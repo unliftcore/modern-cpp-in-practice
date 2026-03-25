@@ -1,16 +1,16 @@
-# Chapter 14: Testing, Fuzzing, Sanitizers, and Observability
+# Chapter 17: Testing, Fuzzing, Sanitizers, and Observability
 
-*Prerequisites: Chapter 13 (build and diagnostic infrastructure must be in place before sanitizers and fuzzers can run effectively). Chapter 1 (ownership and lifetime). Chapter 2 (failure boundaries). Chapter 7 (shared state and synchronization).*
+*Prerequisites: Chapter 16 (build and diagnostic infrastructure must be in place before sanitizers and fuzzers can run effectively). Chapter 1 (ownership and lifetime). Chapter 2 (failure boundaries). Chapter 7 (shared state and synchronization).*
 
 ---
 
-> **Prerequisites:** This chapter assumes your build system already produces sanitizer-instrumented binaries reliably (Chapter 13), that you have a working CI pipeline, and that your team understands ownership semantics (Chapter 1) and failure boundaries (Chapter 2). Sanitizers are not useful if you cannot build with them. Fuzzers are not useful if your code lacks well-defined input boundaries. Observability is not useful if your error model is unclear. Get the foundations right first.
+> **Prerequisites:** This chapter assumes your build system already produces sanitizer-instrumented binaries reliably (Chapter 16), that you have a working CI pipeline, and that your team understands ownership semantics (Chapter 1) and failure boundaries (Chapter 2). Sanitizers are not useful if you cannot build with them. Fuzzers are not useful if your code lacks well-defined input boundaries. Observability is not useful if your error model is unclear. Get the foundations right first.
 >
 > You should also be comfortable with the synchronization material from Chapter 7. Many of the bug classes discussed here — data races, lock-order inversions, use-after-free across threads — are concurrency failures that only surface under specific scheduling. The verification strategies in this chapter exist precisely because those failures resist deterministic reproduction.
 
 ---
 
-## 14.1 The Production Problem
+## 17.1 The Production Problem
 
 A C++ service passes its unit tests, its integration tests, and three weeks of staging traffic. Then a customer sends a 4 MB JSON blob with a deeply nested array, a coroutine resumes after its owning task has been cancelled, and a background thread reads a config field that another thread is tearing down. The resulting crash dump shows a stack corrupted beyond recovery. The post-mortem takes four days.
 
@@ -25,7 +25,7 @@ Conventional testing catches logic errors in code paths the author imagined. It 
 
 ---
 
-## 14.2 The Naive Approach: Example-Driven Tests Alone
+## 17.2 The Naive Approach: Example-Driven Tests Alone
 
 Most C++ projects rely on a test suite structured like this:
 
@@ -58,11 +58,11 @@ Example-driven tests are necessary. They are not sufficient.
 
 ---
 
-## 14.3 The Modern Approach: Layered Verification
+## 17.3 The Modern Approach: Layered Verification
 
 Production-grade C++ verification is not a single tool. It is a strategy that layers four complementary techniques, each catching bug classes the others miss.
 
-### 14.3.1 Structured Unit and Integration Tests
+### 17.3.1 Structured Unit and Integration Tests
 
 Good tests are not about quantity. They are about covering decision boundaries, error paths, and contract violations.
 
@@ -142,7 +142,7 @@ TEST(SessionCache, ConcurrentInsertAndEvictDoNotCorrupt) {
 
 This test does not assert on specific interleaving outcomes. It asserts on the invariant that must hold regardless of scheduling. Run it under Thread Sanitizer (Section 3.3) to detect races the assertions cannot.
 
-### 14.3.2 Fuzzing
+### 17.3.2 Fuzzing
 
 Fuzzing explores the input space that humans never enumerate. A fuzzer generates millions of inputs per second, guided by coverage feedback, and reports any input that triggers a crash, assertion failure, timeout, or sanitizer violation.
 
@@ -238,7 +238,7 @@ This approach is essential for stateful APIs where the bug surfaces only after a
 
 **CI integration:** Run fuzzers for a fixed time budget (e.g., 60 seconds per target) on every PR. Store and replay the accumulated corpus across runs. OSS-Fuzz provides continuous fuzzing infrastructure for open-source projects; internal teams need an equivalent.
 
-### 14.3.3 Sanitizers
+### 17.3.3 Sanitizers
 
 Sanitizers are compiler-inserted runtime checks that detect bug classes no amount of assertion-writing can catch. They are not optional tools for debugging sessions. They are CI infrastructure.
 
@@ -298,7 +298,7 @@ export UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"
 
 Set `halt_on_error=1`. Sanitizers that log warnings and continue are sanitizers that get ignored.
 
-### 14.3.4 Observability: Debugging What Tests Cannot Catch
+### 17.3.4 Observability: Debugging What Tests Cannot Catch
 
 Tests and sanitizers run before deployment. Observability operates after deployment — and sometimes it is the only way to diagnose failures that depend on real traffic patterns, hardware behavior, or timing.
 
@@ -394,7 +394,7 @@ The metrics that matter most in C++ services are often allocation-related: alloc
 
 ---
 
-## 14.4 Tradeoffs and Boundaries
+## 17.4 Tradeoffs and Boundaries
 
 **Sanitizers are not free.** ASan doubles memory usage. TSan can impose a 15x slowdown. Running the full test suite under every sanitizer on every commit may be prohibitively slow for large projects. The common compromise: ASan+UBSan on every commit, TSan on a targeted subset per commit and the full suite nightly.
 
@@ -410,9 +410,9 @@ The metrics that matter most in C++ services are often allocation-related: alloc
 
 ---
 
-## 14.5 Testing and Tooling Implications
+## 17.5 Testing and Tooling Implications
 
-### 14.5.1 CI Pipeline Structure
+### 17.5.1 CI Pipeline Structure
 
 A minimal but effective CI matrix for a C++ project:
 
@@ -425,7 +425,7 @@ A minimal but effective CI matrix for a C++ project:
 | MSan (optional) | Clang 18 | MSan | Unit + integration | Nightly |
 | Coverage | GCC 14 | None | Unit | Weekly (reporting only) |
 
-### 14.5.2 Test Organization
+### 17.5.2 Test Organization
 
 Separate tests by what they verify and how long they take:
 
@@ -443,7 +443,7 @@ tests/
     └── ubsan.txt
 ```
 
-### 14.5.3 Reproducing Sanitizer Failures
+### 17.5.3 Reproducing Sanitizer Failures
 
 When a sanitizer reports a failure, the first priority is a minimal reproducer. Sanitizer output includes a stack trace with source locations. For fuzz-found bugs, the fuzzer saves the crashing input:
 
@@ -457,7 +457,7 @@ When a sanitizer reports a failure, the first priority is a minimal reproducer. 
 
 For TSan-reported races, the output shows both access stacks. Map them to code, identify the shared state, and determine which synchronization was missing. TSan does not produce false positives on correctly compiled code (modulo known, documented limitations with signal handlers and certain lock-free patterns). If TSan reports a race, assume it is real until proven otherwise.
 
-### 14.5.4 Property-Based Testing
+### 17.5.4 Property-Based Testing
 
 Between hand-written examples and fuzzing sits property-based testing: generate random but typed inputs and verify invariants rather than specific outputs.
 
@@ -504,16 +504,16 @@ Property-based tests are particularly effective for data structures, serializati
 
 ---
 
-## 14.6 Review Checklist
+## 17.6 Review Checklist
 
-### 14.6.1 Test Coverage and Structure
+### 17.6.1 Test Coverage and Structure
 
 - [ ] Every public API entry point has at least one test for its success path and one for each documented error condition.
 - [ ] Tests assert on behavioral contracts, not internal state.
 - [ ] Concurrent data structures have stress tests that run under TSan.
 - [ ] Flaky tests are quarantined and tracked, not ignored or retried into silence.
 
-### 14.6.2 Fuzzing
+### 17.6.2 Fuzzing
 
 - [ ] Every parser, deserializer, and codec has a fuzz target.
 - [ ] Fuzz targets are built with ASan + UBSan instrumented.
@@ -521,7 +521,7 @@ Property-based tests are particularly effective for data structures, serializati
 - [ ] Fuzz targets run in CI with a minimum time budget per target.
 - [ ] Crashing inputs are minimized and converted to regression tests.
 
-### 14.6.3 Sanitizers
+### 17.6.3 Sanitizers
 
 - [ ] ASan + UBSan run on the full test suite for every commit.
 - [ ] TSan runs on concurrency-related tests for every commit and the full suite nightly.
@@ -530,7 +530,7 @@ Property-based tests are particularly effective for data structures, serializati
 - [ ] MSan or an equivalent (Valgrind) runs at least nightly if the dependency tree supports it.
 - [ ] MSVC builds have an alternative race-detection strategy if TSan is unavailable.
 
-### 14.6.4 Observability
+### 17.6.4 Observability
 
 - [ ] Structured logging is in place with correlation IDs that span request lifetimes.
 - [ ] Key decision boundaries emit metrics: error rates, latency histograms, queue depths.
@@ -539,7 +539,7 @@ Property-based tests are particularly effective for data structures, serializati
 - [ ] Slow destructor paths are identified and instrumented.
 - [ ] Observability overhead is measured and bounded in latency-critical paths.
 
-### 14.6.5 Process
+### 17.6.5 Process
 
 - [ ] CI runs sanitizer builds as blocking checks, not advisory.
 - [ ] Fuzz corpus is preserved across CI runs (not rebuilt from seed each time).

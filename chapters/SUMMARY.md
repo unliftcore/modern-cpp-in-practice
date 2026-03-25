@@ -10,31 +10,37 @@
 - [Ownership, Lifetime, and Resource Management](01-ownership-lifetime-and-resource-management.md)
 - [Errors, Results, and Failure Boundaries](02-errors-results-and-failure-boundaries.md)
 - [Value Semantics, Identity, and Invariants](03-value-semantics-identity-and-invariants.md)
-- [Generic Code, Concepts, and Compile-Time Cost](04-generic-code-concepts-and-compile-time-cost.md)
+- [Compile-Time Programming: constexpr, consteval, and Metaprogramming](04-compile-time-programming.md)
 
-# Part II: Design, Interfaces, and Boundaries
+# Part II: Type-Level Design and Generic Programming
 
-- [Interfaces, APIs, and Dependency Direction](05-interfaces-apis-and-dependency-direction.md)
-- [Libraries, Modules, ABI, and Versioning](06-libraries-modules-abi-and-versioning.md)
+- [Concepts, Constraints, and Generic Interfaces](05-concepts-constraints-and-generic-interfaces.md)
+- [Ranges, Views, and Functional Composition](06-ranges-views-and-functional-composition.md)
 
-# Part III: Concurrency and Time
+# Part III: Interfaces, Modules, and Boundaries
 
-- [Shared State, Synchronization, and Contention](07-shared-state-synchronization-and-contention.md)
-- [Tasks, Coroutines, and Cancellation](08-tasks-coroutines-and-cancellation.md)
-- [Pipelines, Backpressure, and Service Throughput](09-pipelines-backpressure-and-service-throughput.md)
+- [Interfaces, APIs, and Dependency Direction](07-interfaces-apis-and-dependency-direction.md)
+- [Modules, Libraries, ABI, and Versioning](08-modules-libraries-abi-and-versioning.md)
 
-# Part IV: Data, Performance, and Measurement
+# Part IV: Concurrency and Structured Async
 
-- [Data Structures, Layout, and Memory Behavior](10-data-structures-layout-and-memory-behavior.md)
-- [Cost Models, Allocation, and Locality](11-cost-models-allocation-and-locality.md)
-- [Benchmarking, Profiling, and Regression Control](12-benchmarking-profiling-and-regression-control.md)
+- [Shared State, Synchronization, and Contention](09-shared-state-synchronization-and-contention.md)
+- [Coroutines and Generators](10-coroutines-and-generators.md)
+- [Senders, Receivers, and Structured Concurrency](11-senders-receivers-and-structured-concurrency.md)
+- [Pipelines, Backpressure, and Service Throughput](12-pipelines-backpressure-and-service-throughput.md)
 
-# Part V: Tooling and Verification
+# Part V: Data, Performance, and Measurement
 
-- [Builds, Diagnostics, and Static Analysis](13-builds-diagnostics-and-static-analysis.md)
-- [Testing, Fuzzing, Sanitizers, and Observability](14-testing-fuzzing-sanitizers-and-observability.md)
+- [Data Structures, Layout, and Memory Behavior](13-data-structures-layout-and-memory-behavior.md)
+- [Cost Models, Allocation, and Locality](14-cost-models-allocation-and-locality.md)
+- [Benchmarking, Profiling, and Regression Control](15-benchmarking-profiling-and-regression-control.md)
 
-# Part VI: Evolution and Long-Term Maintenance
+# Part VI: Tooling and Verification
 
-- [Legacy Migration, Interop, and Incremental Modernization](15-legacy-migration-interop-and-incremental-modernization.md)
-- [Large Codebases, Review Heuristics, and Maintainability](16-large-codebases-review-heuristics-and-maintainability.md)
+- [Builds, Diagnostics, and Static Analysis](16-builds-diagnostics-and-static-analysis.md)
+- [Testing, Fuzzing, Sanitizers, and Observability](17-testing-fuzzing-sanitizers-and-observability.md)
+
+# Part VII: Evolution and Long-Term Maintenance
+
+- [Legacy Migration, Interop, and Incremental Modernization](18-legacy-migration-interop-and-incremental-modernization.md)
+- [Large Codebases, C++26 Horizon, and Maintainability](19-large-codebases-cpp26-horizon-and-maintainability.md)

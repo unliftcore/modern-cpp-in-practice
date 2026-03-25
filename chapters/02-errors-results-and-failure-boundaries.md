@@ -337,6 +337,153 @@ FraudService::check(const PaymentRequest& req) {
 
 The internal error type can change without affecting callers. The boundary function is responsible for translation and for ensuring that diagnostic information is preserved in the `ServiceError::message` field.
 
+### 2.3.9 `std::format` for type-safe diagnostic messages
+
+Legacy error paths build messages with `sprintf` (type-unsafe, buffer-overflow-prone) or `std::ostringstream` (allocation-heavy, verbose). `std::format` (C++20, `<format>`) replaces both with a type-safe, compile-time-checked formatting facility that belongs in every error construction path.
+
+The advantage over `sprintf` is not just safety. `std::format` supports user-defined formatters, meaning your domain types — account IDs, transaction references, error codes — can appear directly in format strings without manual `to_string` calls.
+
+```cpp
+// Before: sprintf in an error path. Type mismatch is silent, buffer size is a guess.
+char buf[256];
+std::snprintf(buf, sizeof(buf), "ledger write failed: account=%lld amount=%.2f",
+              entry.account_id, entry.amount);  // BUG if account_id is uint64_t, not long long
+
+// Before: stringstream. Correct, but verbose and allocates on every operator<<.
+std::ostringstream oss;
+oss << "ledger write failed: account=" << entry.account_id
+    << " amount=" << entry.amount;
+
+// After: std::format. Type-safe, compile-time checked, single expression.
+auto msg = std::format("ledger write failed: account={} amount={:.2f}",
+                       entry.account_id, entry.amount);
+```
+
+For error types that carry a message string, `std::format` is the default construction mechanism. It composes naturally with `std::expected` and structured error types:
+
+```cpp
+return std::unexpected{ServiceError::make(
+    ServiceError::timeout,
+    std::format("fraud check timed out after {}ms for merchant={} amount={}",
+                elapsed.count(), req.merchant_id(), req.amount()))};
+```
+
+The format string is validated at compile time (C++20 requires the format string to be a constant expression in `std::format`). A mismatched argument count or an unsupported type is a compile error, not a runtime surprise in a rare failure path that never gets tested.
+
+### 2.3.10 `std::stacktrace` and `std::source_location` for failure diagnostics
+
+`std::source_location` (C++20) captures the file, line, column, and function name at a call site without macros. Section 2.3.4 already showed it embedded in a `ServiceError`. The limitation is that it captures a single frame — the immediate call site. When a failure originates deep in a call chain, one frame is not enough to diagnose the problem.
+
+`std::stacktrace` (C++23, `<stacktrace>`) captures the entire call stack at the point of construction. This is the programmatic equivalent of what a debugger shows, available at runtime without attaching a debugger.
+
+```cpp
+#include <stacktrace>
+#include <format>
+#include <source_location>
+
+struct DiagnosticError {
+    enum Code {
+        connection_lost,
+        timeout,
+        constraint_violation,
+        internal,
+    };
+
+    Code code;
+    std::string message;
+    std::source_location origin;
+    std::stacktrace trace;
+    std::chrono::system_clock::time_point when;
+
+    static DiagnosticError make(
+            Code c,
+            std::string msg,
+            std::source_location loc = std::source_location::current()) {
+        return {
+            c,
+            std::move(msg),
+            loc,
+            std::stacktrace::current(),  // capture full stack at failure point
+            std::chrono::system_clock::now(),
+        };
+    }
+};
+```
+
+The cost of `std::stacktrace::current()` is non-trivial — it walks the stack and resolves symbols. This is acceptable in error paths that execute infrequently (network failures, constraint violations, unexpected state). It is not acceptable in paths that fire thousands of times per second. Guard accordingly:
+
+```cpp
+std::expected<void, DiagnosticError>
+write_batch(DbConnection& conn, std::span<const LedgerEntry> entries) {
+    auto result = conn.execute_batch(entries);
+    if (!result) {
+        // Stack capture is acceptable here: batch failures are rare
+        // and the diagnostic value outweighs the microsecond cost.
+        return std::unexpected{DiagnosticError::make(
+            DiagnosticError::constraint_violation,
+            std::format("batch write failed: {} of {} entries rejected, first error: {}",
+                        result.error().rejected_count,
+                        entries.size(),
+                        result.error().first_message))};
+    }
+    return {};
+}
+```
+
+**Combining format, source_location, and stacktrace at the failure boundary.**
+
+The three facilities compose into a boundary handler that produces complete diagnostics from a single error object. No scattered logging, no manual stack inspection, no attaching a debugger to reproduce the failure.
+
+```cpp
+void log_diagnostic_error(const DiagnosticError& err) {
+    // Structured, single-point log entry with full context.
+    LOG(ERROR) << std::format(
+        "[{}] {} | origin={}:{} ({}) | time={}\n"
+        "stack trace:\n{}",
+        to_string(err.code),
+        err.message,
+        err.origin.file_name(),
+        err.origin.line(),
+        err.origin.function_name(),
+        err.when,
+        err.trace);
+}
+```
+
+A request handler using this pattern:
+
+```cpp
+void handle_batch_write(HttpContext& ctx) noexcept {
+    try {
+        auto req = parse_batch_request(ctx);
+        auto result = write_batch(db_connection_, req.entries());
+        if (!result) {
+            log_diagnostic_error(result.error());
+            ctx.respond(to_http_status(result.error().code),
+                        result.error().message);
+            return;
+        }
+        ctx.respond(200, "accepted");
+    } catch (const std::exception& e) {
+        // Even for unexpected exceptions, capture a stack trace at the boundary.
+        auto err = DiagnosticError::make(
+            DiagnosticError::internal,
+            std::format("unhandled exception in batch write: {}", e.what()));
+        log_diagnostic_error(err);
+        ctx.respond(500, "Internal server error");
+    } catch (...) {
+        auto err = DiagnosticError::make(
+            DiagnosticError::internal, "unknown exception in batch write handler");
+        log_diagnostic_error(err);
+        ctx.respond(500, "Internal server error");
+    }
+}
+```
+
+The catch blocks construct a `DiagnosticError` at the boundary itself. The stack trace captured there shows how the exception reached the handler. Combined with the exception's `what()` message formatted into the diagnostic, this produces a postmortem-quality log entry from a single handler — no log aggregation across layers required.
+
+**Practical constraints.** `std::stacktrace` requires debug info or symbol tables at runtime. In release builds stripped of symbols, the trace contains only addresses, which can be symbolized offline. Implementations vary: libstdc++ uses `libbacktrace` or `addr2line`; MSVC uses `DbgHelp`. Verify that your build and deployment pipeline preserves enough symbol information for traces to be useful, or ship a symbol file alongside the binary for offline resolution.
+
 ## 2.4 Tradeoffs and Boundaries
 
 ### 2.4.1 `std::expected` is not free

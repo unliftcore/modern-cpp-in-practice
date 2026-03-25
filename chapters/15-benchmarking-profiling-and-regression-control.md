@@ -1,14 +1,14 @@
-# Chapter 12: Benchmarking, Profiling, and Regression Control
+# Chapter 15: Benchmarking, Profiling, and Regression Control
 
-*Prerequisites: Chapter 11 (cost models provide the hypotheses that measurement validates).*
+*Prerequisites: Chapter 14 (cost models provide the hypotheses that measurement validates).*
 
-> **Prerequisites:** This chapter assumes you have a cost model worth testing. Chapter 11 covered allocation patterns, indirection costs, locality, and the reasoning that produces hypotheses like "this path allocates twice per request" or "switching from `std::map` to a flat container should cut lookup time by 4x for our working-set size." Without that reasoning, benchmarking degenerates into running timers around random code and producing numbers that feel scientific but prove nothing.
+> **Prerequisites:** This chapter assumes you have a cost model worth testing. Chapter 14 covered allocation patterns, indirection costs, locality, and the reasoning that produces hypotheses like "this path allocates twice per request" or "switching from `std::map` to a flat container should cut lookup time by 4x for our working-set size." Without that reasoning, benchmarking degenerates into running timers around random code and producing numbers that feel scientific but prove nothing.
 >
 > You should also be comfortable with your toolchain's optimization levels and their effects on codegen. Measuring unoptimized builds is almost never useful for performance work and frequently misleading. The examples in this chapter assume `-O2` or equivalent as the baseline, with specific notes where `-O3`, LTO, or PGO change the picture.
 >
 > Familiarity with at least one profiler (perf, Instruments, VTune, or Tracy) is helpful but not required. The chapter explains interpretation, not installation.
 
-## 12.1 The Production Problem
+## 15.1 The Production Problem
 
 Performance regressions are among the most expensive bugs in production systems. They rarely crash anything. They show up as gradually increasing tail latency, growing memory footprints, or CI pipelines that slow down by a few percent per quarter until someone notices the build takes forty minutes instead of twelve. By the time the regression is visible, the commit that caused it is months old and buried under hundreds of changes.
 
@@ -21,7 +21,7 @@ The root causes are predictable:
 
 The deeper problem is cultural. Performance evidence is treated as disposable — gathered during an optimization sprint, then abandoned. This chapter treats it as an engineering artifact: versioned, reviewed, automated, and tied to the same CI pipeline that enforces correctness.
 
-## 12.2 The Naive Approach
+## 15.2 The Naive Approach
 
 The most common first attempt at benchmarking in C++ looks something like this:
 
@@ -62,9 +62,9 @@ This has several problems that compound in practice:
 
 Teams that outgrow this pattern often move to a framework but repeat the same mistakes at a higher level of abstraction — measuring unrealistic inputs, ignoring variance, and treating benchmark results as absolute rather than comparative.
 
-## 12.3 The Modern Approach
+## 15.3 The Modern Approach
 
-### 12.3.1 Benchmark Design with Google Benchmark
+### 15.3.1 Benchmark Design with Google Benchmark
 
 Google Benchmark is the de facto standard for C++ micro-benchmarking. It handles iteration control, warmup, statistics, and optimizer-defeating scaffolding. But using the framework correctly still requires deliberate design.
 
@@ -115,7 +115,7 @@ Key design decisions here:
 
 **`SetItemsProcessed`** normalizes throughput reporting. Reviewers can compare "items per second" across different implementations even when iteration counts differ.
 
-### 12.3.2 Avoiding Micro-Benchmark Traps
+### 15.3.2 Avoiding Micro-Benchmark Traps
 
 Micro-benchmarks are useful for comparing two implementations of the same operation under controlled conditions. They are not useful for predicting system-level performance. The gap between the two is where most measurement mistakes live.
 
@@ -125,7 +125,7 @@ Micro-benchmarks are useful for comparing two implementations of the same operat
 
 **Branch prediction is trained.** After hundreds of iterations with the same data distribution, the branch predictor is perfectly trained. Production workloads are rarely this predictable. Consider randomizing branch-affecting inputs across iterations.
 
-### 12.3.3 Profiling: From Flame Graph to Actionable Insight
+### 15.3.3 Profiling: From Flame Graph to Actionable Insight
 
 A profiler tells you where time is spent. It does not tell you why, and it does not tell you what to do about it. Misreading profiler output is as common as not profiling at all.
 
@@ -155,7 +155,7 @@ void process_batch(std::span<const Request> batch) {
 
 Tracy zones have approximately 5-20 ns overhead per zone entry/exit. For functions called millions of times per second, that overhead is measurable. Use zones selectively — instrument the outer loop, not the inner arithmetic.
 
-### 12.3.4 Tracking Allocations as a First-Class Metric
+### 15.3.4 Tracking Allocations as a First-Class Metric
 
 Allocation count and allocation size are often more informative than wall-clock time for regression detection. A change that adds one allocation per request may not show up in a micro-benchmark but can degrade throughput by 10-20% under contention when multiple threads compete for the allocator.
 
@@ -250,7 +250,7 @@ void measure_request_allocations(const Request& req) {
 
 The `pmr` approach is composable and scoped. It tracks only the allocations routed through it, making attribution precise. The tradeoff is that existing code must already use `pmr` containers, or be refactored to accept an allocator — which is nontrivial in large codebases.
 
-### 12.3.5 Workload Selection
+### 15.3.5 Workload Selection
 
 The most important decision in benchmark design is not the framework or the statistics. It is the workload.
 
@@ -264,7 +264,7 @@ Principles for workload design:
 - **Use real data when possible.** Sanitized production traces, anonymized request logs, or recorded workload replays eliminate guesswork about distributions. Synthetic data is a fallback, not a first choice.
 - **Document the workload.** Every benchmark should have a comment or companion document explaining why this workload was chosen, what production scenario it represents, and what its known limitations are.
 
-### 12.3.6 Noise Control
+### 15.3.6 Noise Control
 
 Benchmark variance is the enemy of regression detection. If your benchmark has 15% run-to-run variance, you cannot detect a 5% regression. Reducing noise is prerequisite to useful automation.
 
@@ -298,9 +298,9 @@ Avoid core 0, which typically handles interrupts.
                --benchmark_out_format=json
 ```
 
-## 12.4 Tradeoffs and Boundaries
+## 15.4 Tradeoffs and Boundaries
 
-### 12.4.1 Micro-Benchmarks vs. System Benchmarks
+### 15.4.1 Micro-Benchmarks vs. System Benchmarks
 
 Micro-benchmarks are cheap, fast, and deterministic. They answer "which implementation is faster for this operation in isolation?" They do not answer "will this make the system faster?" because they cannot model cache contention with other subsystems, allocator fragmentation from prior operations, or the interaction between this code and the scheduler under real load.
 
@@ -308,21 +308,21 @@ System benchmarks (load tests, integration benchmarks, replay-based benchmarks) 
 
 Most teams need both. Micro-benchmarks gate individual PRs. System benchmarks gate releases.
 
-### 12.4.2 Measurement Overhead
+### 15.4.2 Measurement Overhead
 
 Every measurement technique has overhead. Tracy zones cost 5-20 ns. Allocation counting via global `operator new` adds an atomic increment per allocation. Sampling profilers consume 1-5% of CPU depending on sample rate. Instrumented builds can be 2-10x slower than production builds.
 
 The consequence: never measure with the same binary you ship. Performance-measurement builds and production builds serve different purposes. Treating them as interchangeable produces either slow production binaries or meaningless measurements.
 
-### 12.4.3 The Danger of Premature Automation
+### 15.4.3 The Danger of Premature Automation
 
 Automating benchmark regression detection before noise is under control produces false positives. False positives erode trust. After a few weeks of ignoring flaky benchmark alerts, teams stop looking at them entirely — and then real regressions pass through unnoticed.
 
 Get the noise floor below 2-3% before automating gates. If you cannot achieve that with your infrastructure, use automation for alerts (informational) rather than gates (blocking), and investigate manually.
 
-## 12.5 Testing and Tooling Implications
+## 15.5 Testing and Tooling Implications
 
-### 12.5.1 CI Integration: Continuous Benchmarking
+### 15.5.1 CI Integration: Continuous Benchmarking
 
 The goal is to make performance regression as visible as a failing test. The mechanism depends on infrastructure constraints, but the pattern is consistent:
 
@@ -381,7 +381,7 @@ if __name__ == "__main__":
 
 This is deliberately simple. Production CI systems often add: results archival to a database, graphing over time, separate thresholds for different benchmark categories, and notification routing. But the core logic — compare medians, flag regressions above threshold — stays the same.
 
-### 12.5.2 Benchmark Hygiene Rules
+### 15.5.2 Benchmark Hygiene Rules
 
 Benchmarks rot faster than tests. A test either passes or fails; a benchmark that drifts 1% per month is technically passing while becoming useless. Maintenance rules:
 
@@ -390,7 +390,7 @@ Benchmarks rot faster than tests. A test either passes or fails; a benchmark tha
 - **Benchmarks have owners.** When the team responsible for a subsystem changes the data layout, they update the corresponding benchmarks. Orphaned benchmarks are worse than no benchmarks because they provide false confidence.
 - **Dead benchmarks are deleted.** A benchmark for a code path that no longer exists is noise in the CI pipeline and confusion in results.
 
-### 12.5.3 Hardware Counters and perf stat
+### 15.5.3 Hardware Counters and perf stat
 
 When a micro-benchmark shows a regression but the algorithmic complexity has not changed, hardware counters reveal what the CPU is actually doing:
 
@@ -412,7 +412,7 @@ On Windows, VTune provides equivalent counters through its GUI or `vtune -collec
 
 Hardware counters are deterministic in a way that wall-clock time is not. Two runs on the same data with the same binary will produce nearly identical instruction counts even if wall-clock time varies by 5%. This makes instruction count a useful secondary metric for regression detection in noisy CI environments.
 
-### 12.5.4 Allocation Regression Tests
+### 15.5.4 Allocation Regression Tests
 
 Allocation counts can be asserted in unit tests, not just benchmarks:
 
@@ -437,45 +437,45 @@ TEST(JsonParser, AllocationCount) {
 
 This is a coarse-grained but effective regression gate. The exact count may change intentionally — the point is that it changes visibly and requires an explicit update to the test, which triggers review discussion.
 
-### 12.5.5 Profiler-Guided Optimization Workflow
+### 15.5.5 Profiler-Guided Optimization Workflow
 
 The disciplined workflow for performance optimization is:
 
-1. **Hypothesize.** Use the cost model from Chapter 11 to predict where time goes. "I expect 60% of time in deserialization, 30% in sorting, 10% in output."
+1. **Hypothesize.** Use the cost model from Chapter 14 to predict where time goes. "I expect 60% of time in deserialization, 30% in sorting, 10% in output."
 2. **Profile.** Run a sampling profiler under a representative workload. Compare the profile to your hypothesis.
 3. **Identify the gap.** If deserialization is 40% and allocation is 25% (not in your model), the allocation cost is the finding — not a confirmation of what you already knew.
 4. **Benchmark the candidate change in isolation.** Write or update a micro-benchmark that exercises the specific operation.
 5. **Measure the system effect.** After the micro-benchmark confirms improvement, run the system benchmark or load test to verify the improvement survives integration.
 6. **Record the evidence.** The PR should include before/after benchmark numbers, the profiler finding that motivated the change, and the workload used. This is not bureaucracy — it is the only way future maintainers can evaluate whether the optimization is still valid when the workload changes.
 
-## 12.6 Review Checklist
+## 15.6 Review Checklist
 
 Use this checklist when reviewing benchmarks, profiling-driven optimizations, or performance regression infrastructure.
 
-### 12.6.1 Benchmark Design
+### 15.6.1 Benchmark Design
 - [ ] The workload matches production data sizes, distributions, and access patterns. Deviations are documented.
 - [ ] `DoNotOptimize` or `ClobberMemory` prevents dead-code elimination of the measured operation.
 - [ ] Setup and teardown costs are excluded from timing (via `PauseTiming`/`ResumeTiming` or batched setup).
 - [ ] The benchmark is parameterized across relevant sizes to show scaling behavior, not just a single data point.
 - [ ] Multiple repetitions are used and results report median, not just mean.
 
-### 12.6.2 Profiling
+### 15.6.2 Profiling
 - [ ] The profiled binary was compiled with optimizations enabled (`-O2` or equivalent) and frame pointers retained (`-fno-omit-frame-pointer`).
 - [ ] The profile was taken under a representative workload, not a unit test or trivial input.
 - [ ] Flame graph interpretation distinguishes self time from inclusive time.
 - [ ] Findings are stated as specific claims ("allocation accounts for 23% of wall time") rather than vague impressions ("allocation seems high").
 
-### 12.6.3 Regression Detection
+### 15.6.3 Regression Detection
 - [ ] Benchmark noise floor is documented. Regression threshold is set above the noise floor.
 - [ ] Benchmarks run on isolated or dedicated hardware, not shared CI runners without CPU pinning.
 - [ ] Results are stored in a format that supports historical comparison (JSON, database).
 - [ ] Regression alerts have been validated: at least one synthetic regression has been introduced and detected by the pipeline before trusting it with real changes.
 
-### 12.6.4 Allocation Tracking
+### 15.6.4 Allocation Tracking
 - [ ] Allocation counts are tracked for performance-critical paths, either via benchmarks or unit-test assertions.
 - [ ] Changes to allocation counts require explicit acknowledgment in review (updated test expectations or documented justification).
 
-### 12.6.5 Optimization PRs
+### 15.6.5 Optimization PRs
 - [ ] The PR states the hypothesis and the profiling evidence that motivated the change.
 - [ ] Before/after benchmark results are included, with workload description.
 - [ ] The micro-benchmark improvement is validated by a system-level benchmark or load test.

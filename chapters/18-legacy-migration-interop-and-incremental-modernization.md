@@ -1,6 +1,6 @@
-# Chapter 15: Legacy Migration, Interop, and Incremental Modernization
+# Chapter 18: Legacy Migration, Interop, and Incremental Modernization
 
-*Prerequisites: Parts I–II (the ownership, failure, and interface models that modernized code should target).*
+*Prerequisites: Parts I–III (the ownership, failure, and interface models that modernized code should target).*
 
 Most teams do not begin with a clean C++23 codebase. They inherit old ownership models, macro-heavy interfaces, C compatibility constraints, partial platform support, and years of operational workarounds. This chapter focuses on modernization under constraint: how to introduce better boundaries, safer types, and stronger tooling without destabilizing shipping systems. The challenge is sequencing change so local improvements accumulate instead of producing a rewrite-shaped crater in the roadmap.
 
@@ -12,7 +12,7 @@ Most teams do not begin with a clean C++23 codebase. They inherit old ownership 
 
 ---
 
-## 15.1 The Production Problem
+## 18.1 The Production Problem
 
 The common framing is "we need to modernize." The actual problem is more specific: the codebase has regions where ownership is ambiguous, failure modes are invisible, interfaces are too wide, and tooling cannot reach. These regions resist change because they are load-bearing — they carry years of operational fixes, implicit contracts, and downstream dependencies that nobody mapped.
 
@@ -28,7 +28,7 @@ The alternative is incremental modernization: changing code in small, reviewable
 
 ---
 
-## 15.2 The Naive Approach: Bottom-Up Rewrite
+## 18.2 The Naive Approach: Bottom-Up Rewrite
 
 The instinct is to start at the bottom of the dependency graph — the lowest-level utility libraries — modernize them, then work upward. This fails for several reasons.
 
@@ -53,11 +53,11 @@ The third failure mode is the motivation cliff. A months-long rewrite of utility
 
 ---
 
-## 15.3 Modern Approach: Facade, Strangle, Harden
+## 18.3 Modern Approach: Facade, Strangle, Harden
 
 Incremental modernization follows three interlocking strategies, applied to different parts of the codebase depending on risk and value.
 
-### 15.3.1 The Facade Strategy: New Interface Over Old Implementation
+### 18.3.1 The Facade Strategy: New Interface Over Old Implementation
 
 Instead of rewriting a component, wrap it in a new interface that expresses the ownership, failure, and lifetime contracts you want. The old implementation continues to run. The new interface is what new code calls.
 
@@ -110,7 +110,7 @@ The facade does several things at once. It makes ownership explicit: the caller 
 
 New code calls `config_get`. Old code continues to call `legacy_config_get`. Both work. Migration happens call site by call site, at whatever pace the team can sustain.
 
-### 15.3.2 The Strangler Strategy: Route New Traffic Through New Code
+### 18.3.2 The Strangler Strategy: Route New Traffic Through New Code
 
 When a component needs behavioral changes — not just interface cleanup — the strangler pattern applies. Build the new implementation alongside the old one. Route new callers (or a controlled subset of existing callers) to the new implementation. Remove the old implementation only after all traffic has migrated and the new one has proven stable under production load.
 
@@ -143,7 +143,7 @@ private:
 
 The `[[deprecated]]` attribute produces a compiler warning at every remaining call site for the old interface. This makes migration progress visible in build logs and CI dashboards. The old path remains functional — no runtime behavior changes — but the team has a mechanical way to track how many call sites still need migration.
 
-### 15.3.3 The Hardening Strategy: Make Old Code Safer Without Changing Its Interface
+### 18.3.3 The Hardening Strategy: Make Old Code Safer Without Changing Its Interface
 
 Not everything can be wrapped or replaced. Some code is too deeply embedded, too performance-sensitive, or too risky to restructure. For those regions, the goal is hardening: adding runtime checks, assertions, sanitizer annotations, and static analysis suppressions that reduce defect risk without altering the interface or behavior.
 
@@ -172,9 +172,9 @@ Hardening is low-risk and high-value. It does not change behavior for correct ca
 
 ---
 
-## 15.4 Tradeoffs and Boundaries
+## 18.4 Tradeoffs and Boundaries
 
-### 15.4.1 What Not to Modernize
+### 18.4.1 What Not to Modernize
 
 Modernization has a cost. Every facade is a new abstraction layer. Every strangler migration requires maintaining two implementations in parallel. Every hardening annotation is code that must be reviewed and maintained.
 
@@ -184,7 +184,7 @@ Some code should be left alone:
 - **Code scheduled for removal.** If a subsystem is being replaced by an external dependency or a different service, modernizing it is waste.
 - **Code where the C interface is the product.** Libraries that expose a C API for cross-language interop cannot simply switch to `std::expected` and `string_view`. The C boundary is a feature, not a defect. Modernization applies to the implementation behind that boundary, not the boundary itself.
 
-### 15.4.2 The Interop Tax
+### 18.4.2 The Interop Tax
 
 Every boundary between old and new code has a cost. The facade in Section 3.1 copies a `string_view` into a `std::string` to null-terminate it, then copies the C string into another `std::string` for the return value. In a tight loop, those allocations matter. In a configuration-loading path called once at startup, they do not.
 
@@ -213,7 +213,7 @@ packet_get_field_view(const Packet& pkt, const char* field_name) {
 
 The second version preserves the zero-copy property of the C API. The tradeoff is that the caller must reason about the lifetime of the returned `string_view`. This is acceptable in a performance-critical path where the callers are few and expert. It is not acceptable in a widely-used utility where most callers would mishandle the lifetime.
 
-### 15.4.3 Macro Elimination
+### 18.4.3 Macro Elimination
 
 Legacy C++ codebases often rely heavily on macros for configuration, logging, platform abstraction, and code generation. Eliminating macros is worthwhile when they obscure control flow, defeat tooling (debuggers, IDEs, static analyzers cannot see through macros), or create subtle hygiene bugs.
 
@@ -270,7 +270,7 @@ The modern version is debuggable, visible to static analysis, and produces clear
 
 However, not all macros are worth replacing. Platform-detection macros (`#ifdef _WIN32`) have no superior alternative in standard C++23. Header include guards are universally understood. Replace macros that damage tooling and code clarity; leave macros that serve a purpose no language feature can replicate.
 
-### 15.4.4 Managing `extern "C"` Boundaries
+### 18.4.4 Managing `extern "C"` Boundaries
 
 C interop is not a legacy problem to be solved — it is a permanent feature of systems programming. Many production C++ codebases must expose or consume C interfaces for FFI with other languages, OS APIs, plugin systems, or embedded environments.
 
@@ -319,9 +319,9 @@ The pattern is: opaque typedef in the C header, `reinterpret_cast` between the o
 
 ---
 
-## 15.5 Testing and Tooling Implications
+## 18.5 Testing and Tooling Implications
 
-### 15.5.1 Migration Creates Temporary Duplication
+### 18.5.1 Migration Creates Temporary Duplication
 
 During a strangler migration, both the old and new implementations exist. Both must be tested. The natural approach is to extract the behavioral specification into a shared test suite that runs against both implementations.
 
@@ -370,7 +370,7 @@ TYPED_TEST(PoolBehaviorTest, ExhaustedPoolReportsError) {
 
 This approach catches behavioral divergence between old and new implementations before it reaches production. When the old implementation is eventually removed, the test suite continues to verify the new one.
 
-### 15.5.2 Sanitizers and Legacy Code
+### 18.5.2 Sanitizers and Legacy Code
 
 Address Sanitizer (ASan), Undefined Behavior Sanitizer (UBSan), and Thread Sanitizer (TSan) are most valuable in legacy code — that is where the bugs are. But legacy code also produces the most sanitizer noise: benign violations that were never fixed, platform-specific constructs that sanitizers do not understand, and third-party code that cannot be modified.
 
@@ -387,7 +387,7 @@ leak:src/legacy/protocol_v1.cpp
 
 The suppression file is a living document. Each entry should have a comment explaining why it exists and when it can be removed. Treat suppression additions as code changes that require review. The goal is to run sanitizers on every CI build so that new code never introduces the classes of bugs that legacy code still contains.
 
-### 15.5.3 Static Analysis as a Migration Radar
+### 18.5.3 Static Analysis as a Migration Radar
 
 Clang-tidy, with a curated set of checks, serves as a migration progress tracker. Enable modernization checks incrementally:
 
@@ -411,7 +411,7 @@ WarningsAsErrors: >
 
 Start with checks that are mechanical and low-risk (`use-override`, `use-nullptr`). These can be auto-fixed across the codebase in a single commit with `clang-tidy --fix`. Progress toward checks that require judgment (`owning-memory`, `use-after-move`) as the team builds confidence.
 
-### 15.5.4 Compiler Warnings as a Ratchet
+### 18.5.4 Compiler Warnings as a Ratchet
 
 Enable warnings incrementally and never allow them to regress. The practical mechanism is `-Werror` on a growing subset of warnings, enforced in CI:
 
@@ -431,7 +431,7 @@ target_compile_options(${target} PRIVATE
 
 ---
 
-## 15.6 Sequencing a Migration
+## 18.6 Sequencing a Migration
 
 The order in which you modernize matters more than the techniques you use. A practical sequencing:
 
@@ -449,7 +449,7 @@ Each phase should produce a shippable system. If the migration stalls at any poi
 
 ---
 
-## 15.7 Review Checklist
+## 18.7 Review Checklist
 
 **Migration strategy**
 

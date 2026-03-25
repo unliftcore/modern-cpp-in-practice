@@ -1,8 +1,8 @@
-# Chapter 9: Pipelines, Backpressure, and Service Throughput
+# Chapter 12: Pipelines, Backpressure, and Service Throughput
 
-> **Prerequisites:** Chapters 7 and 8. Pipeline stages share mutable state across threads (Chapter 7's synchronization primitives), and the task and coroutine infrastructure from Chapter 8 provides the execution model that stages run on. Familiarity with bounded queues, condition variables, and cooperative cancellation is assumed throughout.
+> **Prerequisites:** Chapters 9–11. Pipeline stages share mutable state across threads (Chapter 9's synchronization primitives), and the task and coroutine infrastructure from Chapter 11 provides the execution model that stages run on. Familiarity with bounded queues, condition variables, and cooperative cancellation is assumed throughout.
 
-## 9.1 The Production Problem
+## 12.1 The Production Problem
 
 A service accepts requests, transforms them through several processing stages, and emits responses. Each stage does different work: parsing, validation, enrichment from a cache or external call, serialization, I/O. The team writes each stage as a concurrent task, connects them with queues, and the system works in testing.
 
@@ -17,7 +17,7 @@ These are not concurrency bugs in the traditional sense. The locks are correct. 
 
 Flow control in pipelines is the same problem as flow control in networks. TCP solved it decades ago with window-based backpressure. The lesson applies directly: producers must not outrun consumers, and the mechanism for throttling must be explicit, bounded, and observable.
 
-## 9.2 The Naive Approach: Unbounded Queues and Hope
+## 12.2 The Naive Approach: Unbounded Queues and Hope
 
 The most common first design connects stages with `std::queue` behind a mutex, or a lock-free queue with no capacity limit.
 
@@ -67,7 +67,7 @@ Silent drops turn a throughput problem into a correctness problem. The caller be
 
 Both designs share the same flaw: the producer has no way to learn that the consumer is falling behind, and no mechanism to slow down in response.
 
-## 9.3 Bounded Channels with Backpressure
+## 12.3 Bounded Channels with Backpressure
 
 A bounded channel is a queue with a fixed capacity where `send` blocks (or returns a failure indicator) when the queue is full. This is the fundamental building block of pipeline backpressure.
 
@@ -143,13 +143,13 @@ Key design decisions:
 
 **Blocking send.** When the buffer is full, the producer waits. This is the backpressure signal: the producer physically cannot outrun the consumer. Queue depth is bounded by construction, not by hope.
 
-**Stop token integration.** `std::stop_token` from C++20 (universally available in C++23) provides cooperative cancellation. A stage that is shutting down can interrupt blocked senders and receivers without closing the channel or introducing a separate cancellation flag. This dovetails with the cancellation model from Chapter 8.
+**Stop token integration.** `std::stop_token` from C++20 (universally available in C++23) provides cooperative cancellation. A stage that is shutting down can interrupt blocked senders and receivers without closing the channel or introducing a separate cancellation flag. This dovetails with the cancellation model from Chapter 11.
 
 **Close semantics.** Closing the channel wakes all waiters. Receivers drain remaining items before seeing the closed state. This avoids the common bug where closing a channel loses in-flight work.
 
 **`std::deque` over `std::queue`.** `std::deque` gives the same FIFO behavior but avoids the wrapper overhead and allows `size()` without walking the container. For hot paths, a ring buffer on a contiguous allocation is better; the interface stays the same.
 
-## 9.4 Composing Pipeline Stages
+## 12.4 Composing Pipeline Stages
 
 A pipeline stage is a function that reads from an input channel, processes each item, and writes to an output channel. The type signature captures the contract:
 
@@ -257,7 +257,7 @@ void run_pipeline(std::stop_token shutdown) {
 
 Notice the channel capacities taper: 256, 128, 64. This is deliberate. The enrichment stage is the bottleneck (IO-bound with external calls). Giving it a smaller input buffer means backpressure reaches the parse stage faster, which reduces the amount of work that has already been validated but cannot yet be enriched. Work sitting in a queue is wasted memory and latency.
 
-## 9.5 Choosing Queue Capacity
+## 12.5 Choosing Queue Capacity
 
 Queue capacity is not a tuning knob to maximize. It is a latency budget.
 
@@ -269,7 +269,7 @@ Rules of thumb:
 - **Measure queueing delay, not just throughput.** Instrument `send` and `recv` with timestamps. The difference between an item's enqueue time and its dequeue time is the queueing delay. If this grows under load, the downstream stage is the bottleneck.
 - **Do not size queues to absorb bursts.** Large queues turn bursts into sustained latency increases. If you need burst absorption, do it at the ingress point with an explicit admission control policy (see below), not by making internal queues deep.
 
-## 9.6 Admission Control and Overload
+## 12.6 Admission Control and Overload
 
 Backpressure propagates from the slowest stage back to the ingress point. At that point, the system has a choice: block the caller, reject the request, or shed load. This is admission control.
 
@@ -317,11 +317,11 @@ The `in_flight_` counter tracks how many requests are anywhere in the pipeline. 
 
 The maximum in-flight count should be derived from measurement, not guessed. Profile the pipeline under steady-state load. Find the throughput ceiling — the point where adding more in-flight requests no longer increases throughput but does increase latency. Set the limit slightly above that point to absorb jitter.
 
-### 9.6.1 Why Not Just Use the Queue Capacity?
+### 12.6.1 Why Not Just Use the Queue Capacity?
 
 Queue capacity and admission control solve different problems. Queue capacity bounds memory between two specific stages. Admission control bounds total work in the system. A pipeline with five stages, each with a queue of 64, can have 320 items in flight — far more than the system can process promptly. The admission controller sets a single, system-wide limit that reflects actual processing capacity.
 
-## 9.7 Head-of-Line Blocking and Priority
+## 12.7 Head-of-Line Blocking and Priority
 
 When all items share a single queue, a slow item blocks everything behind it. This is head-of-line blocking, and it is the most common source of latency variance in pipeline systems.
 
@@ -371,7 +371,7 @@ auto process = [](const TimedItem& item) -> std::optional<ValidatedRequest> {
 
 Dropping expired work is counterintuitive but correct under overload. The client has already timed out. Processing the request wastes resources and produces a response nobody will read. The metric makes the expiration rate visible so the team can adjust capacity or shedding thresholds.
 
-## 9.8 Fan-Out, Fan-In, and Retry Amplification
+## 12.8 Fan-Out, Fan-In, and Retry Amplification
 
 Some pipelines fan out: one input item produces N downstream items (e.g., a batch request, a scatter query). The downstream channel must be sized for the amplified rate, or the fan-out stage will block on send, stalling the entire upstream.
 
@@ -416,7 +416,7 @@ The deadline check is critical. Without it, retries continue long after the orig
 
 A circuit breaker (tracking the error rate over a rolling window and short-circuiting calls when it exceeds a threshold) provides the system-level complement. Individual retry policies limit per-request cost; the circuit breaker limits aggregate cost.
 
-## 9.9 Observability
+## 12.9 Observability
 
 A pipeline that you cannot observe is a pipeline that you cannot operate. The minimum instrumentation for a production pipeline:
 
@@ -454,7 +454,7 @@ struct StageMetrics {
 
 These metrics should feed into whatever observability system the service already uses (Prometheus, OpenTelemetry, internal counters). The point is not the export mechanism; it is that the information exists.
 
-## 9.10 Tradeoffs and Boundaries
+## 12.10 Tradeoffs and Boundaries
 
 **Bounded queues trade throughput for latency predictability.** An unbounded queue maximizes throughput at the cost of arbitrary latency under load. A bounded queue with admission control sacrifices some peak throughput (rejected requests) to keep latency bounded. The right tradeoff depends on the service's SLO. Most services care more about p99 latency than peak throughput.
 
@@ -462,15 +462,15 @@ These metrics should feed into whatever observability system the service already
 
 **Concurrency per stage is not free.** More workers on a stage reduce queueing delay for that stage but increase contention on the shared channel, increase context-switch overhead, and may increase contention on downstream resources (database connections, external APIs). Measure; do not guess.
 
-**Coroutine-based stages change the cost model.** If stages are coroutines on an executor (Chapter 8), a "blocked" send does not consume an OS thread — it suspends, freeing the thread for other work. This changes the concurrency arithmetic: you can have thousands of in-flight items without thousands of threads. But it also means backpressure is less visible; a coroutine waiting on a full channel does not show up as a blocked thread in `top`. Instrumentation becomes more important, not less.
+**Coroutine-based stages change the cost model.** If stages are coroutines on an executor (Chapter 11), a "blocked" send does not consume an OS thread — it suspends, freeing the thread for other work. This changes the concurrency arithmetic: you can have thousands of in-flight items without thousands of threads. But it also means backpressure is less visible; a coroutine waiting on a full channel does not show up as a blocked thread in `top`. Instrumentation becomes more important, not less.
 
 **Fan-out and fan-in require explicit capacity planning.** If a stage can produce multiple output items per input item, the downstream channel's capacity and the downstream stage's concurrency must account for the amplification factor. This is easy to overlook when the fan-out ratio varies per item.
 
 **This chapter does not cover distributed pipelines.** The patterns here apply within a single process or a tightly coupled set of threads. Distributed stream processing (Kafka, Flink, etc.) shares the same concepts — bounded buffers, backpressure, admission control — but adds network partitions, exactly-once semantics, and rebalancing, which are outside this book's scope.
 
-## 9.11 Testing and Tooling Implications
+## 12.11 Testing and Tooling Implications
 
-### 9.11.1 Testing Pipeline Behavior
+### 12.11.1 Testing Pipeline Behavior
 
 Unit tests that process one item at a time through a stage are necessary but insufficient. The failure modes are about queueing, timing, and load interaction. You need:
 
@@ -514,7 +514,7 @@ void test_backpressure_under_overload() {
 
 **Deadline expiration tests.** Inject items with short deadlines and a slow processing stage. Verify that expired items are dropped and counted, not processed.
 
-### 9.11.2 Tooling
+### 12.11.2 Tooling
 
 **ThreadSanitizer (TSan).** Run saturation tests under TSan. Pipeline code is heavily concurrent, and the interaction between condition variables, atomics, and shared state is where data races hide. TSan will catch races on the `closed_` flag, unsynchronized access to metrics counters, and incorrect memory ordering on the in-flight counter.
 
@@ -524,7 +524,7 @@ void test_backpressure_under_overload() {
 
 **Latency histograms.** Log per-item latency (ingress timestamp to egress timestamp) and plot the distribution. Under healthy load, the histogram is tight. Under overload without backpressure, it develops a long tail. Under overload with backpressure and admission control, the tail is bounded but some items are rejected. The histogram shape tells you which regime you are in.
 
-## 9.12 Review Checklist
+## 12.12 Review Checklist
 
 When reviewing pipeline code, verify:
 

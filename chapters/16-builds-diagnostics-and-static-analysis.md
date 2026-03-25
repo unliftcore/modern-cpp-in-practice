@@ -1,10 +1,10 @@
-# Chapter 13: Builds, Diagnostics, and Static Analysis
+# Chapter 16: Builds, Diagnostics, and Static Analysis
 
 > **Prerequisites:** None beyond Part I foundations. The techniques here apply regardless of concurrency model, data layout, or API surface. If your team ships C++ in any form, this chapter is relevant now.
 
 ---
 
-## 13.1 The Production Problem
+## 16.1 The Production Problem
 
 A C++ codebase of modest size — a few hundred translation units, a handful of third-party dependencies — can quietly accumulate build configuration debt that manifests as three distinct operational costs:
 
@@ -18,7 +18,7 @@ These are not hypothetical. They are the default trajectory of any C++ project w
 
 ---
 
-## 13.2 The Naive Approach
+## 16.2 The Naive Approach
 
 Most teams start with a build configuration that "works" — meaning it produces a binary — and add flags reactively. The pattern is familiar:
 
@@ -59,9 +59,9 @@ A third failure mode: no static analysis in CI, or static analysis configured so
 
 ---
 
-## 13.3 Build Graph Discipline
+## 16.3 Build Graph Discipline
 
-### 13.3.1 Targets, Not Global Flags
+### 16.3.1 Targets, Not Global Flags
 
 Modern CMake (3.15+) provides the right abstraction: compile options belong on targets, not in global scope. This is not a style preference. It is how you prevent a flag intended for your application code from silently altering the behavior of a vendored dependency.
 
@@ -124,7 +124,7 @@ target_include_directories(third_party_json SYSTEM INTERFACE
 
 The `SYSTEM` keyword tells the compiler to treat the include path as a system header directory. GCC and Clang suppress most warnings for system headers. MSVC requires `/external:I` and `/external:W0` (available since 17.0), which CMake handles via `SYSTEM` on sufficiently recent versions.
 
-### 13.3.2 Warnings as Errors — When and Where
+### 16.3.2 Warnings as Errors — When and Where
 
 `-Werror` (GCC/Clang) and `/WX` (MSVC) are valuable in CI because they prevent warning ratchet: new code cannot introduce warnings that pass silently. But applying them globally during development creates friction. The practical split:
 
@@ -146,11 +146,11 @@ endif()
 
 ---
 
-## 13.4 Compiler Diagnostics Worth Understanding
+## 16.4 Compiler Diagnostics Worth Understanding
 
 Not all warnings are equal. Some flags catch real bugs with near-zero false positive rates. Others generate noise. The following flags earn their cost on virtually every codebase. All are supported by GCC 14+, Clang 18+, or both.
 
-### 13.4.1 High-Value, Low-Noise
+### 16.4.1 High-Value, Low-Noise
 
 | Flag | What it catches |
 |------|----------------|
@@ -161,7 +161,7 @@ Not all warnings are equal. Some flags catch real bugs with near-zero false posi
 | `-Wnull-dereference` | Paths where the compiler can prove a null pointer is dereferenced. Limited scope, but zero false positives in practice. |
 | `-Woverloaded-virtual` | A derived class declares a function that hides (rather than overrides) a base virtual function. |
 
-### 13.4.2 Worth Enabling Selectively
+### 16.4.2 Worth Enabling Selectively
 
 | Flag | Tradeoff |
 |------|----------|
@@ -169,7 +169,7 @@ Not all warnings are equal. Some flags catch real bugs with near-zero false posi
 | `-Wcast-align` | Flags casts that increase alignment requirements. Relevant on ARM. Noisy on x86 where misaligned access is merely slow, not trapping. |
 | `-Wlifetime` (Clang) | Experimental lifetime analysis. Catches some use-after-free patterns at compile time. Not yet stable enough for `-Werror`. |
 
-### 13.4.3 MSVC-Specific Considerations
+### 16.4.3 MSVC-Specific Considerations
 
 MSVC's `/W4` is roughly comparable to `-Wall -Wextra` on GCC/Clang, but the overlap is imperfect. Key MSVC warnings to enable explicitly:
 
@@ -182,9 +182,9 @@ The `/analyze` flag enables MSVC's built-in static analysis, which is separate f
 
 ---
 
-## 13.5 Link-Time Configuration
+## 16.5 Link-Time Configuration
 
-### 13.5.1 LTO and Its Build-Time Cost
+### 16.5.1 LTO and Its Build-Time Cost
 
 Link-time optimization (LTO) enables cross-translation-unit inlining, dead code elimination, and devirtualization. In production builds, it regularly delivers 5-15% throughput improvement for compute-bound workloads. The cost is link time — often 2-5x longer — and memory consumption that can exceed 16 GB for large projects.
 
@@ -208,7 +208,7 @@ endif()
 
 LTO interacts with debugging. Debug info generated at compile time may not survive the LTO link step intact. If your debugger shows mangled or missing frames in LTO builds, the usual fix is `-fno-lto` for debug configurations or using split DWARF (`-gsplit-dwarf`) to keep debug info manageable.
 
-### 13.5.2 Sanitizer Builds as Link-Time Decisions
+### 16.5.2 Sanitizer Builds as Link-Time Decisions
 
 Sanitizer instrumentation (AddressSanitizer, UndefinedBehaviorSanitizer, ThreadSanitizer) must be consistent across all translation units and the link step. Mixing sanitized and unsanitized object files produces false negatives or outright crashes.
 
@@ -227,11 +227,11 @@ Note: AddressSanitizer and ThreadSanitizer cannot coexist in the same binary. Th
 
 ---
 
-## 13.6 Static Analysis in Practice
+## 16.6 Static Analysis in Practice
 
 Static analysis is not a substitute for compiler warnings or sanitizers. It occupies a different niche: it reasons about paths and states that span multiple functions, which the compiler's warning pass generally cannot. The cost is analysis time and false positive management.
 
-### 13.6.1 Clang-Tidy
+### 16.6.1 Clang-Tidy
 
 Clang-Tidy is the most widely adopted C++ linter. It runs Clang's AST matchers and path-sensitive analysis passes against your code. The default check set is too broad for production use — it includes style checks, naming convention enforcement, and modernization suggestions alongside actual bug detection. Curate your configuration.
 
@@ -291,7 +291,7 @@ run-clang-tidy -p build/ -j$(nproc) \
     'src/.*\.cpp$'
 ```
 
-### 13.6.2 Clang Static Analyzer (scan-build)
+### 16.6.2 Clang Static Analyzer (scan-build)
 
 The Clang Static Analyzer performs deeper path-sensitive analysis than clang-tidy's `clang-analyzer-*` checks. It models memory state across branches and loops to find leaks, use-after-free, and uninitialized reads. The tradeoff is analysis time — 3-10x slower than a normal build — and a higher false positive rate on complex control flow.
 
@@ -306,7 +306,7 @@ scan-build --use-cc=clang --use-c++=clang++ \
     cmake --build build/
 ```
 
-### 13.6.3 MSVC `/analyze`
+### 16.6.3 MSVC `/analyze`
 
 MSVC's built-in analyzer is invoked with `/analyze` and supports SAL (Source Annotation Language) annotations that express preconditions, postconditions, and buffer sizes:
 
@@ -322,7 +322,7 @@ void process_buffer(
 
 Without SAL annotations, `/analyze` operates in a best-effort mode that produces more false positives. If your codebase targets MSVC, adding SAL to boundary functions (public APIs, I/O entry points, allocation wrappers) gives the analyzer enough information to be useful.
 
-### 13.6.4 Cppcheck
+### 16.6.4 Cppcheck
 
 Cppcheck is an independent static analyzer (not Clang-based) that catches a different set of defects: out-of-bounds access, integer overflow, null pointer issues after failed allocation checks, and misuse of STL APIs. It is lighter-weight than clang-tidy and can run on code that does not have a full Clang compilation database.
 
@@ -336,7 +336,7 @@ cppcheck --enable=warning,performance,portability \
 
 `--inline-suppr` allows targeted suppression in source via `// cppcheck-suppress` comments. This is preferable to global suppressions because reviewers can see the justification.
 
-### 13.6.5 Integrating Analysis into CI Without Drowning in Noise
+### 16.6.5 Integrating Analysis into CI Without Drowning in Noise
 
 The operational mistake teams make with static analysis is enabling everything and then ignoring the output. A better approach:
 
@@ -356,9 +356,9 @@ auto* reg = reinterpret_cast<volatile uint32_t*>(0x4000'0000);
 
 ---
 
-## 13.7 Build Reproducibility and Diagnostic Stability
+## 16.7 Build Reproducibility and Diagnostic Stability
 
-### 13.7.1 Pinning Toolchain Versions
+### 16.7.1 Pinning Toolchain Versions
 
 Compiler upgrades add new warnings, change diagnostic text, and occasionally alter overload resolution or template instantiation behavior. A build that is clean on GCC 14.1 may produce warnings on GCC 14.2. In CI, pin the compiler version:
 
@@ -374,7 +374,7 @@ RUN apt-get update && apt-get install -y \
 
 Run a separate scheduled job (weekly or monthly) with the latest toolchain to detect upcoming issues before they become urgent.
 
-### 13.7.2 Compilation Database Consistency
+### 16.7.2 Compilation Database Consistency
 
 Tools that consume `compile_commands.json` — clang-tidy, clangd, cppcheck when configured for it — depend on that file being accurate. Common failure modes:
 
@@ -386,7 +386,7 @@ The simplest fix: generate the compilation database in the same CMake configure 
 
 ---
 
-## 13.8 Tradeoffs and Boundaries
+## 16.8 Tradeoffs and Boundaries
 
 **Warning strictness vs. onboarding friction.** A codebase with `-Werror` and fifty enabled warning flags is hostile to new contributors who are used to looser settings. Mitigation: document the warning policy, provide a one-command developer build, and make sure the error messages from the warnings are clear enough to act on.
 
@@ -398,9 +398,9 @@ The simplest fix: generate the compilation database in the same CMake configure 
 
 ---
 
-## 13.9 Testing and Tooling Implications
+## 16.9 Testing and Tooling Implications
 
-The build configuration decisions in this chapter directly affect what Chapter 14 (testing, fuzzing, sanitizers) can accomplish:
+The build configuration decisions in this chapter directly affect what Chapter 17 (testing, fuzzing, sanitizers) can accomplish:
 
 - **Sanitizer builds require global flag consistency.** If your build system applies sanitizer flags per-target rather than globally, you will get incomplete instrumentation and confusing results.
 - **Fuzzing targets need compilation databases.** Coverage-guided fuzzers (libFuzzer, AFL++) depend on instrumentation flags (`-fsanitize=fuzzer-no-link`, `-fprofile-instr-generate`) being applied correctly.
@@ -409,7 +409,7 @@ The build configuration decisions in this chapter directly affect what Chapter 1
 
 ---
 
-## 13.10 Review Checklist
+## 16.10 Review Checklist
 
 Use this during code review and build system changes:
 

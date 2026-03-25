@@ -1,4 +1,4 @@
-# Chapter 5: Interfaces, APIs, and Dependency Direction
+# Chapter 7: Interfaces, APIs, and Dependency Direction
 
 *Prerequisites: Chapters 1–2 (ownership and failure policy must be stable before interface shape can be evaluated).*
 
@@ -6,7 +6,7 @@
 >
 > You should also be comfortable with value semantics and invariant design (Chapter 3) and have at least passing familiarity with concepts and constrained templates (Chapter 4), since both arise when designing customization points.
 
-## 5.1 The Production Problem
+## 7.1 The Production Problem
 
 Large C++ systems do not usually fail because individual functions are wrong. They fail because interfaces between components encode too many assumptions, expose too much internal structure, or point dependencies in a direction that makes future change expensive.
 
@@ -21,9 +21,9 @@ These are not language bugs. They are design decisions that seemed harmless loca
 
 The core tension is between **expressiveness** and **commitment**. Every type, parameter, or return value in a public interface is a promise. The more you expose, the more you promise. The art is exposing enough capability for callers to do their work without committing to representation, policy, or lifetime details that belong on the other side of the wall.
 
-## 5.2 The Naive and Legacy Approach
+## 7.2 The Naive and Legacy Approach
 
-### 5.2.1 God headers and transitive coupling
+### 7.2.1 God headers and transitive coupling
 
 A common legacy pattern is the "convenience header" that re-exports everything:
 
@@ -55,7 +55,7 @@ ServiceContext& get_global_context();
 
 The cost is not just compile time — though that is bad enough. The cost is that any change to the cache eviction policy, the metrics library, or the config representation requires touching every translation unit that includes this header. The internal decision has become a system-wide constraint.
 
-### 5.2.2 Stringly-typed and void-pointer interfaces
+### 7.2.2 Stringly-typed and void-pointer interfaces
 
 Legacy C++ and C-interop APIs often collapse type information to avoid header dependencies:
 
@@ -71,7 +71,7 @@ public:
 
 This avoids coupling to concrete types, but at the cost of type safety, lifetime clarity, and debuggability. The `void*` context has no owner, no destructor, and no way for a code reviewer to verify correctness without reading the implementation of every callback. The `event_data` pointer has no schema; misinterpreting its layout is a silent corruption bug.
 
-### 5.2.3 Dependency arrows that point the wrong way
+### 7.2.3 Dependency arrows that point the wrong way
 
 A subtler failure mode is when low-level components depend on high-level policy:
 
@@ -92,9 +92,9 @@ public:
 
 The rate limiter cannot be tested without constructing the full application configuration. It cannot be reused in another service. It cannot be compiled independently. The dependency arrow points from the general to the specific, which is backwards.
 
-## 5.3 The Modern C++ Approach
+## 7.3 The Modern C++ Approach
 
-### 5.3.1 Principle: narrow interfaces, wide implementations
+### 7.3.1 Principle: narrow interfaces, wide implementations
 
 A good interface exposes *what* a component can do, not *how* it does it or *what* it depends on. In C++ terms, this means:
 
@@ -104,7 +104,7 @@ A good interface exposes *what* a component can do, not *how* it does it or *wha
 
 3. **Headers expose the interface; sources own the implementation.** Use forward declarations, the Pimpl idiom, or abstract base classes to keep implementation types out of public headers.
 
-### 5.3.2 Designing function signatures
+### 7.3.2 Designing function signatures
 
 A function signature is a contract. Every parameter type, every qualifier, every default argument is a commitment. Here is a concrete example: a component that parses a document from a byte buffer.
 
@@ -138,7 +138,7 @@ void set_error_handler(Handler&& handler);
 
 The tradeoff is real: the template version cannot be hidden behind a compilation firewall, and it generates per-instantiation code. Use `std::function` (or `std::move_only_function` in C++23 when the callable is non-copyable) at stable binary boundaries. Use constrained templates at internal boundaries where compile-time cost is acceptable and runtime cost is not.
 
-### 5.3.3 Hiding implementation: the Pimpl pattern in modern C++
+### 7.3.3 Hiding implementation: the Pimpl pattern in modern C++
 
 The Pimpl (pointer to implementation) idiom moves private members behind an opaque pointer, so the public header contains only the interface:
 
@@ -258,7 +258,7 @@ The header includes only `<memory>`, `<expected>`, `<cstdint>`, and `<string_vie
 
 **Cost of Pimpl:** Every method call goes through a pointer indirection. Construction requires a heap allocation. Move operations are cheap (pointer swap), but copies are deleted or must be explicitly deep-copied. For hot-path, small objects, Pimpl is the wrong tradeoff. For boundary types that are constructed infrequently and crossed by meaningful operations, the compilation firewall is worth the indirection.
 
-### 5.3.4 Abstract interfaces for dependency inversion
+### 7.3.4 Abstract interfaces for dependency inversion
 
 When a component needs a capability that could have multiple implementations — storage backends, transport layers, clock sources — use an abstract base class to define the contract and inject the implementation:
 
@@ -309,7 +309,7 @@ class RateLimiter {
 
 This eliminates virtual dispatch but makes `RateLimiter` a template, which means its implementation must be visible in the header (or explicitly instantiated), it generates code per instantiation, and it cannot be hidden behind a stable ABI. Choose virtual interfaces when the boundary is between separately compiled components. Choose templates when the boundary is within a single library and you need to eliminate dispatch overhead.
 
-### 5.3.5 Span, string_view, and non-owning vocabulary types
+### 7.3.5 Span, string_view, and non-owning vocabulary types
 
 Non-owning view types are the primary tool for decoupling an interface from the caller's storage decisions:
 
@@ -335,7 +335,7 @@ struct Request {
 
 If the struct must store the data, store `std::string`. If it borrows the data and the lifetime is architecturally bounded (e.g., within a single request-processing scope), document the invariant explicitly and consider `[[clang::lifetimebound]]` where your toolchain supports it so the compiler can help detect escaped views.
 
-### 5.3.6 Customization points: hidden friends and tag_invoke
+### 7.3.6 Customization points: hidden friends and tag_invoke
 
 When designing an extensible interface — a serialization framework, a hashing protocol, a formatting customization — the question is how third-party types opt in. The modern C++ approach is to use hidden friends (friend functions defined inside the class body) or a `tag_invoke`-style customization point object.
 
@@ -377,9 +377,9 @@ The advantage over a virtual interface is that the type does not inherit from an
 
 **C++26 note:** `std::tag_invoke` was proposed but not accepted into the standard. The customization point object pattern shown above remains the practical idiom. If your codebase uses a `tag_invoke` library (e.g., from stdexec/P2300), it works the same way.
 
-## 5.4 Tradeoffs and Boundaries
+## 7.4 Tradeoffs and Boundaries
 
-### 5.4.1 Pimpl vs. abstract base class vs. template
+### 7.4.1 Pimpl vs. abstract base class vs. template
 
 | Concern | Pimpl | Abstract base | Template |
 |---|---|---|---|
@@ -392,7 +392,7 @@ The advantage over a virtual interface is that the type does not inherit from an
 
 There is no single winner. A production codebase will use all three, at different boundaries, for different reasons. The decision heuristic: if the boundary is between teams or binaries, prefer Pimpl or abstract base classes. If the boundary is within a module and performance matters, prefer templates. If you need to mock the dependency in tests, abstract base classes give you the seam naturally; Pimpl requires an additional injection mechanism.
 
-### 5.4.2 When not to add an interface
+### 7.4.2 When not to add an interface
 
 Not every function call needs a seam. Introducing an abstract interface for something that has exactly one implementation and no plausible second one adds indirection, a vtable, a header, and a mock that exists only to satisfy test infrastructure. The cost is real: more types to maintain, more allocations, more cognitive load in reviews.
 
@@ -405,7 +405,7 @@ Add an interface boundary when:
 
 Do not add an interface boundary when the only justification is "we might need it someday." Speculative abstraction ages as badly as speculative optimization.
 
-### 5.4.3 The Dependency Rule
+### 7.4.3 The Dependency Rule
 
 Dependencies should point from volatile (high-churn, application-specific) code toward stable (low-churn, general-purpose) code. In a layered system:
 
@@ -417,9 +417,9 @@ Every arrow points toward greater stability. A domain interface should never inc
 
 In C++ the enforcement mechanism is header inclusion. If `util/rate_limiter.h` includes `app/config.h`, the dependency is real regardless of what the architecture diagram says. Tooling such as `include-what-you-use`, or build systems that enforce layered visibility (Bazel's `visibility` attribute, CMake's `PRIVATE`/`PUBLIC`/`INTERFACE` link dependencies), catches violations mechanically.
 
-## 5.5 Testing and Tooling Implications
+## 7.5 Testing and Tooling Implications
 
-### 5.5.1 Testing through interfaces
+### 7.5.1 Testing through interfaces
 
 Abstract interfaces give you the injection seam. A test constructs a fake implementation and passes it to the component under test:
 
@@ -453,7 +453,7 @@ TEST(RateLimiterTest, RespectsLimit) {
 
 The test runs in microseconds, requires no network, no configuration file, and no real clock. This is only possible because the rate limiter depends on abstractions (Clock, MetricSink) rather than on concrete application types.
 
-### 5.5.2 Compile-time dependency auditing
+### 7.5.2 Compile-time dependency auditing
 
 Three tools catch interface violations before they become technical debt:
 
@@ -463,7 +463,7 @@ Three tools catch interface violations before they become technical debt:
 
 3. **Header self-containment checks:** Every public header should compile on its own. A CI step that compiles each header in isolation (a "header compile test") catches missing includes and undeclared dependencies.
 
-### 5.5.3 API surface linting
+### 7.5.3 API surface linting
 
 Clang-tidy checks relevant to interface design:
 
@@ -474,7 +474,7 @@ Clang-tidy checks relevant to interface design:
 
 These are not style preferences. Each check catches a class of interface defect that is difficult to find in review and expensive to fix after consumers depend on the signature.
 
-## 5.6 Review Checklist
+## 7.6 Review Checklist
 
 Use this checklist when reviewing code that defines or modifies a public interface.
 

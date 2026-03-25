@@ -1,10 +1,10 @@
-# Chapter 10: Data Structures, Layout, and Memory Behavior
+# Chapter 13: Data Structures, Layout, and Memory Behavior
 
-*Prerequisites: Chapter 1 (ownership-aware layout) and Chapter 3 (value semantics determine copy and move cost).*
+*Prerequisites: Chapter 1 (ownership-aware layout), Chapter 3 (value semantics determine copy and move cost), and Chapter 6 (spans and views as non-owning access).*
 
 High-level design decisions often hide low-level costs until the system reaches real scale. A `std::map` chosen for convenience in a prototype survives into production, where it becomes millions of scattered heap nodes touched on every request. A flat array of polymorphic pointers seems cache-friendly until the virtual dispatch at each element destroys the branch predictor. These failures share a root cause: the data structure was chosen to match the API shape rather than the workload shape.
 
-This chapter covers container choice, representation tradeoffs, ownership-aware data layout, and how memory behavior interacts with cache locality, traversal patterns, and update frequency. The focus is on selecting structures that fit the workload — the "what and why" of data representation. When a container choice is also an API contract (exposing iterators, constraining element lifetime, or promising contiguous storage), that boundary implication is part of the analysis. Chapter 11 picks up where this one ends: measuring whether the choices actually deliver.
+This chapter covers container choice, representation tradeoffs, ownership-aware data layout, and how memory behavior interacts with cache locality, traversal patterns, and update frequency. The focus is on selecting structures that fit the workload — the "what and why" of data representation. When a container choice is also an API contract (exposing iterators, constraining element lifetime, or promising contiguous storage), that boundary implication is part of the analysis. Chapter 14 picks up where this one ends: measuring whether the choices actually deliver.
 
 ---
 
@@ -12,7 +12,7 @@ This chapter covers container choice, representation tradeoffs, ownership-aware 
 
 ---
 
-## 10.1 The Production Problem
+## 13.1 The Production Problem
 
 A trading analytics service maintains an order book per instrument. The initial implementation used `std::map<OrderId, Order>` for fast lookup and `std::list<Order*>` for price-level iteration. Under light load, latency was acceptable. At 50,000 instruments with frequent updates, the service missed SLA targets by 3x. Profiling showed the dominant cost was not computation — it was memory access. Every map lookup chased a tree of heap-allocated nodes. Every price-level traversal walked a linked list whose nodes were scattered across the heap. The CPU spent more time waiting for cache lines than doing useful work.
 
@@ -22,11 +22,11 @@ This pattern recurs across domains. The container that matches the abstract data
 
 ---
 
-## 10.2 The Naive Approach: Choosing Containers by Abstract Interface
+## 13.2 The Naive Approach: Choosing Containers by Abstract Interface
 
 The standard library names its containers after abstract data types: `map`, `set`, `list`, `deque`. This naming encourages a selection process that starts from the wrong question — "what abstract operations do I need?" — instead of "what does my workload actually do to this data?"
 
-### 10.2.1 Anti-pattern: Node-based containers as default
+### 13.2.1 Anti-pattern: Node-based containers as default
 
 ```cpp
 // Anti-pattern: choosing std::map because the problem is "key-value lookup"
@@ -50,7 +50,7 @@ struct SessionCache {
 
 This code is correct. It has logarithmic lookup, ordered iteration, and safe erasure during traversal. On a machine with 200ns main-memory latency and 1ns L1 latency, the constant factor hiding behind O(log n) is the dominant cost once n exceeds a few thousand entries.
 
-### 10.2.2 Anti-pattern: `std::list` for "I need stable iterators"
+### 13.2.2 Anti-pattern: `std::list` for "I need stable iterators"
 
 ```cpp
 // Anti-pattern: using std::list because "elements must not move"
@@ -69,9 +69,9 @@ The stated requirement — stable element addresses — is real, but `std::list`
 
 ---
 
-## 10.3 Modern Approach: Workload-Driven Container Selection
+## 13.3 Modern Approach: Workload-Driven Container Selection
 
-### 10.3.1 Start from the access pattern
+### 13.3.1 Start from the access pattern
 
 Before choosing a container, answer these questions about the workload:
 
@@ -84,7 +84,7 @@ Before choosing a container, answer these questions about the workload:
 
 These questions determine the container, not the abstract data type.
 
-### 10.3.2 Contiguous storage as the default
+### 13.3.2 Contiguous storage as the default
 
 For most workloads, `std::vector` is the right starting point. Contiguous storage means sequential reads are prefilled by the hardware prefetcher, iteration touches minimal cache lines, and the allocator is invoked infrequently (amortized O(1) push_back). Even for "lookup by key" workloads, a sorted vector with binary search often outperforms `std::map` for collections under ~100,000 elements, because the cache behavior dominates the log-factor difference.
 
@@ -119,7 +119,7 @@ struct SessionCache {
 
 The insert is O(n) due to element shifting. For a read-heavy workload with infrequent mutations, this is a net win over `std::map` because every lookup and every scan runs at memory-bus speed instead of pointer-chasing speed.
 
-### 10.3.3 `std::flat_map` and `std::flat_set` (C++23)
+### 13.3.3 `std::flat_map` and `std::flat_set` (C++23)
 
 C++23 codifies the sorted-vector pattern with `std::flat_map` and `std::flat_set`. These adaptors store keys and values in separate contiguous sequences, giving you associative-container semantics with contiguous-storage performance.
 
@@ -142,7 +142,7 @@ Key properties of `std::flat_map`:
 
 Use `std::flat_map` when the read-to-write ratio is high, the collection fits comfortably in cache (tens of thousands of entries or fewer with small keys), and you do not need stable iterators or references.
 
-### 10.3.4 When you actually need node-based containers
+### 13.3.4 When you actually need node-based containers
 
 Node-based containers (`std::map`, `std::set`, `std::unordered_map`, `std::unordered_set`, `std::list`) are the right choice under specific constraints:
 
@@ -151,7 +151,7 @@ Node-based containers (`std::map`, `std::set`, `std::unordered_map`, `std::unord
 - **Interleaved mutation and iteration.** If you must erase elements during iteration and the erase pattern is sparse, `std::map::erase` returning the next iterator is ergonomic and correct.
 - **Hash-table performance.** `std::unordered_map` is node-based in most implementations, but its O(1) average lookup is worth the scattered memory when lookup dominates and elements are expensive to move. For small-element, lookup-heavy workloads, consider open-addressing alternatives (Abseil's `flat_hash_map`, Boost's `unordered_flat_map` in Boost 1.81+).
 
-### 10.3.5 Separation of hot and cold data
+### 13.3.5 Separation of hot and cold data
 
 A common mistake is storing all fields of an object in a single structure, then putting those structures in a vector. If the hot path reads only two fields out of twelve, every cache line loaded carries ten fields of waste.
 
@@ -204,7 +204,7 @@ struct InstrumentStore {
 
 This is a data-oriented design pattern sometimes called "struct of arrays" (SoA). The tradeoff is coupling: you must maintain the invariant that both vectors are the same size and indexed consistently. The benefit is that hot-path iteration over pricing touches only pricing cache lines, fitting 2–3x more elements per line than the combined struct. The cost is that SoA only helps when the hot path touches a subset of fields. If the hot path usually reads all fields of one logical element together, array-of-structs is often faster because related data already lands in the same cache line.
 
-### 10.3.6 Object pools and arena patterns
+### 13.3.6 Object pools and arena patterns
 
 When the workload creates and destroys many short-lived objects of the same type, per-object allocation becomes a bottleneck. An object pool or arena pre-allocates a block and hands out slots.
 
@@ -262,9 +262,9 @@ public:
 
 The pool returns handles rather than raw pointers. Handles are stable identifiers that survive pool growth (new blocks do not move existing blocks), and they can be validated — a freed slot can be detected by checking the occupancy bitset. This is the pattern referenced in Section 3.4: returning handles instead of pointers lets you decouple element identity from element address.
 
-Pools are not free. They add a layer of indirection (handle → pointer), they require manual lifetime discipline (the pool does not call destructors automatically in this minimal sketch), and they complicate debugging. Use them when allocation profiling (Chapter 11) shows that per-object `new`/`delete` is a measurable cost.
+Pools are not free. They add a layer of indirection (handle → pointer), they require manual lifetime discipline (the pool does not call destructors automatically in this minimal sketch), and they complicate debugging. Use them when allocation profiling (Chapter 14) shows that per-object `new`/`delete` is a measurable cost.
 
-### 10.3.7 `std::pmr` and memory resources
+### 13.3.7 `std::pmr` and memory resources
 
 C++17 introduced `std::pmr::polymorphic_allocator` and a set of memory resource classes. C++23 codebases should consider `std::pmr` containers when:
 
@@ -295,7 +295,7 @@ void process_request(std::span<const std::byte> payload) {
 
 `std::pmr::monotonic_buffer_resource` is particularly effective for parse-process-discard workloads: it never frees individual allocations, so deallocation is a no-op, and the entire buffer is released at scope exit. The tradeoff is that you must ensure nothing retains a pointer into the arena after the resource is destroyed — an ownership constraint that Chapter 1's principles directly address.
 
-### 10.3.8 Small-buffer optimization and inline storage
+### 13.3.8 Small-buffer optimization and inline storage
 
 Many standard library implementations apply small-buffer optimization (SBO) to `std::string` and `std::function`. The principle generalizes: if most instances are small, store them inline to avoid heap allocation entirely.
 
@@ -313,7 +313,140 @@ using Message = std::variant<
 
 `std::variant` gives you tagged-union semantics with inline storage for all alternatives. If one alternative is disproportionately large, wrap it in `std::unique_ptr` to keep the variant small. This preserves value semantics for the common case while paying heap cost only for the uncommon case.
 
-### 10.3.9 Container choice as API contract
+### 13.3.9 `std::mdspan`: Zero-overhead multidimensional views (C++23)
+
+Contiguous storage is the foundation of cache-friendly data access, but many production workloads operate on logically multidimensional data — images (rows x columns x channels), matrices, sensor grids, simulation meshes. Before C++23, accessing such data meant either manual index arithmetic (error-prone, hard to read) or wrapper classes that each project reinvented. `std::mdspan` solves this: it is a non-owning, zero-overhead multidimensional view over contiguous storage, analogous to how `std::span` provides a one-dimensional view.
+
+```cpp
+#include <mdspan>
+#include <vector>
+
+// A 1080p RGB image stored as a flat vector
+std::vector<std::uint8_t> pixels(1920 * 1080 * 3);
+
+// View the same memory as a 3D array: [row][col][channel]
+auto image = std::mdspan(pixels.data(),
+    std::extents<std::size_t, 1080, 1920, 3>{});
+
+// Access is bounds-checked in debug, zero-overhead in release
+image[540, 960, 0] = 255;  // set red channel of center pixel
+image[540, 960, 1] = 0;    // green
+image[540, 960, 2] = 0;    // blue
+```
+
+`std::mdspan` does not own memory. It is a view type — a pointer plus extents plus a layout mapping. The owning container (`std::vector`, a `std::pmr` container, a raw allocation, or mapped memory) lives elsewhere. This separation of storage ownership from access shape is the key design insight.
+
+**Layout policies** control how multidimensional indices map to linear offsets:
+
+- **`std::layout_right`** (the default): row-major order. The rightmost index varies fastest. This is the C/C++ array convention and is optimal when the inner loop iterates over the last dimension (e.g., iterating across columns within a row, or across channels within a pixel).
+- **`std::layout_left`**: column-major order. The leftmost index varies fastest. This is the Fortran/MATLAB convention and is optimal for column-oriented access patterns or interoperating with Fortran libraries.
+- **`std::layout_stride`**: each dimension has an explicit stride. Use this when the view represents a subregion of a larger allocation (e.g., a tile within an image), when rows are padded for SIMD alignment, or when interoperating with external libraries that use non-standard strides.
+
+```cpp
+// Row-major (default) — iterating across columns is fast
+auto row_major = std::mdspan<float, std::dextents<std::size_t, 2>,
+                             std::layout_right>(data, rows, cols);
+
+// Column-major — iterating down rows is fast
+auto col_major = std::mdspan<float, std::dextents<std::size_t, 2>,
+                             std::layout_left>(data, rows, cols);
+
+// Strided — a 100x100 subregion of a 1920-wide image
+std::array<std::size_t, 2> strides{1920, 1};  // row stride, col stride
+auto tile = std::mdspan<float, std::dextents<std::size_t, 2>,
+                        std::layout_stride>(
+    data + start_row * 1920 + start_col,
+    std::layout_stride::mapping<std::dextents<std::size_t, 2>>(
+        std::dextents<std::size_t, 2>(100, 100), strides));
+```
+
+**Custom accessors** let you transform element access without modifying storage. The accessor policy controls how the pointer-plus-offset is converted to a reference. The default (`std::default_accessor`) simply dereferences the pointer. A custom accessor can apply scaling, unit conversion, or atomic access:
+
+```cpp
+// Accessor that scales every read by a constant factor
+template <typename T>
+struct ScaledAccessor {
+    using element_type = T;
+    using reference = T;              // returns by value (the scaled result)
+    using data_handle_type = const T*;
+    using offset_policy = ScaledAccessor;
+
+    T scale_factor;
+
+    constexpr reference access(data_handle_type p, std::size_t i) const noexcept {
+        return p[i] * scale_factor;
+    }
+    constexpr data_handle_type offset(data_handle_type p, std::size_t i) const noexcept {
+        return p + i;
+    }
+};
+
+// View raw sensor data as already-calibrated values
+std::vector<float> raw_adc(sensor_rows * sensor_cols);
+auto calibrated = std::mdspan<const float, std::dextents<std::size_t, 2>,
+                              std::layout_right, ScaledAccessor<float>>(
+    raw_adc.data(), sensor_rows, sensor_cols,
+    ScaledAccessor<float>{.scale_factor = 0.00489f});  // ADC to volts
+
+float voltage = calibrated[row, col];  // scaled on read, no copy of data
+```
+
+**Production use cases.** `std::mdspan` is not an academic curiosity; it addresses real production patterns:
+
+- **Image processing.** View pixel buffers as `[height][width][channels]` without index arithmetic. Switch between planar (channels as outermost dimension) and interleaved (channels as innermost) layouts by changing the layout policy, not the processing code.
+- **Matrix operations.** Dense linear algebra on row-major or column-major storage, interoperating with BLAS/LAPACK libraries that expect specific layouts.
+- **Scientific and simulation data.** 3D grids, time-series of 2D fields, multi-variable datasets — all map naturally to `mdspan` with appropriate extents.
+- **Sensor arrays.** Hardware sensor grids (LiDAR, camera arrays, antenna arrays) produce data in fixed-size multidimensional layouts. `mdspan` provides type-safe access with zero runtime cost.
+
+**`mdspan` as an API boundary type.** One of the strongest uses of `mdspan` is at function boundaries. A function that operates on 2D data can accept an `mdspan` instead of a raw pointer plus dimensions:
+
+```cpp
+// Before: raw pointer, manual dimensions, no layout safety
+void blur(const float* input, float* output,
+          std::size_t rows, std::size_t cols, std::size_t stride);
+
+// After: self-describing, layout-aware, zero-copy
+void blur(std::mdspan<const float, std::dextents<std::size_t, 2>> input,
+          std::mdspan<float, std::dextents<std::size_t, 2>> output);
+```
+
+The `mdspan` version carries its dimensions and layout intrinsically. Callers cannot accidentally swap rows and columns, pass the wrong stride, or forget a dimension. The function can query `input.extent(0)` and `input.extent(1)` instead of relying on separately-passed integers. If both row-major and column-major callers exist, the function can be templated on the layout policy:
+
+```cpp
+template <typename Layout>
+void blur(std::mdspan<const float, std::dextents<std::size_t, 2>, Layout> input,
+          std::mdspan<float, std::dextents<std::size_t, 2>, Layout> output);
+```
+
+**Interaction with owning containers.** `mdspan` is always non-owning. The backing storage must outlive the `mdspan`, just as with `std::span`. A common pattern is a `std::vector` as the owning store with `mdspan` as the access interface:
+
+```cpp
+class Matrix {
+    std::vector<double> storage_;
+    std::size_t rows_;
+    std::size_t cols_;
+
+public:
+    Matrix(std::size_t r, std::size_t c)
+        : storage_(r * c), rows_(r), cols_(c) {}
+
+    auto view() {
+        return std::mdspan(storage_.data(),
+            std::extents<std::size_t, std::dynamic_extent,
+                         std::dynamic_extent>(rows_, cols_));
+    }
+
+    auto view() const {
+        return std::mdspan(std::as_const(storage_).data(),
+            std::extents<std::size_t, std::dynamic_extent,
+                         std::dynamic_extent>(rows_, cols_));
+    }
+};
+```
+
+This preserves the ownership model from Chapter 1 — the `Matrix` owns the storage, and `mdspan` views are borrowed references that must not outlive it. The same pattern works with `std::pmr::vector` for arena-backed multidimensional data, or with `std::unique_ptr<T[]>` for fixed-size allocations.
+
+### 13.3.10 Container choice as API contract
 
 When a container type appears in a public interface, it becomes a contract. Callers may depend on:
 
@@ -341,9 +474,9 @@ private:
 
 ---
 
-## 10.4 Tradeoffs and Boundaries
+## 13.4 Tradeoffs and Boundaries
 
-### 10.4.1 Contiguous vs. node-based
+### 13.4.1 Contiguous vs. node-based
 
 | Property | `std::vector` / `std::flat_map` | `std::map` / `std::list` |
 |---|---|---|
@@ -353,7 +486,7 @@ private:
 | Memory overhead per element | Zero (plus amortized slack) | 2–3 pointers per node |
 | Allocator pressure | Rare, bulk | Frequent, per-node |
 
-### 10.4.2 Sorted vector vs. `std::flat_map`
+### 13.4.2 Sorted vector vs. `std::flat_map`
 
 `std::flat_map` is a standardized sorted-vector adaptor. It is not always superior to a hand-rolled sorted vector:
 
@@ -361,21 +494,21 @@ private:
 - If your values are large, the separation is a benefit: key-only binary search touches fewer cache lines.
 - If your values are small and always accessed with their keys, a single `std::vector<std::pair<K,V>>` may be faster.
 
-Profile before committing to either layout. Chapter 11 covers how.
+Profile before committing to either layout. Chapter 14 covers how.
 
-### 10.4.3 SoA vs. AoS
+### 13.4.3 SoA vs. AoS
 
 Struct-of-arrays improves cache utilization when the hot path touches a subset of fields. It degrades when the hot path touches many fields of the same element, because each field access hits a different array (and potentially a different cache line). Measure the actual access pattern before splitting.
 
-### 10.4.4 Pool allocation vs. general allocator
+### 13.4.4 Pool allocation vs. general allocator
 
 Object pools reduce allocation latency and fragmentation, but they introduce handle-based indirection, complicate debugging (addresses are less meaningful), and require careful destruction discipline. Reserve pools for workloads where profiling confirms that allocation is a top-five cost.
 
 ---
 
-## 10.5 Testing and Tooling Implications
+## 13.5 Testing and Tooling Implications
 
-### 10.5.1 Correctness testing with address sanitizer
+### 13.5.1 Correctness testing with address sanitizer
 
 Any container migration — especially from node-based to contiguous — risks introducing use-after-move, dangling reference, or iterator invalidation bugs. Compile and run tests with AddressSanitizer (`-fsanitize=address`) to catch:
 
@@ -383,7 +516,7 @@ Any container migration — especially from node-based to contiguous — risks i
 - Use of a reference into a `std::flat_map` after insertion.
 - Reads from a `std::pmr` container after the memory resource is destroyed.
 
-### 10.5.2 Verifying layout assumptions
+### 13.5.2 Verifying layout assumptions
 
 Use `static_assert` to enforce size and alignment expectations:
 
@@ -400,7 +533,7 @@ static_assert(alignof(InstrumentPricing) <= alignof(std::max_align_t),
 
 These assertions catch silent regressions when someone adds a field or changes a type.
 
-### 10.5.3 Allocation-aware testing
+### 13.5.3 Allocation-aware testing
 
 Wrap tests in a custom `std::pmr::memory_resource` that counts allocations:
 
@@ -440,7 +573,7 @@ EXPECT_EQ(counter.count(), 1u);  // single allocation from reserve()
 
 This technique makes allocation behavior a testable property, not an assumption. If a refactor introduces unexpected allocations, the test fails.
 
-### 10.5.4 Iterator invalidation as a test category
+### 13.5.4 Iterator invalidation as a test category
 
 For any container exposed through an interface, write explicit tests for the invalidation contract:
 
@@ -460,7 +593,7 @@ These tests encode the stability promises your API makes. When you change the un
 
 ---
 
-## 10.6 Review Checklist
+## 13.6 Review Checklist
 
 Use this checklist when reviewing code that introduces or modifies a data structure:
 

@@ -1,8 +1,8 @@
-# Chapter 7: Shared State, Synchronization, and Contention
+# Chapter 9: Shared State, Synchronization, and Contention
 
-> **Prerequisites:** This chapter requires the ownership model from Chapter 1 and the value-semantics discussion from Chapter 3. Sharing state across threads is an ownership decision: if you cannot articulate who owns a piece of data, adding a mutex does not fix the problem — it hides it behind a lock. Value semantics determine what can be copied into thread-local scope and what must remain shared. Readers should also be comfortable with the interface boundary ideas from Chapter 5, since the synchronization surface of a component is part of its public contract.
+> **Prerequisites:** This chapter requires the ownership model from Chapter 1 and the value-semantics discussion from Chapter 3. Sharing state across threads is an ownership decision: if you cannot articulate who owns a piece of data, adding a mutex does not fix the problem — it hides it behind a lock. Value semantics determine what can be copied into thread-local scope and what must remain shared. Readers should also be comfortable with the interface boundary ideas from Chapter 7, since the synchronization surface of a component is part of its public contract.
 
-## 7.1 The Production Problem
+## 9.1 The Production Problem
 
 Most concurrency bugs in shipped C++ are not exotic. They fall into a small number of categories:
 
@@ -16,11 +16,11 @@ These failures share a common root: the code does not state, in a way reviewable
 
 ---
 
-## 7.2 The Naive Approach: Mutexes Everywhere, Reasoning Nowhere
+## 9.2 The Naive Approach: Mutexes Everywhere, Reasoning Nowhere
 
 The reflexive response to a data race report is to wrap the offending access in a `std::mutex`. This works locally and scales poorly.
 
-### 7.2.1 Anti-pattern: The God Mutex
+### 9.2.1 Anti-pattern: The God Mutex
 
 ```cpp
 // Anti-pattern: single mutex guarding unrelated state
@@ -48,7 +48,7 @@ Three unrelated data fields share one mutex. The hot path (session lookup and in
 
 The deeper issue: this design encodes no information about which invariants the mutex protects. The lock "protects everything," which means a reviewer cannot tell whether a new field added later needs the same lock, a different lock, or no lock at all.
 
-### 7.2.2 Anti-pattern: Lock-and-Forget Composition
+### 9.2.2 Anti-pattern: Lock-and-Forget Composition
 
 ```cpp
 // Anti-pattern: holding a lock while calling user-provided code
@@ -70,11 +70,11 @@ Calling unknown code under a lock invites re-entrance and lock-order violations.
 
 ---
 
-## 7.3 Modern C++ Approach: Bounded Sharing with Explicit Invariants
+## 9.3 Modern C++ Approach: Bounded Sharing with Explicit Invariants
 
 The goal is a design where shared state is visible, bounded, and reviewable. Three principles guide the approach.
 
-### 7.3.1 Principle 1: Minimize What Is Shared
+### 9.3.1 Principle 1: Minimize What Is Shared
 
 The cheapest synchronization is the one you eliminate. When a value can be copied into a thread's local scope, do that instead of sharing.
 
@@ -98,7 +98,7 @@ void run_pricing_loop(PricingConfig config, /* ... */) {
 
 Value semantics (Chapter 3) make this viable. If `PricingConfig` were a polymorphic base class held by pointer, copying it safely would require a clone protocol and careful lifetime management. Flat value types copy trivially.
 
-### 7.3.2 Principle 2: Protect Invariants, Not Fields
+### 9.3.2 Principle 2: Protect Invariants, Not Fields
 
 A mutex should guard a named invariant, not "all the members." Document the invariant in the code, not in a wiki that drifts.
 
@@ -130,7 +130,7 @@ public:
 
 Two mutexes, two invariants, zero interaction between them. A reviewer can verify each invariant in isolation. If a new method needs both locks, that is a design signal — either the invariants are coupled and should merge, or the method is doing too much.
 
-### 7.3.3 Principle 3: Publish Immutable Snapshots
+### 9.3.3 Principle 3: Publish Immutable Snapshots
 
 For data that is read far more often than it is written, the read-copy-update pattern avoids holding a lock on the read path entirely.
 
@@ -156,7 +156,7 @@ public:
 
 Tradeoff: each update allocates. If updates are infrequent (configuration changes, periodic recalculation), the allocation is negligible. If updates are per-message, the allocation pressure can dominate, and a different strategy — such as a seqlock or epoch-based reclamation — becomes necessary.
 
-### 7.3.4 Scoped Locking and `std::scoped_lock`
+### 9.3.4 Scoped Locking and `std::scoped_lock`
 
 When multiple locks must be held simultaneously, `std::scoped_lock` uses a deadlock-avoidance algorithm internally (equivalent to `std::lock`):
 
@@ -170,7 +170,7 @@ void transfer(Account& from, Account& to, Amount amt) {
 
 This eliminates manual lock ordering for the specific case of acquiring multiple locks at once. It does not help when locks are acquired at different points in a call chain — that requires a documented lock hierarchy.
 
-### 7.3.5 `std::shared_mutex` for Read-Heavy Workloads
+### 9.3.5 `std::shared_mutex` for Read-Heavy Workloads
 
 When most accesses are reads and writes are infrequent, `std::shared_mutex` allows concurrent readers:
 
@@ -198,11 +198,11 @@ public:
 
 ---
 
-## 7.4 Atomics and Memory Ordering
+## 9.4 Atomics and Memory Ordering
 
 Atomics are not a replacement for mutexes. They protect individual variables; mutexes protect invariants spanning multiple variables. Reaching for atomics to avoid "the cost of a mutex" without understanding the memory-ordering contract is a common source of subtle bugs that pass every test and fail in production under high core counts.
 
-### 7.4.1 The Ordering Spectrum
+### 9.4.1 The Ordering Spectrum
 
 | Order | Guarantees | Typical Use |
 |---|---|---|
@@ -210,7 +210,7 @@ Atomics are not a replacement for mutexes. They protect individual variables; mu
 | `memory_order_acquire` / `release` | A release-store is visible to a subsequent acquire-load, and all writes before the release are visible after the acquire. | Flag-based signaling, publication of initialized data. |
 | `memory_order_seq_cst` | Total order across all `seq_cst` operations on all threads. | Default. Use when reasoning about weaker orders is not worth the risk. |
 
-### 7.4.2 Anti-pattern: Relaxed Ordering on a Flag
+### 9.4.2 Anti-pattern: Relaxed Ordering on a Flag
 
 ```cpp
 // Anti-pattern: relaxed flag guarding non-atomic data
@@ -253,7 +253,7 @@ struct SharedWork {
 
 The acquire-release pair guarantees that all writes before the `release` store are visible to the thread that observes `true` via the `acquire` load.
 
-### 7.4.3 When `seq_cst` Is the Right Default
+### 9.4.3 When `seq_cst` Is the Right Default
 
 `memory_order_seq_cst` is the default for `std::atomic` operations because it provides the strongest guarantees. Weakening the order is an optimization. Like all optimizations, it requires evidence that the stronger order is actually a bottleneck and that the weaker order is correct. In practice, `seq_cst` is rarely the bottleneck; the bottleneck is usually contention on the cache line itself, which no memory order eliminates.
 
@@ -261,7 +261,7 @@ Use `relaxed` for statistics counters and approximate metrics. Use `acquire`/`re
 
 ---
 
-## 7.5 Condition Variables and Waiting
+## 9.5 Condition Variables and Waiting
 
 Raw spin loops waste CPU. `std::condition_variable` is the standard mechanism for blocking until a predicate holds.
 
@@ -298,7 +298,7 @@ public:
 
 Key discipline: always pass a predicate to `wait()`. The two-argument form (`wait(lock, predicate)`) re-checks the condition on spurious wakeups. The one-argument form without a predicate is a bug waiting to happen.
 
-### 7.5.1 `std::stop_token` Integration (C++20)
+### 9.5.1 `std::stop_token` Integration (C++20)
 
 For cancellable waits, `std::condition_variable_any` accepts a `std::stop_token`:
 
@@ -316,7 +316,7 @@ This avoids the pattern of polling a separate cancellation flag inside a loop an
 
 ---
 
-## 7.6 Thread Lifecycle and `std::jthread`
+## 9.6 Thread Lifecycle and `std::jthread`
 
 `std::thread` has a destructive edge: if a `std::thread` object is destroyed while still joinable, `std::terminate` is called. In exception paths and early returns, this creates landmines.
 
@@ -345,9 +345,9 @@ Prefer `std::jthread` over `std::thread` in all new code. The only reason to use
 
 ---
 
-## 7.7 Tradeoffs and Boundaries
+## 9.7 Tradeoffs and Boundaries
 
-### 7.7.1 Mutex vs. Atomic vs. Lock-Free
+### 9.7.1 Mutex vs. Atomic vs. Lock-Free
 
 The decision is not "mutexes are slow, atomics are fast." The decision depends on what you are protecting:
 
@@ -355,11 +355,11 @@ The decision is not "mutexes are slow, atomics are fast." The decision depends o
 - **Multiple fields that form a single invariant:** A mutex is appropriate. Attempting to protect a multi-field invariant with multiple atomics introduces ordering bugs that are nearly impossible to test.
 - **Lock-free data structures:** Appropriate when you have measured contention, rejected simpler alternatives, and are prepared to invest heavily in verification. Writing a correct lock-free queue is harder than writing a correct mutex-based queue and harder to maintain. Use a proven library (such as Folly's `MPMCQueue`, Boost.Lockfree, or libcds) rather than writing your own.
 
-### 7.7.2 `std::shared_mutex` vs. `std::mutex`
+### 9.7.2 `std::shared_mutex` vs. `std::mutex`
 
 `std::shared_mutex` wins only when the reader-to-writer ratio is high (roughly 10:1 or more) and the critical section is long enough that reader serialization is measurable. For short critical sections — a handful of map lookups — an uncontended `std::mutex` is often faster because `std::shared_mutex` has higher per-operation overhead on most implementations.
 
-### 7.7.3 False Sharing
+### 9.7.3 False Sharing
 
 Atomics and mutexes that live on the same cache line contend even when they protect unrelated state:
 
@@ -385,7 +385,7 @@ struct Counters {
 
 `std::hardware_destructive_interference_size` (C++17) gives the L1 cache line size. On most x86 platforms this is 64 bytes; on Apple Silicon it is 128. If your implementation does not provide it, use a platform-specific constant.
 
-### 7.7.4 Contention Under Skew
+### 9.7.4 Contention Under Skew
 
 Real workloads are rarely uniform. A single hot key in a sharded map, a burst of writes to a usually-read-heavy config, a shutdown sequence that takes a lock held by every in-flight request — skewed access patterns are where synchronization designs actually fail.
 
@@ -397,9 +397,9 @@ Design for the worst observed contention, not the average. This means:
 
 ---
 
-## 7.8 Testing and Tooling Implications
+## 9.8 Testing and Tooling Implications
 
-### 7.8.1 ThreadSanitizer (TSan)
+### 9.8.1 ThreadSanitizer (TSan)
 
 TSan detects data races at runtime. It is the single most effective tool for finding concurrency bugs in C++ and should run in CI on every commit.
 
@@ -417,13 +417,13 @@ Caveats:
 - It does not prove the absence of races — only the absence of races on the paths that were exercised.
 - Mixing TSan with other sanitizers (particularly MSan) in the same binary is not supported.
 
-### 7.8.2 Deadlock Detection
+### 9.8.2 Deadlock Detection
 
 TSan includes a lock-order inversion detector. Clang's `-fsanitize=thread` reports potential deadlocks even when they do not manifest during the test run, based on observed lock-acquisition graphs.
 
 For runtime deadlock detection in production, some teams instrument `std::mutex` wrappers that record acquisition order and assert consistency. This is worth the effort in systems with more than a handful of mutexes.
 
-### 7.8.3 Stress Testing and Nondeterminism
+### 9.8.3 Stress Testing and Nondeterminism
 
 Concurrency bugs depend on scheduling. A test that passes 99 times and fails on the 100th is not flaky — it is detecting a real race with low probability.
 
@@ -434,7 +434,7 @@ Strategies:
 - **Use `CHESS`-style model checkers** (such as CDSChecker or Relacy) for critical lock-free algorithms. These systematically explore interleavings rather than relying on scheduling luck.
 - **Run TSan tests repeatedly in CI.** A single pass provides moderate confidence; 10–50 repetitions under TSan provide substantially more.
 
-### 7.8.4 Observability
+### 9.8.4 Observability
 
 Concurrency problems are diagnosed after the fact when they cannot be reproduced. Build observability into the synchronization layer:
 
@@ -444,7 +444,7 @@ Concurrency problems are diagnosed after the fact when they cannot be reproduced
 
 ---
 
-## 7.9 Putting It Together: A Concurrent Cache
+## 9.9 Putting It Together: A Concurrent Cache
 
 The following example applies the principles from this chapter to a realistic component: a thread-safe LRU cache for a service that resolves user profiles.
 
@@ -525,7 +525,7 @@ For higher throughput under heavy read load, a sharded design (multiple `Profile
 
 ---
 
-## 7.10 Review Checklist
+## 9.10 Review Checklist
 
 Use this checklist during code review for any change that introduces or modifies shared mutable state.
 
