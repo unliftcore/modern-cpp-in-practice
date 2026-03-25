@@ -1,0 +1,29 @@
+[book]
+title = "Modern C++ in Production"
+authors = ["Qiao Wang"]
+language = "en"
+src = "chapters"
+description = "A production handbook for modern C++. Ownership, interfaces, failure handling, concurrency, performance, tooling, and long-term maintainability."
+
+[build]
+build-dir = "site"
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/qiaowan/modern-cpp"
+edit-url-template = "https://github.com/qiaowan/modern-cpp/edit/main/chapters/{path}"
+no-section-label = false
+additional-css = ["theme/custom.css"]
+
+[output.html.search]
+enable = true
+limit-results = 20
+boost-hierarchy = 2
+
+[output.html.print]
+enable = true
+
+[output.html.fold]
+enable = true
+level = 1

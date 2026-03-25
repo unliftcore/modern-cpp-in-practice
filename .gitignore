@@ -1,6 +1,2 @@
-build/
-dist/
-out/
-.worktrees/
-Thumbs.db
-*.tmp
+# mdBook build output
+site/
