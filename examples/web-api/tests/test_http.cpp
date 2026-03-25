@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-#include "webapi/http.hpp"
+import webapi.http;
 
 void test_parse_method() {
     assert(webapi::http::parse_method("GET") == webapi::http::Method::GET);

@@ -1,28 +1,30 @@
-#pragma once
 // ============================================================================
-// error.hpp — Failure representation (Ch 3: Errors & Results)
+// error.cppm — Failure representation (Ch 3: Errors & Results)
 //
 // "Distinguish failure from absence. Use std::expected for recoverable
 //  errors and std::optional for ordinary absence."
 //
 // C++23 features used:
-//   • std::expected<T, E>     — typed, recoverable failure
-//   • std::unexpected          — construct error values
-//   • std::variant             — closed set of error categories
-//   • std::format              — structured error messages
-//   • std::string_view         — non-owning string borrowing
-//   • [[nodiscard]]            — prevent silent error dropping
-//   • constexpr                — compile-time error code lookup
+//   • C++20 modules (Ch 11)       — named module interface unit
+//   • std::expected<T, E>         — typed, recoverable failure
+//   • std::unexpected              — construct error values
+//   • std::format                  — structured error messages
+//   • std::string_view             — non-owning string borrowing
+//   • [[nodiscard]]                — prevent silent error dropping
+//   • constexpr                    — compile-time error code lookup
 // ============================================================================
+module;
 
+// Global module fragment: standard headers used by the exported interface
 #include <cstdint>
 #include <expected>
 #include <format>
 #include <string>
 #include <string_view>
-#include <variant>
 
-namespace webapi {
+export module webapi.error;
+
+export namespace webapi {
 
 // ── Error codes (closed set via enum class) ─────────────────────────────────
 enum class ErrorCode : std::uint8_t {

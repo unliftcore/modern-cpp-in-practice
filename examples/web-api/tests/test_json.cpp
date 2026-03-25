@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "webapi/json.hpp"
-#include "webapi/task.hpp"
+import webapi.json;
+import webapi.task;
 
 void test_extract_string_field() {
     auto result = webapi::json::extract_string_field(

@@ -1,6 +1,5 @@
-#pragma once
 // ============================================================================
-// http.hpp — Minimal HTTP types & TCP server (Ch 1, 9, 14)
+// http.cppm — Minimal HTTP types & TCP server (Ch 1, 9, 14)
 //
 // Ch 1:  "Resources extend beyond memory: sockets, FDs, metrics."
 // Ch 9:  "Make interfaces narrow — accept only what you need."
@@ -10,6 +9,7 @@
 //       would use a battle-tested library (Boost.Beast, etc.).
 //
 // C++23 features used:
+//   • C++20 modules (Ch 11)          — named module with POSIX in GMF
 //   • std::string_view              — non-owning header/body access
 //   • std::format                   — response formatting
 //   • std::optional                 — missing headers
@@ -18,9 +18,16 @@
 //   • enum class                    — HTTP method as closed set
 //   • [[nodiscard]]                 — prevent silent drops
 // ============================================================================
+module;
 
+// Global module fragment: standard + POSIX headers
+// (POSIX headers must appear here, not in the module purview)
 #include <algorithm>
+#include <array>
+#include <atomic>
 #include <cerrno>
+#include <chrono>
+#include <cstdint>
 #include <cstring>
 #include <format>
 #include <functional>
@@ -38,7 +45,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-namespace webapi::http {
+export module webapi.http;
+
+export namespace webapi::http {
 
 // ── HTTP Method (closed set — Ch 3) ─────────────────────────────────────────
 enum class Method : std::uint8_t {
@@ -283,6 +292,25 @@ public:
         }
 
         std::cout << "Server shutting down gracefully\n";
+    }
+
+    // Run the server on a jthread, blocking until the stop predicate fires.
+    // Ch 14: jthread + stop_token for cooperative cancellation.
+    //
+    // The jthread lives inside this method so that all stop_source/stop_token
+    // instantiation happens within the module — avoiding a known libc++ 20
+    // linker issue with __atomic_unique_lock visibility in consumer TUs.
+    void run_until(const std::atomic<bool>& should_stop) {
+        std::jthread server_thread{[this](std::stop_token st) {
+            run(st);
+        }};
+
+        // Poll the external stop flag and forward to the jthread's stop_source
+        while (!should_stop.load(std::memory_order_acquire)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        server_thread.request_stop();
+        // jthread auto-joins on destruction
     }
 
 private:

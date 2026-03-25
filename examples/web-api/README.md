@@ -6,8 +6,10 @@ and following the best practices from every part of the book.
 ## Quick Start
 
 ```bash
-# Configure (requires GCC 13+ or Clang 18+)
-cmake -B build -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Debug
+# Configure (requires Clang 20+, libc++ 20+, CMake 3.28+, Ninja)
+cmake -G Ninja -B build \
+    -DCMAKE_CXX_COMPILER=clang++-20 \
+    -DCMAKE_BUILD_TYPE=Debug
 
 # Build
 cmake --build build
@@ -20,6 +22,12 @@ cd build && ctest --output-on-failure
 ```
 
 The server listens on **port 8080**. Press `Ctrl+C` for graceful shutdown.
+
+> **Note:** This example uses C++20 modules (`export module`, `import`).
+> Clang with libc++ currently has the best module support. GCC's module
+> implementation has known issues with standard library headers in the
+> global module fragment. The focus is on demonstrating the syntax and
+> architecture — not on cross-compiler portability.
 
 ## API Endpoints
 
@@ -57,35 +65,34 @@ curl -X DELETE http://localhost:8080/tasks/1
 
 | Feature | Where | Chapter |
 |---------|-------|---------|
-| `std::expected<T, E>` | `error.hpp`, `repository.hpp`, `handlers.hpp` | Ch 3 |
-| `std::unexpected` | `error.hpp` | Ch 3 |
-| `std::optional<T>` | `task.hpp`, `repository.hpp`, `http.hpp`, `json.hpp` | Ch 5 |
+| C++20 modules (`export module`, `import`) | All `.cppm` files, `main.cpp`, tests | Ch 11 |
+| `std::expected<T, E>` | `error.cppm`, `repository.cppm`, `handlers.cppm` | Ch 3 |
+| `std::unexpected` | `error.cppm` | Ch 3 |
+| `std::optional<T>` | `task.cppm`, `repository.cppm`, `http.cppm`, `json.cppm` | Ch 5 |
 | `std::string_view` | Throughout — parameter passing, header lookup | Ch 4, 5 |
 | `std::format` | All response construction, error messages, logging | Ch 5 |
-| `std::variant` | Error code enum + detail (closed set of failures) | Ch 3 |
-| Concepts (`concept`, `requires`) | `json.hpp`, `repository.hpp`, `middleware.hpp` | Ch 6 |
-| `std::ranges` / `std::views` | `repository.hpp` filter/transform, `json.hpp` serialize | Ch 7 |
-| `constexpr` / `consteval` | `error.hpp` HTTP status mapping, `http.hpp` method parsing | Ch 8 |
-| `std::jthread` / `std::stop_token` | `main.cpp`, `http.hpp` server loop | Ch 14 |
-| `std::stop_source` / `std::stop_callback` | `main.cpp` signal-to-thread forwarding | Ch 14 |
+| Concepts (`concept`, `requires`) | `json.cppm`, `repository.cppm`, `middleware.cppm` | Ch 6 |
+| `std::ranges` / `std::views` | `repository.cppm` filter/transform, `json.cppm` serialize | Ch 7 |
+| `constexpr` / `consteval` | `error.cppm` HTTP status mapping, `http.cppm` method parsing | Ch 8 |
+| `std::jthread` / `std::stop_token` | `http.cppm` server loop, `main.cpp` shutdown | Ch 14 |
 | `[[nodiscard]]` | All error-bearing returns | Ch 3, 9 |
 | Designated initializers | `Task{}`, `Response{}`, `Request{}` construction | Ch 2 |
 | `operator<=>` (spaceship) | `Task` defaulted three-way comparison | Ch 2 |
-| `std::shared_mutex` / `std::shared_lock` | `repository.hpp` reader-writer concurrency | Ch 12 |
+| `std::shared_mutex` / `std::shared_lock` | `repository.cppm` reader-writer concurrency | Ch 12 |
 | RAII | `Socket` wrapper, `jthread` auto-join, `scoped_lock` | Ch 1 |
 | Move semantics | `Socket` move-only, handler composition | Ch 1 |
-| `std::from_chars` | `handlers.hpp` path parameter parsing | Ch 5 |
-| `starts_with` | `router.hpp` prefix matching, `http.hpp` | C++20/23 |
-| `std::function` (type erasure) | `middleware.hpp`, `router.hpp` handler storage | Ch 10 |
-| Range-based `for` with structured bindings | `http.hpp` header iteration | Ch 5 |
-| `std::atomic` | `repository.hpp` ID generation | Ch 12 |
+| `std::from_chars` | `handlers.cppm` path parameter parsing | Ch 5 |
+| `starts_with` | `router.cppm` prefix matching, `http.cppm` | C++20/23 |
+| `std::function` (type erasure) | `middleware.cppm`, `router.cppm` handler storage | Ch 10 |
+| Range-based `for` with structured bindings | `http.cppm` header iteration | Ch 5 |
+| `std::atomic` | `repository.cppm` ID generation | Ch 12 |
 
 ## Architecture & Best Practices
 
 ### Layered Design (Ch 9, 22)
 
 ```
-main.cpp          — Wire layers, manage shutdown
+main.cpp          — Wire layers, manage shutdown (import declarations)
   ├── handlers    — Translate HTTP ↔ domain (error boundary)
   ├── repository  — Thread-safe domain storage
   ├── task        — Domain value type with invariants
@@ -94,71 +101,101 @@ main.cpp          — Wire layers, manage shutdown
   └── http        — Minimal TCP server + request/response types
 ```
 
+### Module Structure
+
+Each layer is a named module (`export module webapi.<name>`). Consumers use
+`import webapi.<name>` — no include paths, no header guards, no transitive
+header pollution.
+
+```
+src/modules/
+  ├── error.cppm       → export module webapi.error
+  ├── json.cppm        → export module webapi.json
+  ├── task.cppm        → export module webapi.task      (imports error, json)
+  ├── http.cppm        → export module webapi.http
+  ├── repository.cppm  → export module webapi.repository (imports error, task)
+  ├── router.cppm      → export module webapi.router     (imports http)
+  ├── middleware.cppm   → export module webapi.middleware (imports http)
+  └── handlers.cppm    → export module webapi.handlers   (imports all above)
+```
+
 ### Key Design Decisions
 
-1. **Ownership is visible in types** (Ch 1): `Socket` is move-only, `jthread` auto-joins,
-   `scoped_lock` guards scope.
+1. **Modules replace headers** (Ch 11): Each `.cppm` file is a self-contained
+   module interface unit. Standard library headers appear in the global module
+   fragment; POSIX headers are isolated there too.
 
-2. **Values, not entities** (Ch 2): `Task` has defaulted `<=>`, is copyable, and
-   carries no hidden identity.
+2. **Ownership is visible in types** (Ch 1): `Socket` is move-only, `jthread`
+   auto-joins, `scoped_lock` guards scope.
 
-3. **Errors are typed** (Ch 3): `Result<T> = std::expected<T, Error>`. Every failure
-   path returns an `Error` with code + detail. `[[nodiscard]]` prevents ignoring them.
+3. **Values, not entities** (Ch 2): `Task` has defaulted `<=>`, is copyable,
+   and carries no hidden identity.
 
-4. **Parameters match intent** (Ch 4): Borrowed data uses `std::string_view`,
+4. **Errors are typed** (Ch 3): `Result<T> = std::expected<T, Error>`. Every
+   failure path returns an `Error` with code + detail. `[[nodiscard]]` prevents
+   ignoring them.
+
+5. **Parameters match intent** (Ch 4): Borrowed data uses `std::string_view`,
    owned data uses `std::string`, callables are constrained by concepts.
 
-5. **Concepts at boundaries** (Ch 6): `JsonSerializable`, `JsonDeserializable`,
+6. **Concepts at boundaries** (Ch 6): `JsonSerializable`, `JsonDeserializable`,
    `TaskUpdater` constrain template parameters with named requirements.
 
-6. **Ranges for queries** (Ch 7): `find_completed()` uses `std::views::filter`,
+7. **Ranges for queries** (Ch 7): `find_completed()` uses `std::views::filter`,
    `serialize_array()` iterates any `input_range`.
 
-7. **Compile-time where possible** (Ch 8): HTTP status mapping and method parsing
-   are `constexpr`. Concept satisfaction is `static_assert`-ed.
+8. **Compile-time where possible** (Ch 8): HTTP status mapping and method
+   parsing are `constexpr`. Concept satisfaction is `static_assert`-ed.
 
-8. **Middleware via composition** (Ch 10): Type-erased `std::function` handlers
+9. **Middleware via composition** (Ch 10): Type-erased `std::function` handlers
    compose without inheritance.
 
-9. **Thread safety via RAII locks** (Ch 12): `shared_mutex` with `shared_lock`
-   for reads, `scoped_lock` for writes.
+10. **Thread safety via RAII locks** (Ch 12): `shared_mutex` with `shared_lock`
+    for reads, `scoped_lock` for writes.
 
-10. **Graceful shutdown** (Ch 14): `std::jthread` + `std::stop_token` +
-    `std::stop_callback` chain from signal to server loop.
+11. **Graceful shutdown** (Ch 14): `std::jthread` + `std::stop_token` for
+    cooperative cancellation inside the server loop.
 
 ## Build Variants (Appendix B)
 
 ```bash
 # Debug (default)
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -G Ninja -B build -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_BUILD_TYPE=Debug
 
 # With AddressSanitizer + UBSan
-cmake -B build-asan -DENABLE_ASAN=ON -DCMAKE_BUILD_TYPE=Debug
+cmake -G Ninja -B build-asan -DCMAKE_CXX_COMPILER=clang++-20 -DENABLE_ASAN=ON -DCMAKE_BUILD_TYPE=Debug
 
 # With ThreadSanitizer
-cmake -B build-tsan -DENABLE_TSAN=ON -DCMAKE_BUILD_TYPE=Debug
+cmake -G Ninja -B build-tsan -DCMAKE_CXX_COMPILER=clang++-20 -DENABLE_TSAN=ON -DCMAKE_BUILD_TYPE=Debug
 
 # Release with symbols
-cmake -B build-rel -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake -G Ninja -B build-rel -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_BUILD_TYPE=RelWithDebInfo
 ```
+
+## Requirements
+
+- **Clang 18+** (tested with Clang 20)
+- **libc++ 20** headers and runtime (`libc++-20-dev`, `libc++abi-20-dev`)
+- **CMake 3.28+** (for `FILE_SET CXX_MODULES` support)
+- **Ninja** generator (required for CMake module dependency scanning)
 
 ## Project Structure
 
 ```
 examples/web-api/
-├── CMakeLists.txt                 # Build system (C++23, warnings, sanitizers)
+├── CMakeLists.txt                 # Build system (C++23, modules, warnings, sanitizers)
 ├── README.md                      # This file
-├── include/webapi/
-│   ├── error.hpp                  # Error types — std::expected, std::variant
-│   ├── json.hpp                   # JSON utils — concepts, ranges
-│   ├── task.hpp                   # Domain model — value semantics, validation
-│   ├── repository.hpp             # Storage — thread-safe, RAII locks, ranges
-│   ├── http.hpp                   # HTTP types — RAII sockets, jthread server
-│   ├── middleware.hpp             # Pipeline — type erasure, composition
-│   ├── handlers.hpp               # Route handlers — error boundary translation
-│   └── router.hpp                 # Routing — pattern matching, dispatch
 ├── src/
-│   └── main.cpp                   # Entry point — wiring, shutdown, jthread
+│   ├── modules/
+│   │   ├── error.cppm             # Error types — std::expected, constexpr
+│   │   ├── json.cppm              # JSON utils — concepts, ranges
+│   │   ├── task.cppm              # Domain model — value semantics, validation
+│   │   ├── repository.cppm        # Storage — thread-safe, RAII locks, ranges
+│   │   ├── http.cppm              # HTTP types — RAII sockets, jthread server
+│   │   ├── middleware.cppm        # Pipeline — type erasure, composition
+│   │   ├── handlers.cppm          # Route handlers — error boundary translation
+│   │   └── router.cppm            # Routing — pattern matching, dispatch
+│   └── main.cpp                   # Entry point — wiring, shutdown, import decls
 └── tests/
     ├── CMakeLists.txt
     ├── test_task.cpp              # Domain model tests

@@ -7,7 +7,8 @@
 #include <iostream>
 #include <string>
 
-#include "webapi/task.hpp"
+import webapi.error;
+import webapi.task;
 
 void test_task_validation_accepts_valid() {
     auto result = webapi::Task::validate(webapi::Task{

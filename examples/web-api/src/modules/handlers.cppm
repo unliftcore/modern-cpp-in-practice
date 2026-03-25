@@ -1,12 +1,12 @@
-#pragma once
 // ============================================================================
-// handlers.hpp — HTTP request handlers (Ch 4, 9, 22)
+// handlers.cppm — HTTP request handlers (Ch 4, 9, 22)
 //
 // Ch 4:  "Accept parameters by the cheapest form that preserves intent."
 // Ch 9:  "Translate domain errors at the boundary."
 // Ch 22: "Building Services — wire layers, manage shutdown."
 //
 // C++23 features used:
+//   • C++20 modules (Ch 11)       — named module with multi-module imports
 //   • std::expected + monadic ops  — error propagation (and_then/transform)
 //   • std::optional                — absence handling
 //   • std::string_view             — borrowing path params
@@ -15,6 +15,7 @@
 //   • [[nodiscard]]                — prevent silent drops
 //   • Structured bindings          — destructure results
 // ============================================================================
+module;
 
 #include <charconv>
 #include <cstdint>
@@ -22,13 +23,15 @@
 #include <string>
 #include <string_view>
 
-#include "error.hpp"
-#include "http.hpp"
-#include "json.hpp"
-#include "repository.hpp"
-#include "task.hpp"
+export module webapi.handlers;
 
-namespace webapi::handlers {
+import webapi.error;
+import webapi.http;
+import webapi.json;
+import webapi.repository;
+import webapi.task;
+
+export namespace webapi::handlers {
 
 // ── Helper: parse numeric path parameter (Ch 3: error at boundary) ──────────
 [[nodiscard]] inline Result<TaskId>

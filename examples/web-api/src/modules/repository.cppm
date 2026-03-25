@@ -1,12 +1,12 @@
-#pragma once
 // ============================================================================
-// repository.hpp — Thread-safe in-memory store (Ch 1, 12, 15)
+// repository.cppm — Thread-safe in-memory store (Ch 1, 12, 15)
 //
 // Ch 1:  "RAII composes with exceptions, early returns, and scope."
 // Ch 12: "Shared state must protect invariants, not just fields."
 // Ch 15: "Contiguous storage is the default; prove alternatives."
 //
 // C++23 features used:
+//   • C++20 modules (Ch 11)               — named module with imports
 //   • std::shared_mutex / std::shared_lock — reader-writer locking
 //   • std::scoped_lock                    — RAII lock acquisition
 //   • std::expected / std::optional       — typed failure & absence
@@ -15,11 +15,13 @@
 //   • [[nodiscard]]                       — prevent silent drops
 //   • Concepts (requires)                 — constrain update callable
 // ============================================================================
+module;
 
 #include <algorithm>
 #include <atomic>
 #include <concepts>
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -28,10 +30,12 @@
 #include <string_view>
 #include <vector>
 
-#include "error.hpp"
-#include "task.hpp"
+export module webapi.repository;
 
-namespace webapi {
+import webapi.error;
+import webapi.task;
+
+export namespace webapi {
 
 // ── Concept for update functions (Ch 6: constrain callables) ────────────────
 template <typename F>

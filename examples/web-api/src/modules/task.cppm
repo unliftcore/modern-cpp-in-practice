@@ -1,12 +1,12 @@
-#pragma once
 // ============================================================================
-// task.hpp — Domain model with value semantics (Ch 2: Values & Identity)
+// task.cppm — Domain model with value semantics (Ch 2: Values & Identity)
 //
 // "If two objects with the same field values are interchangeable, the type
 //  is a value. Make it regular: copyable, equality-comparable, orderable
 //  if that makes domain sense."
 //
 // C++23 features used:
+//   • C++20 modules (Ch 11)         — named module with inter-module imports
 //   • Designated initializers       — readable construction
 //   • std::string, std::string_view — owned vs. borrowed text
 //   • std::optional                 — ordinary absence
@@ -17,6 +17,7 @@
 //   • operator<=>                   — defaulted three-way comparison
 //   • Concepts (JsonSerializable / JsonDeserializable satisfaction)
 // ============================================================================
+module;
 
 #include <cstdint>
 #include <format>
@@ -24,10 +25,12 @@
 #include <string>
 #include <string_view>
 
-#include "error.hpp"
-#include "json.hpp"
+export module webapi.task;
 
-namespace webapi {
+import webapi.error;
+import webapi.json;
+
+export namespace webapi {
 
 // ── Unique identifier (Ch 2: "identity needs an address or a key") ──────────
 using TaskId = std::uint64_t;

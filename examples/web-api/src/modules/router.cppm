@@ -1,12 +1,11 @@
-#pragma once
 // ============================================================================
-// router.hpp — HTTP request routing (Ch 9: Interface Design)
+// router.cppm — HTTP request routing (Ch 9: Interface Design)
 //
 // "Make interfaces narrow — accept only what you need."
 // "A good interface says what it does, not how."
 //
 // C++23 features used:
-//   • std::variant                  — route match result as closed set
+//   • C++20 modules (Ch 11)         — named module with imports
 //   • std::string_view              — non-owning pattern matching
 //   • std::vector + ranges          — route table scan
 //   • std::function                 — type-erased handlers
@@ -14,6 +13,7 @@
 //   • [[nodiscard]]                 — prevent silent drops
 //   • Designated initializers       — readable route registration
 // ============================================================================
+module;
 
 #include <format>
 #include <functional>
@@ -22,9 +22,11 @@
 #include <variant>
 #include <vector>
 
-#include "http.hpp"
+export module webapi.router;
 
-namespace webapi {
+import webapi.http;
+
+export namespace webapi {
 
 // ── Route entry ─────────────────────────────────────────────────────────────
 struct Route {

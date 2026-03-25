@@ -1,6 +1,5 @@
-#pragma once
 // ============================================================================
-// middleware.hpp — Request pipeline with type erasure (Ch 10)
+// middleware.cppm — Request pipeline with type erasure (Ch 10)
 //
 // Ch 10: "Type erasure lets you compose behaviors without inheritance
 //         hierarchies. Store what an object does, not what it is."
@@ -9,6 +8,7 @@
 // without coupling middleware implementations to each other.
 //
 // C++23 features used:
+//   • C++20 modules (Ch 11)         — named module with imports
 //   • std::function               — type-erased callable storage
 //   • std::move                   — efficient handler composition
 //   • Concepts                    — constrain middleware signatures
@@ -16,18 +16,22 @@
 //   • std::chrono                 — timing middleware
 //   • [[nodiscard]]               — prevent silent drops
 // ============================================================================
+module;
 
 #include <chrono>
 #include <concepts>
 #include <format>
 #include <functional>
 #include <iostream>
+#include <ranges>
 #include <string>
 #include <utility>
 
-#include "http.hpp"
+export module webapi.middleware;
 
-namespace webapi::middleware {
+import webapi.http;
+
+export namespace webapi::middleware {
 
 // ── Middleware type: wraps the "next" handler ────────────────────────────────
 // A middleware is a function that takes a handler and returns a new handler.

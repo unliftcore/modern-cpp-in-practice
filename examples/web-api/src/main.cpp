@@ -11,8 +11,8 @@
 //   5. Handle SIGINT/SIGTERM for graceful shutdown
 //
 // C++23 features used:
-//   • std::jthread / std::stop_token — cooperative cancellation
-//   • std::stop_source               — external stop signaling
+//   • C++20 modules (Ch 11)           — import declarations
+//   • std::jthread / std::stop_token  — cooperative cancellation (in Server)
 //   • RAII throughout                 — automatic cleanup
 //   • std::format                     — structured output
 //   • Designated initializers         — readable construction
@@ -23,24 +23,22 @@
 #include <cstdint>
 #include <format>
 #include <iostream>
-#include <stop_token>
-#include <thread>
 #include <vector>
 
-#include "webapi/handlers.hpp"
-#include "webapi/http.hpp"
-#include "webapi/middleware.hpp"
-#include "webapi/repository.hpp"
-#include "webapi/router.hpp"
-#include "webapi/task.hpp"
+import webapi.handlers;
+import webapi.http;
+import webapi.middleware;
+import webapi.repository;
+import webapi.router;
+import webapi.task;
 
 // ── Signal handling for graceful shutdown ────────────────────────────────────
-// Ch 14: "Cancellation must be explicit (tokens, stop sources)."
+// Ch 14: "Cancellation must be explicit."
 namespace {
-    std::stop_source global_stop_source;  // NOLINT — intentional global
+    std::atomic<bool> shutdown_requested{false};  // NOLINT — intentional global
 
     extern "C" void signal_handler(int /*sig*/) {
-        global_stop_source.request_stop();
+        shutdown_requested.store(true, std::memory_order_release);
     }
 }
 
@@ -101,24 +99,10 @@ int main() {
     std::cout << "  PATCH  /tasks/:id     — partial update\n";
     std::cout << "  DELETE /tasks/:id     — delete a task\n\n";
 
-    // Run server on a jthread with cooperative cancellation (Ch 14).
-    // The jthread owns a stop_source; we forward the global signal to it.
-    // Ch 14: "Child tasks belong to parent scopes with bounded lifetimes."
-    std::jthread server_thread{[&server](std::stop_token st) {
-        server.run(st);
-    }};
-
-    // Forward the process-level stop signal to the jthread's stop_source.
-    // Ch 14: std::stop_callback ties a callback to a stop_token's lifetime.
-    std::stop_callback on_signal{global_stop_source.get_token(),
-                                 [&server_thread]() noexcept {
-                                     server_thread.request_stop();
-                                 }};
-
-    // Block main thread until the server thread completes.
-    // The signal handler → global_stop_source → on_signal callback →
-    // server_thread.request_stop() → server loop breaks → thread exits.
-    server_thread.join();
+    // Run server with cooperative cancellation (Ch 14: jthread + stop_token).
+    // The jthread and stop_token mechanism lives inside Server::run_until(),
+    // which internally creates a jthread and forwards the stop signal.
+    server.run_until(shutdown_requested);
 
     return 0;
 }

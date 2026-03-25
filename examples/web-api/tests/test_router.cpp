@@ -3,11 +3,12 @@
 // ============================================================================
 
 #include <cassert>
+#include <format>
 #include <iostream>
 #include <string>
 
-#include "webapi/http.hpp"
-#include "webapi/router.hpp"
+import webapi.http;
+import webapi.router;
 
 void test_exact_route_match() {
     webapi::Router router;

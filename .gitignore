@@ -5,3 +5,4 @@ site/
 # C++ build artifacts
 examples/*/build/
 compile_commands.json
+a.out

@@ -1,12 +1,12 @@
-#pragma once
 // ============================================================================
-// json.hpp — Minimal JSON serialization with concepts (Ch 6 & 9)
+// json.cppm — Minimal JSON serialization with concepts (Ch 6 & 9)
 //
 // "Use concepts to constrain template interfaces at the boundary."
 // "Concepts make requirements explicit — the compiler and the reader
 //  see the same contract."
 //
 // C++23 features used:
+//   • C++20 modules (Ch 11)         — named module interface unit
 //   • Concepts & requires           — constrain serialization traits
 //   • std::format                   — build JSON strings
 //   • std::string_view              — non-owning text access
@@ -14,6 +14,7 @@
 //   • constexpr                     — compile-time checks
 //   • [[nodiscard]]                 — prevent dropped results
 // ============================================================================
+module;
 
 #include <concepts>
 #include <cstddef>
@@ -24,7 +25,9 @@
 #include <string_view>
 #include <vector>
 
-namespace webapi::json {
+export module webapi.json;
+
+export namespace webapi::json {
 
 // ── Concept: a type knows how to produce JSON (Ch 6: named constraints) ─────
 template <typename T>
