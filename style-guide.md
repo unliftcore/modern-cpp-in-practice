@@ -10,12 +10,13 @@ This guide defines the editorial contract for the manuscript. If a draft conflic
 - Introduce language features only in service of a design problem. Do not write syntax tours.
 - Avoid filler, motivational framing, and tutorial scaffolding.
 - Prefer short, declarative paragraphs. Long explanations must earn their length by carrying technical detail.
-- Use defined terms consistently. If a chapter distinguishes ownership, lifetime, identity, value semantics, or failure domains, keep those terms stable.
+- Use defined terms consistently. If a chapter distinguishes ownership, lifetime, identity, value semantics, or failure domains, keep those terms stable. Core terms are defined in the glossary appendix; use those definitions as the canonical reference.
 
 ## Chapter Template
 
 Use this structure unless a chapter has a strong reason to deviate:
 
+0. `Prerequisites` — list the chapters or concepts the reader should already understand. Keep this to one or two sentences at the top so readers arriving out of order know what to read first.
 1. `Production problem` — the real engineering pressure or failure mode.
 2. `Naive or legacy approach` — what teams often do first and why it breaks down.
 3. `Modern C++ approach` — the main design and language tools that address the problem.
@@ -39,8 +40,18 @@ Operational rules:
 - Keep examples small enough to read in one pass, but large enough to show real constraints.
 - Prefer C++23 library and language features when they improve clarity, safety, or maintainability.
 - Avoid outdated idioms unless the point is to explain migration, interop, or a failure pattern.
-- When presenting a "bad" example, make the failure explicit: lifetime bug, ownership confusion, exception boundary leak, data race risk, ABI fragility, hidden allocation, and so on.
+- When presenting an anti-pattern, prefix the example title or heading with `Anti-pattern:` and mark the specific failure in the code with a `// BUG:` or `// RISK:` comment at the relevant line. Make the failure class explicit: lifetime bug, ownership confusion, exception boundary leak, data race risk, ABI fragility, hidden allocation, and so on.
 - Use comments sparingly. Comments should explain why a design choice matters, not narrate the code line by line.
+
+### Reference Compilers
+
+Examples target C++23. For reproducibility, the reference toolchains are:
+
+- GCC 14+
+- Clang 18+
+- MSVC 17.10+ (Visual Studio 2022)
+
+If a sample relies on a feature not yet available in one of these compilers, note the restriction next to the example.
 
 ## Diagram Rules
 
@@ -70,5 +81,7 @@ Before considering a chapter ready for review, check the following:
 - The argument is organized around a production problem and a decision, not a feature inventory.
 - Claims about style or design are justified with constraints and tradeoffs.
 - Code samples are either buildable or clearly labeled as intentional partials.
+- Anti-pattern examples are clearly labeled and the failure mode is marked in the code.
 - Any C++26 material changes a real design decision and is clearly marked.
+- The prerequisites section accurately reflects which earlier chapters are assumed.
 - The prose is tight enough that removing a paragraph would lose technical meaning, not just tone.
