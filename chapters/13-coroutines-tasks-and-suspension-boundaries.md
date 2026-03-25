@@ -11,11 +11,54 @@ A request handler that previously nested callbacks can become straight-line code
 Production failures with coroutines usually have one of four shapes:
 
 1. Borrowed data outlives its source across suspension.
-2. A task has no clear owner, so work outluns the component that started it.
+2. A task has no clear owner, so work outlives the component that started it.
 3. Failure and cancellation paths are implicit, so suspended work resumes into invalid assumptions.
 4. Execution hops across threads or executors in ways the code does not make obvious.
 
 This chapter keeps the scope local. The question is not yet how a whole task tree should be managed under cancellation pressure. That is Chapter 14. The question here is what each coroutine actually is: a resource-owning object with suspension points that define lifetime boundaries.
+
+## What Coroutines Replace: Callback Hell and Manual State Machines
+
+To appreciate coroutine design tradeoffs, see what they displace. Pre-coroutine asynchronous code relies on continuation-passing style, where each step chains a callback into the next. A simple "fetch, validate, store" sequence looks like this:
+
+```cpp
+// Continuation-passing style — correct but unreadable at scale.
+void handle_request(request req, std::function<void(response)> done) {
+	fetch_profile(req.user_id, [req, done](std::expected<profile, error> prof) {
+		if (!prof) { done(error_response(prof.error())); return; }
+		validate_access(prof->role, req.resource,
+			[req, prof = *prof, done](std::expected<bool, error> ok) {
+				if (!ok || !*ok) { done(denied_response()); return; }
+				store_audit_log(req, prof,
+					[req, prof, done](std::expected<void, error> result) {
+						if (!result) { done(error_response(result.error())); return; }
+						done(success_response(prof));
+					});
+			});
+	});
+}
+```
+
+Every step nests deeper. Error handling is duplicated at each level. Lifetime of captured values must be managed manually — capture by value inflates copies, capture by reference invites dangling. Adding timeout, cancellation, or retry logic multiplies the nesting further. This is not a strawman; it is the shape of real pre-coroutine async C++ in production codebases.
+
+The coroutine equivalent:
+
+```cpp
+task<response> handle_request(request req) {
+	auto prof = co_await fetch_profile(req.user_id);
+	if (!prof) co_return error_response(prof.error());
+
+	auto ok = co_await validate_access(prof->role, req.resource);
+	if (!ok || !*ok) co_return denied_response();
+
+	auto result = co_await store_audit_log(req, *prof);
+	if (!result) co_return error_response(result.error());
+
+	co_return success_response(*prof);
+}
+```
+
+Sequential reading, single error path per step, no nesting. The improvement is real. But the state machine did not vanish — it moved into the coroutine frame. The rest of this chapter is about what that means for ownership and lifetime.
 
 ## A Coroutine Is a State Machine With Storage
 
@@ -70,6 +113,56 @@ task<parsed_request> parse_and_authorize(
 ```
 
 The copy or move is visible and reviewable. The coroutine frame now owns what it needs. If that allocation cost matters, measure it and redesign around message boundaries or storage reuse. Do not silently borrow across time.
+
+## More Lifetime Traps: Locals, Temporaries, and Lambda Captures
+
+The borrowed-parameter anti-pattern above is the most common case, but coroutine lifetime bugs take other forms that deserve explicit attention.
+
+### Dangling reference to a caller's local
+
+```cpp
+// BUG: coroutine captures a reference to a local that dies when the caller returns.
+task<void> start_processing(dispatcher& d) {
+	std::vector<record> batch = build_batch();
+	co_await d.schedule([&batch] {     // lambda captures batch by reference
+		process(batch);                // batch may be destroyed if start_processing
+	});                                // is suspended and its caller exits
+}
+```
+
+When `start_processing` suspends at `co_await`, the coroutine frame keeps `batch` alive — but only if the frame itself is alive. If the task is detached or the parent scope exits, the frame is destroyed, and the lambda's reference dangles. The fix: capture by value, or ensure the parent scope outlives the scheduled work through structured ownership.
+
+### Temporary lifetime collapse
+
+```cpp
+// BUG: temporary string destroyed before coroutine body executes.
+task<void> log_message(std::string_view msg);
+
+void caller() {
+	log_message("request started"s + request_id()); // temporary std::string
+	// temporary is destroyed here, before the coroutine even begins if lazy-start
+}
+```
+
+With a lazy-start coroutine, the temporary `std::string` is destroyed at the semicolon, but the coroutine has not yet executed. Even with eager-start coroutines, if the frame stores `msg` as a `string_view`, it points to freed memory after the first suspension. The solution is to accept `std::string` by value in the coroutine signature so the frame owns a copy.
+
+### The `this` pointer across suspension
+
+```cpp
+// BUG: 'this' may dangle if the object is moved or destroyed while suspended.
+class connection {
+	std::string peer_addr_;
+public:
+	task<void> run() {
+		auto data = co_await read_socket();    // suspended here
+		log("received from " + peer_addr_);    // 'this' may be invalid
+	}
+};
+```
+
+If a `connection` object is moved into another container, or destroyed while `run()` is suspended, `this` becomes invalid at resumption. Member coroutines are safe only when the object's lifetime is guaranteed to exceed the coroutine's. In practice, this often means the coroutine should take a `shared_ptr<connection>` or the owning scope must be structured to prevent destruction during suspension.
+
+These are not exotic edge cases. They are the normal failure modes of coroutine lifetime in production code. Every suspension point is a moment where the caller's world may have changed.
 
 ## Task Types Are Ownership Contracts
 

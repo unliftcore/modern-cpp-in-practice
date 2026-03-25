@@ -61,7 +61,149 @@ At minimum:
 
 If a benchmark claims that a complex operation takes almost no time, assume the optimizer removed work until proven otherwise. If a benchmark shows enormous variance, assume the environment is unstable or the workload is underspecified until proven otherwise.
 
+### Flawed Benchmark: Dead Code Elimination
+
+This is the single most common microbenchmark lie. The compiler sees that a result is never used and removes the computation entirely:
+
+```cpp
+// BROKEN: the compiler may eliminate the entire loop because
+// 'total' is never observed.
+static void BM_bad_dce(benchmark::State& state) {
+	std::vector<double> data(1'000'000, 1.0);
+	for (auto _ : state) {
+		double total = 0.0;
+		for (double d : data)
+			total += d * d;
+		// total is dead.  Optimizer removes the loop.
+		// Benchmark reports ~0 ns/iteration.
+	}
+}
+```
+
+```cpp
+// FIXED: benchmark::DoNotOptimize prevents the compiler from
+// proving the result is unused.
+static void BM_good_dce(benchmark::State& state) {
+	std::vector<double> data(1'000'000, 1.0);
+	for (auto _ : state) {
+		double total = 0.0;
+		for (double d : data)
+			total += d * d;
+		benchmark::DoNotOptimize(total);
+	}
+}
+```
+
+`benchmark::DoNotOptimize` is not magic. On most implementations it acts as an opaque read of the value (often an inline asm that the compiler treats as potentially observing the variable). Use it on the final result, not on every intermediate step, or you risk inhibiting legitimate optimizations the production code would also benefit from. If you are unsure whether DCE is affecting your results, compile with `-S` and inspect the assembly.
+
+### Flawed Benchmark: Measuring Setup Instead of Work
+
+```cpp
+// BROKEN: construction cost dominates. The benchmark is
+// measuring vector allocation and initialization, not lookup.
+static void BM_bad_lookup(benchmark::State& state) {
+	for (auto _ : state) {
+		std::vector<int> v(1'000'000);
+		std::iota(v.begin(), v.end(), 0);
+		auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+		benchmark::DoNotOptimize(it);
+	}
+}
+
+// FIXED: setup goes outside the timing loop.
+static void BM_good_lookup(benchmark::State& state) {
+	std::vector<int> v(1'000'000);
+	std::iota(v.begin(), v.end(), 0);
+	for (auto _ : state) {
+		auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+		benchmark::DoNotOptimize(it);
+	}
+}
+```
+
+### Flawed Benchmark: Wrong Baseline
+
+Comparing two designs against an unfair baseline is subtler and more dangerous:
+
+```cpp
+// MISLEADING: comparing hash lookup against linear scan.
+// Concludes "hash map is 100x faster" -- but the real alternative
+// in production is sorted vector with binary search, which may
+// be within 2x and uses half the memory.
+static void BM_linear_scan(benchmark::State& state) {
+	std::vector<std::pair<int,int>> data(100'000);
+	// ... fill with random kv pairs, unsorted ...
+	for (auto _ : state) {
+		auto it = std::find_if(data.begin(), data.end(),
+			[](const auto& p) { return p.first == 42; });
+		benchmark::DoNotOptimize(it);
+	}
+}
+```
+
+The right baseline is the realistic alternative, not the worst possible option. Always state what the benchmark is comparing against and why that alternative is the one the team would actually choose.
+
+### Flawed Benchmark: Warm Cache Illusion
+
+```cpp
+// MISLEADING: data fits in L2 cache and is hot from the previous
+// iteration.  Production accesses the same structure after
+// processing unrelated data that evicts it from cache.
+static void BM_warm_cache(benchmark::State& state) {
+	std::vector<int> v(1'000);  // ~4 KB, fits in L1
+	std::iota(v.begin(), v.end(), 0);
+	for (auto _ : state) {
+		int sum = 0;
+		for (int x : v) sum += x;
+		benchmark::DoNotOptimize(sum);
+	}
+	// Reports ~50 ns.  In production, with cache-cold data,
+	// the same operation takes 10-50x longer.
+}
+```
+
+If the production access pattern encounters cold data, either make the working set large enough to exceed cache, or explicitly flush cache lines between iterations (platform-specific and fragile, but sometimes necessary for honest results).
+
+### Google Benchmark Pitfalls
+
+Google Benchmark (`benchmark::`) is widely used and generally solid, but several recurring mistakes deserve mention:
+
+1. **Forgetting `benchmark::ClobberMemory()`**: `DoNotOptimize` prevents dead stores of a value, but it does not force the compiler to assume memory has changed. If your benchmark modifies a data structure in place, the compiler may hoist reads above writes across iterations. Use `benchmark::ClobberMemory()` after mutations to force a reload:
+
+```cpp
+static void BM_modify(benchmark::State& state) {
+	std::vector<int> v(10'000, 0);
+	for (auto _ : state) {
+		for (auto& x : v) x += 1;
+		benchmark::ClobberMemory();
+		// Without ClobberMemory, the compiler could theoretically
+		// observe that v is never read and eliminate the writes,
+		// or combine multiple iterations into one.
+	}
+}
+```
+
+2. **Not using `state.SetItemsProcessed()`**: Without it, the output shows only time per iteration, making it hard to compare benchmarks that process different batch sizes. Always call `state.SetItemsProcessed(state.iterations() * num_items)` so the output includes a throughput column.
+
+3. **Ignoring `state.PauseTiming()` / `state.ResumeTiming()` overhead**: These calls use clock reads that themselves take 20-100 ns on many platforms. If the operation you are measuring takes less than a microsecond, the pause/resume overhead dominates. For sub-microsecond work, keep setup outside the loop entirely or amortize it across many iterations.
+
+4. **Benchmarking only one size**: Use `->Range(8, 1 << 20)` or `->DenseRange()` to test across sizes. A design that wins at 1K elements may lose at 1M. Performance is not a scalar.
+
 Use a serious harness when possible. The exact library is less important than the discipline: stable repetition, clear setup boundaries, and explicit prevention of dead-code elimination. When a benchmark is intentionally partial because the repository does not standardize on a harness, say so and document the omitted scaffolding.
+
+## Measuring Noise Instead of Signal
+
+Even with a correct benchmark, environmental noise can dominate the result. Frequency scaling, thermal throttling, background processes, NUMA effects, and interrupt coalescing all inject variance that has nothing to do with your code change.
+
+Practical defenses:
+
+- **Pin CPU frequency** during benchmarks (`cpupower frequency-set -g performance` on Linux, or disable turbo boost). A benchmark that runs at 4.5 GHz on one iteration and 3.2 GHz on the next is measuring the governor, not your code.
+- **Isolate cores** (`isolcpus` kernel parameter or `taskset` / `numactl`) to prevent scheduler interference.
+- **Run multiple trials** and report median, not mean. Median is robust to occasional spikes from interrupts or page faults. Mean is dragged by outliers.
+- **Require statistical significance** before declaring a win. A 3% improvement with 5% coefficient of variation is noise. Google Benchmark supports `--benchmark_repetitions=N` and reports stddev; use it.
+- **Compare on the same machine, same boot, same binary** when possible. Cross-machine comparisons require careful normalization and are generally less trustworthy.
+
+If a benchmark result changes by more than 1-2% between identical runs on an idle machine, the benchmark setup needs fixing before the result means anything.
 
 ## Distribution Matters More Than a Single Number
 

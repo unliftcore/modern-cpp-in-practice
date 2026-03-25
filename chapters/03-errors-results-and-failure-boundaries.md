@@ -23,6 +23,31 @@ These categories influence both recovery and observability. Invalid input is oft
 
 Once these categories are explicit, API design gets easier. Not every function should expose every class of failure directly. A high-level domain function should not need to understand a vendor-specific SQL error enumeration if the only actionable outcomes are `not_found`, `conflict`, and `temporarily_unavailable`.
 
+### The Error-Code-Only Approach and Its Pitfalls
+
+Before `std::expected` and before exceptions were widely adopted, C++ codebases (and C codebases that C++ inherited) relied on integer error codes and sentinel return values. That approach is still common, and its failure modes are worth examining concretely.
+
+```cpp
+// Error-code-only style: caller must check, but nothing enforces it.
+enum StatusCode { kOk = 0, kNotFound = 1, kTimeout = 2, kCorrupt = 3 };
+
+StatusCode load_account(const char* id, AccountRow* out);
+
+void process_request(const char* account_id) {
+	AccountRow row;
+	load_account(account_id, &row); // BUG: return code silently ignored
+
+	// row may be uninitialized garbage -- the program continues anyway.
+	publish(row.balance); // publishes nonsense data
+}
+```
+
+The core problem is that error codes are advisory. The compiler does not require the caller to inspect them. Even with `[[nodiscard]]`, a cast to `void` or an accidental omission silences the warning. In large codebases, studies of C error-code APIs consistently find that 30-60% of error returns are never checked at some call sites.
+
+The secondary problem is information loss. An integer code cannot carry structured context (which file, which account, what the backend actually said). Callers who do check the code often log a generic message and discard the detail, producing diagnostics that are useless during incidents.
+
+`std::expected` solves both problems. The caller must explicitly access either the value or the error; attempting to use the value when the result holds an error is a visible, reviewable decision (and undefined behavior if done carelessly, which sanitizers catch). The error type can carry structured diagnostics without side-channel logging.
+
 ## Exceptions Are Good for Unwinding and Local Clarity
 
 Exceptions remain valuable in C++ because stack unwinding composes naturally with RAII. When a constructor fails halfway through a resource-owning object graph, exceptions let the language drive destruction without hand-written cleanup ladders. When a local implementation has several nested helper calls and any of them can fail in the same way, exceptions can keep the main path readable.
@@ -70,6 +95,28 @@ auto load_service_config(std::filesystem::path path)
 
 This contract tells the reader something important. Failure is part of normal control flow at this boundary. The caller must decide whether to abort startup, fall back to a default environment, or report a clear diagnostic. That is different from a deep internal helper whose only sensible failure policy is to unwind to the boundary that can actually choose.
 
+Compare the `expected`-based loader with a traditional output-parameter-plus-bool approach to see how much information the old style loses:
+
+```cpp
+// Old style: bool return, output parameter, no structured error.
+bool load_service_config(const std::filesystem::path& path,
+						 ServiceConfig* out,
+						 std::string* error_msg = nullptr);
+
+void startup() {
+	ServiceConfig cfg;
+	std::string err;
+	if (!load_service_config("/etc/app/config.yaml", &cfg, &err)) {
+		// What kind of failure? File missing? Parse error? Permission denied?
+		// err is a free-form string -- no programmatic branching possible.
+		LOG_ERROR("config load failed: {}", err);
+		std::exit(1); // only option: cannot distinguish retriable from fatal
+	}
+}
+```
+
+With `std::expected<ServiceConfig, ConfigError>`, the caller can branch on `ConfigErrorCode::file_not_found` versus `ConfigErrorCode::parse_error`, choose different recovery strategies, and still access a human-readable message for logging. The type system carries the decision-relevant information rather than burying it in a string.
+
 The danger with `expected` is over-propagation. If every tiny helper returns `expected` merely because a public boundary does, the implementation can become littered with repetitive forwarding logic that obscures the main algorithm. Keep `expected` where the error belongs in the design. Do not force it through every private function unless that really improves local clarity.
 
 ## Anti-pattern: Side-Effect Errors With No Boundary Policy
@@ -98,6 +145,39 @@ bool refresh_profile(Cache& cache, DbClient& db, UserId user_id) {
 This function is expensive to use because the caller does not know what `false` means, which failures were already logged, or whether it still needs to add context. If several layers follow this pattern, incidents become noisy and under-explained at the same time.
 
 Boundary code should choose one transport and one logging policy. Either the function returns a structured failure and leaves logging to a higher layer that can attach request context, or it handles the failure completely and makes that clear in the contract. Mixing both is how duplicate logs and missing decisions enter a system.
+
+## Anti-pattern: Silent Failures From Unchecked Returns
+
+A subtler variant of the side-effect problem is code that converts failures into default values without any signal to the caller.
+
+```cpp
+// Anti-pattern: failure becomes a silent default.
+int get_retry_limit(const Config& cfg) {
+	auto val = cfg.get_int("retry_limit");
+	if (!val) {
+		return 3; // silent fallback -- no log, no metric, no trace
+	}
+	return *val;
+}
+```
+
+This is seductive because the code never crashes. But when the configuration file has a typo (`retry_limt` instead of `retry_limit`), the system silently uses a hardcoded default. During an incident, operators change the configuration expecting behavior to update, and nothing happens. The bug is invisible precisely because the error was swallowed.
+
+The better approach makes the default explicit and the fallback observable:
+
+```cpp
+auto get_retry_limit(const Config& cfg) -> std::uint32_t {
+	constexpr std::uint32_t default_limit = 3;
+	auto val = cfg.get_uint("retry_limit");
+	if (!val) {
+		LOG_INFO("retry_limit not configured, using default={}", default_limit);
+		return default_limit;
+	}
+	return *val;
+}
+```
+
+Or, if the caller should decide whether a missing value is acceptable, return the `expected` or `optional` directly and let the boundary make the policy choice.
 
 ## Translate Near Volatile Dependencies
 

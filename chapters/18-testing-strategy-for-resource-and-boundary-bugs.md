@@ -94,6 +94,98 @@ This is the right kind of seam because it sits at the business boundary. The tes
 
 That tradeoff matters. Over-mocking infrastructure produces brittle tests that ratify the implementation order of syscalls rather than the safety properties of the operation. Under-seaming the design leaves failure paths untestable except by broad integration tests. The middle ground is to isolate the resource boundary once, then write tests against commit and rollback behavior.
 
+### When over-mocking hides real bugs
+
+Consider the difference between a test that checks implementation details and one that checks the safety property. Teams often write tests like this:
+
+```cpp
+// BAD: This test passes, but proves nothing about cleanup.
+TEST(write_snapshot_calls_remove_on_rename_failure)
+{
+	strict_mock_file_system fs;
+	EXPECT_CALL(fs, write(_, _)).WillOnce(Return(std::expected<void, std::error_code>{}));
+	EXPECT_CALL(fs, rename(_, _)).WillOnce(Return(
+		std::unexpected(make_error_code(std::errc::device_or_resource_busy))));
+	EXPECT_CALL(fs, remove("cache/index.bin.tmp")).Times(1);
+
+	write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
+}
+```
+
+This test verifies that `remove` is called. It does not verify that the staging file is actually gone or that the original file is untouched. If someone refactors the cleanup to use `std::filesystem::remove_all` or changes the staging path convention, this test breaks -- but a real bug where `remove` silently fails and leaves the staging file behind would pass. The earlier test against `fake_file_system` is stronger because it asserts observable postconditions, not call sequences.
+
+### Resource-leak tests: verify cleanup, not just happy-path ownership
+
+Scoped RAII is not enough if error paths skip construction or move ownership incorrectly. A surprisingly common pattern is a resource that leaks only on a specific failure path:
+
+```cpp
+class connection_pool {
+public:
+	auto acquire() -> std::expected<pooled_connection, pool_error>;
+	void release(pooled_connection conn) noexcept;
+};
+
+// This function has a leak on the second acquire failure.
+auto transfer(connection_pool& pool, transfer_request const& req)
+	-> std::expected<receipt, transfer_error>
+{
+	auto src = pool.acquire();
+	if (!src) return std::unexpected(transfer_error::no_connection);
+
+	auto dst = pool.acquire();
+	if (!dst) {
+		// BUG: forgot to release src back to the pool.
+		return std::unexpected(transfer_error::no_connection);
+	}
+
+	// ... perform transfer, release both on success ...
+	pool.release(std::move(*src));
+	pool.release(std::move(*dst));
+	return receipt{};
+}
+```
+
+A test that only exercises the success path never sees the leak. A test that only checks the return value on failure also misses it. The test that catches it asserts pool state:
+
+```cpp
+TEST(transfer_releases_source_connection_when_dest_acquire_fails)
+{
+	counting_connection_pool pool{.max_connections = 1};
+
+	auto result = transfer(pool, make_request());
+
+	ASSERT_FALSE(result.has_value());
+	EXPECT_EQ(pool.available(), 1);  // Source connection must be returned.
+}
+```
+
+This is the pattern: if you own a scarce resource, your failure-path tests should assert that the resource is released, not just that an error was returned.
+
+### Exception safety: the gap between "compiles" and "correct"
+
+Even `noexcept`-free code paths deserve testing when exception safety matters. A container or cache that provides the strong exception guarantee should be tested for it:
+
+```cpp
+TEST(cache_insert_preserves_existing_entries_on_allocation_failure)
+{
+	lru_cache<std::string, std::string> cache(/*capacity=*/4);
+	cache.insert("key1", "value1");
+	cache.insert("key2", "value2");
+
+	failing_allocator::arm_failure_after(1);  // Fail during insert internals.
+
+	auto result = cache.insert("key3", "value3");
+	EXPECT_FALSE(result.has_value());
+
+	// Strong guarantee: pre-existing entries are intact.
+	EXPECT_EQ(cache.get("key1"), "value1");
+	EXPECT_EQ(cache.get("key2"), "value2");
+	EXPECT_EQ(cache.size(), 2);
+}
+```
+
+If the cache provides only the basic guarantee, the test should still verify that no resources leaked and the cache is in a valid (if modified) state. The worst outcome is no test at all -- the cache silently corrupts its internal structure on exception, and callers discover the problem under production allocation pressure.
+
 The same pattern applies to sockets, transactions, lock-guarded registries, temporary directories, subprocess handles, and thread-owning services. Ask what the stable contract is on success, partial failure, retry, and shutdown. Test that.
 
 ## Boundary Tests Should Prove Translation, Not Just Parsing
@@ -105,6 +197,42 @@ First, valid inputs map to the internal representation without lifetime tricks. 
 Use realistic artifacts here. For a configuration loader, keep real sample files beside the tests. For an HTTP or RPC edge, keep representative payloads, including malformed headers, oversized bodies, duplicate fields, bad encodings, and unsupported versions. For a library with a C API, write tests at the ABI-facing surface rather than only against the internal C++ wrapper. If the boundary promises not to throw, test that promise under allocator pressure and invalid inputs.
 
 These tests do not have to be large. They do have to be concrete. "Round-trips one JSON object" is weak. "Rejects duplicate primary key fields with a schema error and leaves previous configuration active" is strong.
+
+### Boundary edge cases that curated examples miss
+
+Pay attention to boundary conditions that look harmless in isolation but interact badly:
+
+```cpp
+// A parser that stores string_view into a longer-lived config object.
+// This test passes because the input string outlives the config.
+TEST(config_parser_reads_server_name)
+{
+	std::string input = R"({"server": "prod-01"})";
+	auto cfg = parse_config(input);
+	EXPECT_EQ(cfg.server_name(), "prod-01");  // PASSES -- but fragile.
+}
+
+// This test exposes the dangling view.
+TEST(config_survives_input_destruction)
+{
+	auto cfg = []{
+		std::string input = R"({"server": "prod-01"})";
+		return parse_config(input);
+	}();
+	// input is destroyed. If server_name() holds a string_view into it,
+	// this is use-after-free. It may still "pass" without sanitizers.
+	EXPECT_EQ(cfg.server_name(), "prod-01");
+}
+```
+
+The first test is the one most teams write. The second is the one that catches the real bug. Pair it with AddressSanitizer (next chapter) to turn the silent corruption into a hard failure.
+
+Other frequently missed boundary edge cases worth explicit tests:
+
+- Empty input, single-byte input, and input exactly at buffer boundaries.
+- Payloads where string fields contain embedded nulls, since `std::string_view::size()` and C `strlen()` disagree.
+- Error responses from dependencies that arrive as valid protocol frames with unexpected status codes, not just connection failures.
+- Inputs that are valid in one version of a schema but illegal in another, especially when version negotiation is involved.
 
 ## Failure Injection Is More Valuable Than More Mocks
 

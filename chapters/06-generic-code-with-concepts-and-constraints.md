@@ -65,6 +65,66 @@ auto flush_batch(Sink& sink, const auto& batch) {
 
 This version looks shorter. It is worse in every production-relevant way. The assumptions are unstated. The error contract is unclear. The required record shape is accidental. A mismatch produces compiler noise at the use site rather than a crisp statement of the interface.
 
+### The Error Message Problem, Concretely
+
+To appreciate what concepts actually fix, consider what happens when someone passes a wrong type to the unconstrained version:
+
+```cpp
+struct BadSink {};
+BadSink sink;
+std::vector<EncodedRecord> batch = /* ... */;
+flush_batch(sink, batch);
+```
+
+Without concepts, the compiler instantiates the template body and fails deep inside the implementation. A typical error from a major compiler looks something like:
+
+```
+error: 'class BadSink' has no member named 'push'
+    in instantiation of 'auto flush_batch(Sink&, const auto&) [with Sink = BadSink; ...]'
+    required from here
+note: in expansion of 'sink.push(record.data(), record.size())'
+error: 'class BadSink' has no member named 'commit'
+note: in expansion of 'sink.commit()'
+```
+
+This is two errors for a simple case. In production, the template is rarely this shallow. The sink might be passed through three layers of adapters, each a template. The actual error appears at the bottom of a deep instantiation stack, and the programmer must mentally unwind the chain to figure out what went wrong. With heavily nested templates and standard library types involved, these diagnostics routinely span dozens of lines.
+
+With the `ByteSink` concept, the same mistake produces a single, targeted error at the call site:
+
+```
+error: constraints not satisfied for 'auto flush_batch(Sink&, ...) [with Sink = BadSink]'
+note: because 'BadSink' does not satisfy 'ByteSink'
+note: because 'sink.write(bytes)' would be ill-formed
+```
+
+The error names the concept, names the unsatisfied requirement, and points at the call site rather than the implementation internals. The programmer knows immediately what interface `BadSink` needs to provide.
+
+### What This Replaced: SFINAE
+
+Before concepts, the standard technique for constraining templates was SFINAE (Substitution Failure Is Not An Error). The idea was to make the template signature itself ill-formed for wrong types, so the compiler would silently remove it from overload resolution rather than producing a hard error.
+
+The equivalent of the `ByteSink` constraint in pre-C++20 code looked like this:
+
+```cpp
+// SFINAE approach (using enable_if to constrain the same interface)
+template <typename Sink,
+          std::enable_if_t<
+              std::is_same_v<
+                  decltype(std::declval<Sink&>().write(
+                      std::declval<std::span<const std::byte>>())),
+                  std::expected<void, WriteError>
+              > &&
+              std::is_same_v<
+                  decltype(std::declval<Sink&>().flush()),
+                  std::expected<void, WriteError>
+              >,
+              int> = 0>
+auto flush_batch(Sink& sink, std::span<const EncodedRecord> batch)
+    -> std::expected<void, WriteError>;
+```
+
+This is the same constraint expressed in a form that nobody wants to read. `std::enable_if_t` with `decltype` and `std::declval` is not describing a design intent; it is exploiting a compiler mechanism. The resulting error messages when SFINAE rejects the overload are typically just "no matching function for call to `flush_batch`" with no indication of which requirement was not met. When multiple SFINAE-guarded overloads exist, the compiler may list every candidate it rejected without explaining why any individual one failed. The concept version is better in every dimension: readability, error quality, and maintainability.
+
 Constrain the public surface aggressively so the implementation can remain boring. That is the right trade.
 
 ## Concepts Should Describe Semantics, Not Just Syntax

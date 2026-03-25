@@ -10,7 +10,25 @@ The sample domains here are realistic ones: filtering logs before export, transf
 
 An ordinary loop is still the right tool for many jobs. It keeps sequencing obvious, makes side effects explicit, and is easy to step through. A range pipeline earns its place when the essential structure of the work is “take a sequence, discard some elements, transform the survivors, then materialize or consume.”
 
-Suppose a log-export worker receives a batch of parsed records and needs to ship only security-relevant entries after projecting them into an export schema:
+Suppose a log-export worker receives a batch of parsed records and needs to ship only security-relevant entries after projecting them into an export schema. First, consider the pre-ranges approach using manual iterators:
+
+```cpp
+// Pre-C++20: manual iterator loop with filter + transform
+std::vector<ExportRow> export_rows;
+for (auto it = records.begin(); it != records.end(); ++it) {
+    if (it->severity >= Severity::warning && !it->redacted) {
+        ExportRow row;
+        row.timestamp = it->timestamp;
+        row.service   = it->service;
+        row.message   = it->message;
+        export_rows.push_back(row);
+    }
+}
+```
+
+This version works, but the filtering logic and the transformation logic are fused into a single loop body. The reader must parse the `if` to understand what is kept and parse the body to understand what is produced. In more complex cases, these loops accumulate nested conditions, early `continue` statements, index arithmetic, and manual bookkeeping that obscure the data flow. Off-by-one errors in index-based variants (`for (size_t i = 0; i < records.size(); ++i)`) are a persistent source of bugs, especially when the loop body mutates the container or uses the index for more than one purpose.
+
+The range version separates the concerns structurally:
 
 ```cpp
 auto export_rows = records
@@ -30,6 +48,20 @@ auto export_rows = records
 This is good range code because the pipeline is the business logic. There is no tricky mutation, no lifetime ambiguity in the source, and a clear materialization point at the end. The intermediate storage never existed conceptually, so not allocating it improves both clarity and cost.
 
 Now compare that with a loop that updates shared counters, emits metrics, mutates records in place, and conditionally retries downstream writes. A pipeline there often hides the part that matters most: sequencing and side effects. Range syntax is not a readability win when the computation is stateful and effect-heavy.
+
+Another common pre-ranges pattern worth examining is the "erase-remove" idiom for in-place filtering:
+
+```cpp
+// Pre-C++20 erase-remove idiom
+records.erase(
+    std::remove_if(records.begin(), records.end(),
+                   [](const LogRecord& r) {
+                       return r.severity < Severity::warning || r.redacted;
+                   }),
+    records.end());
+```
+
+This is correct but notoriously easy to get wrong. Forgetting the `.end()` argument to `erase` is a well-known bug that compiles but leaves the removed elements in the container. The logic is also inverted: you specify what to *remove* rather than what to *keep*, which is a common source of predicate errors. C++20 introduced `std::erase_if` to simplify this, and range pipelines avoid the problem entirely by producing a new view rather than mutating in place.
 
 The rule is straightforward. Use range pipelines for linear dataflow over a sequence. Use loops when control flow, mutation, or operational steps are the story.
 
@@ -83,7 +115,63 @@ C++23's `std::generator` is useful because some sequences are not naturally “s
 
 This is where generators change design. They let the producer keep state between elements without forcing the caller into callback inversion or hand-written iterator machinery.
 
-A batch job that reads pages from a remote API is a good example. Materializing all rows before processing may waste memory and delay first useful work. A generator can express a sequence of yielded rows while keeping page tokens, buffers, and retry state local to the producer.
+A batch job that reads pages from a remote API is a good example. Before generators, expressing an incremental page-fetching sequence required either callback inversion or a hand-written iterator class:
+
+```cpp
+// Pre-C++23: hand-written iterator for paged results
+class PagedResultIterator {
+public:
+    using value_type = Row;
+    using difference_type = std::ptrdiff_t;
+
+    PagedResultIterator() = default; // sentinel
+    explicit PagedResultIterator(Client& client)
+        : client_(&client) { fetch_next_page(); }
+
+    const Row& operator*() const { return rows_[index_]; }
+    PagedResultIterator& operator++() {
+        if (++index_ >= rows_.size()) {
+            if (next_token_.empty()) { client_ = nullptr; return *this; }
+            fetch_next_page();
+        }
+        return *this;
+    }
+    bool operator==(const PagedResultIterator& other) const {
+        return client_ == other.client_;
+    }
+
+private:
+    void fetch_next_page() {
+        auto page = client_->fetch(next_token_);
+        rows_ = std::move(page.rows);
+        next_token_ = std::move(page.next_token);
+        index_ = 0;
+    }
+
+    Client* client_ = nullptr;
+    std::vector<Row> rows_;
+    std::string next_token_;
+    std::size_t index_ = 0;
+};
+```
+
+This is roughly forty lines of boilerplate to express "fetch pages and yield rows." The same logic with `std::generator`:
+
+```cpp
+std::generator<const Row&> paged_rows(Client& client) {
+    std::string token;
+    do {
+        auto page = client.fetch(token);
+        for (const auto& row : page.rows)
+            co_yield row;
+        token = std::move(page.next_token);
+    } while (!token.empty());
+}
+```
+
+The generator version keeps all state (page token, current buffer, position) implicit in the coroutine frame. The control flow is obvious. The hand-written iterator version is error-prone: the sentinel comparison, the index bookkeeping, and the fetch-on-boundary logic are all manual and easy to get subtly wrong.
+
+Materializing all rows before processing may waste memory and delay first useful work. A generator can express a sequence of yielded rows while keeping page tokens, buffers, and retry state local to the producer.
 
 That said, generators are coroutine machinery. They come with suspension points, frame lifetime, and sometimes allocation cost depending on implementation and optimization. They are not free. They are also harder to debug than a local vector and a loop. Use them when incremental production is the real structure of the problem, not as a fashionable replacement for ordinary containers.
 

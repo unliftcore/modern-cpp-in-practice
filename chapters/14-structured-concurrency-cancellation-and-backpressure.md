@@ -24,6 +24,83 @@ Detached tasks, ad hoc thread pools, and fire-and-forget retries have three pred
 
 A service can survive this for months if traffic is light and shutdown is rare. Under burst load, deployment churn, or slow downstream dependencies, the hidden work becomes the system.
 
+## Fire-and-Forget: A Catalog of Failures
+
+Before contrasting with structured concurrency, it is worth seeing exactly how unstructured work fails. "Fire-and-forget" is not one anti-pattern; it is several, each with a distinct failure mode.
+
+### Resource leaks from ownerless work
+
+```cpp
+// Anti-pattern: detached task leaks a database connection on cancellation.
+void on_request(request req) {
+	std::jthread([req = std::move(req)] {
+		auto conn = db_pool.acquire();        // acquired, never returned on some paths
+		auto result = conn.execute(req.query);
+		send_response(req.client, result);
+	}).detach(); // no owner, no cancellation, no cleanup guarantee
+}
+```
+
+If the process begins shutting down, detached threads do not receive stop requests. The database connection is not returned to the pool. Multiply this by thousands of in-flight requests during a rolling deployment: the database sees connection exhaustion, and the old process hangs in `std::thread` destructor calls or, worse, exits while threads still reference destroyed globals.
+
+### Unobserved exceptions vanish silently
+
+```cpp
+// Anti-pattern: exception in detached task is never observed.
+void start_background_sync() {
+	auto handle = std::async(std::launch::async, [] {
+		auto data = fetch_remote_config(); // throws on network error
+		apply_config(data);
+	});
+	// handle is destroyed here — std::async's destructor blocks,
+	// but if this were a custom fire-and-forget task, the exception
+	// would be silently swallowed.
+}
+```
+
+With `std::async`, the destructor blocks (which may be its own surprise). But with most custom task types that support detach, destroying the handle without observing the result means exceptions evaporate. The system continues with stale configuration, and the failure appears only as a mysterious behavioral regression hours later.
+
+### Shutdown hangs from orphaned work
+
+```cpp
+// Anti-pattern: shutdown cannot complete because background tasks were never tracked.
+class ingestion_service {
+	void ingest(message msg) {
+		// "just kick off enrichment in the background"
+		pool_.submit([msg = std::move(msg), this] {
+			auto enriched = enrich(msg);       // calls external service, may block
+			store_.write(enriched);
+		});
+	}
+
+	void shutdown() {
+		store_.close();    // closes storage
+		pool_.shutdown();  // waits for in-flight tasks
+		// BUG: in-flight tasks may call store_.write() after store_ is closed
+		// BUG: enrich() may block indefinitely — pool shutdown hangs
+	}
+};
+```
+
+The pool has tasks, but the service has no model of what those tasks need or how to cancel them. Shutdown either hangs (waiting for a blocked external call) or races (closing dependencies while tasks still use them). In production, this turns a clean restart into a process kill, which turns into data loss.
+
+### The structured alternative in brief
+
+The structured answer to all three problems is the same principle: the scope that creates work owns its completion.
+
+```cpp
+// Structured: parent scope owns child tasks, propagates cancellation, awaits completion.
+task<void> on_request(request req, std::stop_token stop) {
+	auto conn = co_await db_pool.acquire(stop);  // respects cancellation
+	auto result = co_await conn.execute(req.query, stop);
+	co_await send_response(req.client, result);
+	// conn returned to pool when coroutine frame is destroyed
+	// if stop is triggered, co_await points observe it and unwind cleanly
+}
+```
+
+The parent request scope can cancel the token on client disconnect or deadline. The coroutine's awaitables check the token at each suspension point. Resources are released through normal RAII. No work outlives its owner. The contrast with fire-and-forget is not style; it is the difference between a system that can shut down and one that cannot.
+
 ## Structured Concurrency Means Parent Scopes Own Child Work
 
 The central idea is simple: if a scope starts child tasks to complete its job, those children should finish, fail, or be canceled before the scope is considered done.

@@ -51,6 +51,52 @@ AddressSanitizer is the standard first line because it finds a wide set of bugs 
 
 ASan is especially effective when paired with the testing strategies from the previous chapter. Failure-path tests, fuzzers, and integration scenarios drive execution into branches where ownership mistakes live. ASan then converts those mistakes into reproducible failures.
 
+### The bug that "works" without ASan
+
+This is the canonical case that wastes days of debugging time in codebases that skip sanitizer builds:
+
+```cpp
+auto get_session_name(session_registry& registry, session_id id)
+	-> std::string_view
+{
+	auto it = registry.find(id);
+	if (it == registry.end()) return {};
+	return it->second.name();  // Returns view into the session object.
+}
+
+void log_and_remove_session(session_registry& registry, session_id id)
+{
+	auto name = get_session_name(registry, id);
+	registry.erase(id);             // Session destroyed. name is now dangling.
+	audit_log("removed session: {}", name);  // Use-after-free.
+}
+```
+
+Without ASan, this code will usually pass tests and even run correctly in production for months. The freed memory still contains the old string data until something else overwrites it. The test passes. Code review might not catch it -- the function looks straightforward. When it does fail, the symptom is garbled log output or a crash in an unrelated allocation, nowhere near the actual bug.
+
+Under ASan, this produces an immediate, precise failure:
+
+```
+==41032==ERROR: AddressSanitizer: heap-use-after-free on address 0x6020000000d0
+READ of size 12 at 0x6020000000d0 thread T0
+    #0 0x55a3c1 in log_and_remove_session(session_registry&, session_id)
+        src/session_manager.cpp:47
+    #1 0x55a812 in handle_disconnect src/connection.cpp:103
+
+0x6020000000d0 is located 0 bytes inside of 32-byte region
+freed by thread T0 here:
+    #0 0x4c1a30 in operator delete(void*)
+    #1 0x55a7f1 in session_registry::erase(session_id)
+        src/session_manager.cpp:31
+
+previously allocated by thread T0 here:
+    #0 0x4c1820 in operator new(unsigned long)
+    #1 0x55a620 in session_registry::insert(session_id, session_info)
+        src/session_manager.cpp:22
+```
+
+The report identifies the exact read, the exact free, and the exact allocation. Compare that with the alternative: a corrupted log entry three weeks from now that nobody connects to this code path.
+
 Typical build characteristics look like this:
 
 ```bash
@@ -66,9 +112,81 @@ UBSan is the companion that catches dangerous behavior not always visible as mem
 
 Do not over-interpret it, though. UBSan is not a proof system. It only reports behavior that the exercised execution encountered and that the enabled checks can see.
 
+A concrete example: signed overflow in size calculations is a common source of security bugs that compilers are free to exploit.
+
+```cpp
+auto compute_buffer_size(std::int32_t width, std::int32_t height, std::int32_t channels)
+	-> std::int32_t
+{
+	return width * height * channels;  // Signed overflow if product exceeds INT32_MAX.
+}
+```
+
+For `width=4096, height=4096, channels=4`, the product is 67,108,864 -- safe. For `width=32768, height=32768, channels=4`, the product is 4,294,967,296 which overflows a 32-bit signed integer. Without UBSan, the compiler may optimize downstream bounds checks away entirely because signed overflow is undefined. UBSan catches this at the multiplication:
+
+```
+runtime error: signed integer overflow: 32768 * 32768 cannot be
+represented in type 'int'
+```
+
+The fix is to use unsigned arithmetic or to check for overflow before the multiplication. The point is that this class of bug is silent, optimizer-sensitive, and often security-relevant -- exactly what UBSan is for.
+
 ### ThreadSanitizer
 
 TSan is expensive and often noisy around custom synchronization, lock-free code, and some coroutine or foreign-runtime integrations. It is still worth running because data races remain among the most expensive native bugs to diagnose after the fact.
+
+### The data race that tests never catch
+
+Data races are invisible to testing without TSan because they depend on scheduling. Consider a metrics counter shared between a request handler and a background reporter:
+
+```cpp
+struct service_stats {
+	std::int64_t requests_handled = 0;   // No synchronization.
+	std::int64_t bytes_processed = 0;
+};
+
+// Thread 1: request handler
+void handle_request(service_stats& stats, request const& req) {
+	process(req);
+	stats.requests_handled++;    // Data race: unsynchronized write.
+	stats.bytes_processed += req.size();
+}
+
+// Thread 2: periodic reporter
+void report_stats(service_stats const& stats) {
+	log_metrics("requests", stats.requests_handled);   // Data race: unsynchronized read.
+	log_metrics("bytes", stats.bytes_processed);
+}
+```
+
+This code will pass every test you write. It will run correctly for months on x86 where the memory model is relatively forgiving. It becomes a problem when the compiler reorders the writes, when the optimizer lifts the read into a register, or when someone ports to ARM. The bug is real today but the symptoms are deferred.
+
+TSan catches it immediately:
+
+```
+WARNING: ThreadSanitizer: data race (pid=28511)
+  Write of size 8 at 0x7f8e3c000120 by thread T1:
+    #0 handle_request(service_stats&, request const&)
+        src/handler.cpp:24
+    #1 worker_loop src/server.cpp:88
+
+  Previous read of size 8 at 0x7f8e3c000120 by thread T2:
+    #0 report_stats(service_stats const&)
+        src/reporter.cpp:12
+    #1 reporter_loop src/server.cpp:102
+
+  Location is global 'g_stats' of size 16 at 0x7f8e3c000120
+
+  Thread T1 (tid=28513, running) created by main thread at:
+    #0 pthread_create
+    #1 start_workers src/server.cpp:71
+
+  Thread T2 (tid=28514, running) created by main thread at:
+    #0 pthread_create
+    #1 start_reporter src/server.cpp:76
+```
+
+The fix is to use `std::atomic<std::int64_t>` with appropriate memory ordering, or to protect the struct with a mutex if the fields must be read consistently together. The important point is that no amount of conventional testing would have found this -- the test needs TSan to convert a scheduling-dependent corruption into a deterministic failure.
 
 The operational pattern is usually different from ASan. Run TSan in a narrower CI lane or nightly job. Feed it tests that deliberately stress shared-state paths, shutdown, retries, and cancellation. Keep the suppression file short and justified. If TSan reports a race in supposedly benign statistics code, do not dismiss it reflexively. Benign races have a habit of becoming real ones after the next feature.
 

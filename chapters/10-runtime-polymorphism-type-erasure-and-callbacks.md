@@ -40,6 +40,90 @@ The weaknesses are just as real. Hierarchies tempt over-generalization. Per-call
 
 Use virtual dispatch when the abstraction is naturally an object protocol. Do not use it just because behavior varies.
 
+## Anti-pattern: Deep Inheritance Hierarchies and Fragile Base Classes
+
+Virtual dispatch becomes a liability when it grows into deep or wide hierarchies where the base class accumulates obligations over time.
+
+```cpp
+// Anti-pattern: a growing base class that every derived type must satisfy.
+class Widget {
+public:
+	virtual void draw(Canvas& c) = 0;
+	virtual void handle_input(const InputEvent& e) = 0;
+	virtual Size preferred_size() const = 0;
+	virtual void set_theme(const Theme& t) = 0;
+	virtual void serialize(Archive& ar) = 0;    // added in v2
+	virtual void animate(Duration dt) = 0;       // added in v3
+	virtual AccessibilityInfo accessibility() = 0; // added in v4
+	virtual ~Widget() = default;
+};
+```
+
+Every new virtual method forces every derived class to implement it or inherit a possibly wrong default. Classes that only need drawing must still address input, serialization, animation, and accessibility. Testing a simple leaf widget requires constructing `Canvas`, `InputEvent`, `Theme`, `Archive`, and `AccessibilityInfo` objects. The base class becomes a change amplifier: a single addition to `Widget` triggers recompilation and potential modification of every derived class across the codebase.
+
+This is the fragile base class problem. The hierarchy appears extensible but is actually brittle because the base class interface keeps growing to serve every consumer.
+
+### Diamond inheritance and semantic ambiguity
+
+Multiple inheritance of interface hierarchies introduces diamond problems that `virtual` inheritance only partially addresses.
+
+```cpp
+class Readable {
+public:
+	virtual std::expected<std::size_t, IoError>
+	read(std::span<std::byte> buffer) = 0;
+	virtual void close() = 0;  // close the read side
+	virtual ~Readable() = default;
+};
+
+class Writable {
+public:
+	virtual std::expected<std::size_t, IoError>
+	write(std::span<const std::byte> data) = 0;
+	virtual void close() = 0;  // close the write side
+	virtual ~Writable() = default;
+};
+
+// Diamond: what does close() mean here? Read side? Write side? Both?
+class ReadWriteStream : public virtual Readable, public virtual Writable {
+public:
+	// Single close() must now serve two different semantic contracts.
+	// Callers holding a Readable* expect close() to close the read side.
+	// Callers holding a Writable* expect close() to close the write side.
+	// There is no way to satisfy both through one override.
+	void close() override { /* ??? */ }
+};
+```
+
+Virtual inheritance solves the layout duplication but not the semantic conflict. The result is code that compiles but whose behavior depends on which base pointer the caller holds. This ambiguity is structural. It does not go away with more careful implementation.
+
+### Contrast: type erasure avoids these problems
+
+Type erasure sidesteps hierarchies entirely. Each erased wrapper defines its own minimal contract without forcing unrelated types into a common base.
+
+```cpp
+// No base class. No hierarchy. No diamond.
+// Any type that is callable with the right signature works.
+using DrawAction = std::move_only_function<void(Canvas&)>;
+using InputHandler = std::move_only_function<bool(const InputEvent&)>;
+
+struct WidgetBehavior {
+	DrawAction draw;
+	InputHandler handle_input;
+};
+
+// A simple widget only provides what it needs.
+// No obligation to implement serialize, animate, or accessibility.
+WidgetBehavior make_label(std::string text) {
+	return {
+		.draw = [t = std::move(text)](Canvas& c) { c.draw_text(t); },
+		.handle_input = [](const InputEvent&) { return false; }
+	};
+}
+```
+
+There is no base class to grow. Adding animation support does not force label widgets to change. Testing `draw` does not require constructing an `InputEvent`. Each concern is independently composable. The cost is that you lose the named-object-protocol clarity of a class hierarchy, which may matter if the protocol is genuinely stable and rich. The tradeoff is worth evaluating case by case.
+
 ## Type Erasure: Good for Owned Runtime Flexibility
 
 Type erasure is the right tool when you need to store or pass runtime-selected behavior without exposing the concrete type, but you do not need an inheritance hierarchy in the user model.
@@ -55,6 +139,30 @@ Type erasure buys three things:
 It also introduces costs that must be treated as design facts rather than implementation trivia: possible heap allocation, indirect call overhead, larger object representation, and sometimes loss of `noexcept` or cv/ref-qualification detail unless you model it carefully.
 
 For many systems, these costs are acceptable. For some, especially hot dispatch loops or high-rate scheduler internals, they are decisive. Measure in the actual workload before arguing from aesthetics.
+
+### Common pitfall: `std::function` forces copyability on move-only state
+
+`std::function` requires its target to be copyable. This seems harmless until real callback state enters the picture.
+
+```cpp
+// This will not compile. std::function requires CopyConstructible.
+auto handler = std::function<void()>{
+	[conn = std::make_unique<DbConnection>()](){ conn->heartbeat(); }
+};
+```
+
+Teams work around this by wrapping unique pointers in shared pointers, adding reference counting and shared mutation to code that was naturally single-owner. The workaround compiles but weakens the ownership model.
+
+```cpp
+// Workaround: shared_ptr "fixes" compilation but lies about ownership.
+auto conn = std::make_shared<DbConnection>();
+auto handler = std::function<void()>{
+	[conn]() { conn->heartbeat(); }
+};
+// Now conn is shared. Who shuts it down? When? The ownership story is gone.
+```
+
+`std::move_only_function` avoids this entirely. If your callback is submitted, queued, or deferred and will not be copied, it is the correct default in C++23.
 
 ## Callback Forms: Borrowed, Owned, and One-Shot
 

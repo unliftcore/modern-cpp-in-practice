@@ -18,6 +18,38 @@ C++ modules help with parse cost, macro isolation, and dependency control. Those
 
 But modules do not create a portable binary contract. They do not erase compiler ABI differences. They do not guarantee the same layout rules, exception interoperability, or standard library binary compatibility across vendors. They are not a substitute for packaging strategy.
 
+### What modules replace: the header inclusion model and its hazards
+
+Without modules, C++ compilation is textual inclusion. Every `#include` pastes a header's full text into the translation unit. This creates three classes of real problems.
+
+**Include order dependencies.** If header A defines a macro or type that header B consumes, swapping `#include` order can silently change behavior or break compilation. This is not hypothetical. Large codebases accumulate implicit ordering contracts that no one documents.
+
+```cpp
+// order_matters.cpp
+#include <windows.h>    // defines min/max as macros
+#include <algorithm>     // std::min/std::max are now broken
+
+auto x = std::min(1, 2); // compilation error or wrong overload
+```
+
+**Macro pollution.** Every macro defined in every transitively included header is visible everywhere below. A library that `#define`s `ERROR`, `OK`, `TRUE`, `CHECK`, or `Status` can silently collide with unrelated code. The classic defense (include guards, `#undef`, `NOMINMAX`) is fragile and must be remembered at every inclusion site.
+
+```cpp
+// some_vendor_lib.h
+#define STATUS int
+#define ERROR -1
+
+// your_code.cpp
+#include "some_vendor_lib.h"
+#include "your_domain.h"  // any enum named ERROR or type named STATUS is now broken
+
+enum class Status { ok, error };  // fails to compile: STATUS expands to int
+```
+
+**Transitive dependency explosion.** Including one header can pull in hundreds of others. A seemingly small change to an internal header triggers recompilation of thousands of translation units. Build times scale with total transitive include depth, not with the actual dependency graph of the program.
+
+Modules address all three problems: they do not leak macros, they have well-defined import semantics independent of order, and they export only what is explicitly declared. This is a meaningful improvement for source hygiene, even though it does not touch binary compatibility.
+
 That means the first decision is not "should we use modules?" It is "what are we promising consumers?"
 
 If the answer is internal source reuse inside one repository with one toolchain baseline, modules may be excellent. If the answer is "we ship a public SDK consumed by unknown build systems and compiler versions," modules may still help your own build, but they do not remove the need for strict binary-boundary discipline.
@@ -67,6 +99,59 @@ These are common sources of ABI fragility:
 5. Exporting inline-heavy templates or virtual hierarchies as the binary extension mechanism.
 
 That does not mean standard C++ library types are bad. It means they are often the wrong public binary boundary.
+
+### Concrete ABI breakage scenarios
+
+These are real scenarios, not theoretical risks.
+
+**Adding a private member changes class size.** A consumer compiled against v1 of a library allocates objects based on `sizeof(Widget)` at their compile time. If v2 adds a private member, the library's methods now write past what the consumer allocated. The result is silent memory corruption, not a linker error.
+
+```cpp
+// v1: shipped in libwidget.so
+class EXPORT Widget {
+	int x_;
+	int y_;
+public:
+	void move(int dx, int dy);  // accesses x_, y_
+};
+// sizeof(Widget) == 8 for the consumer
+
+// v2: added a z-index member
+class EXPORT Widget {
+	int x_;
+	int y_;
+	int z_;  // sizeof(Widget) is now 12
+public:
+	void move(int dx, int dy);  // same signature, same symbol
+};
+// Consumer still allocates 8 bytes. Library writes 12. Corruption.
+```
+
+**Different standard library implementations.** A shared library built with libstdc++ exposes `std::string` in its API. A consumer built with libc++ links against it. The two implementations have different internal layouts (SSO buffer sizes, pointer arrangements). Calling across this boundary corrupts string state. There is no compile-time or link-time diagnostic.
+
+**Compiler flag mismatch.** Building the library with `-fno-exceptions` and the consumer with exceptions enabled can produce incompatible stack unwinding behavior. Building with different `-std=` flags can change the layout of standard types. Building with different struct packing or alignment flags changes ABI silently.
+
+### ODR violations from header-only libraries
+
+Header-only libraries are popular because they avoid binary distribution complexity. They introduce a different class of problems: One Definition Rule violations.
+
+If two translation units include the same header-only library but compile with different flags, preprocessor definitions, or template arguments that affect inline function behavior, the linker may silently pick one definition and discard the other. The program contains code compiled against two different assumptions linked into one binary.
+
+```cpp
+// translation_unit_a.cpp
+#define LIBRARY_USE_SSE 1
+#include "header_only_math.hpp"  // vector ops use SSE intrinsics
+
+// translation_unit_b.cpp
+// LIBRARY_USE_SSE not defined
+#include "header_only_math.hpp"  // vector ops use scalar fallback
+
+// Both define the same inline functions with different bodies.
+// Linker picks one. Half the program uses the wrong implementation.
+// No diagnostic. Possible wrong results or crashes.
+```
+
+This is not a contrived scenario. Libraries that use `#ifdef` to select code paths, or that behave differently based on `NDEBUG`, `_DEBUG`, or platform macros, can produce ODR violations in any project that mixes compilation settings. Sanitizers (specifically `-fsanitize=undefined` with ODR violation detection) and link-time tools like `ld`'s `--detect-odr-violations` can catch some of these, but not all.
 
 For a stable shared-library or plugin contract, prefer opaque handles, narrow C-style value types, explicit ownership functions, versioned structs, and clear lifetime rules. Internally, use modern C++ aggressively. At the boundary, be conservative because consumers pay for your binary ambiguity.
 
@@ -150,6 +235,34 @@ Versioning is not only about semantic version numbers. It is also about symbol v
 Most cross-library failures are not glamorous. They come from ownership mismatches.
 
 If one side allocates memory and the other deallocates it, the allocator contract must be explicit. If exceptions are allowed to cross the boundary, runtime and compiler assumptions must align. If the boundary uses callbacks, retention and thread-affinity rules must be documented. If background work continues during unload, the packaging design is already unsafe.
+
+```cpp
+// Anti-pattern: cross-boundary allocation mismatch.
+// Library (built with MSVC debug runtime, uses debug heap):
+EXPORT char* get_name() {
+	char* buf = new char[64];
+	std::strcpy(buf, "session-001");
+	return buf;
+}
+
+// Consumer (built with MSVC release runtime, uses release heap):
+void use_library() {
+	char* name = get_name();
+	// ...
+	delete[] name;  // CRASH: freeing debug-heap memory on release heap
+}
+```
+
+The fix is to never let allocation and deallocation cross the boundary. The library that allocates must also provide the deallocation function, or the boundary must use caller-provided buffers.
+
+```cpp
+// Safe: library owns both allocation and deallocation.
+EXPORT char* get_name();
+EXPORT void free_name(char* name);
+
+// Also safe: caller provides the buffer.
+EXPORT status_code get_name(char* buffer, std::size_t buffer_size);
+```
 
 These are the details that turn a locally clean interface into an operable library.
 

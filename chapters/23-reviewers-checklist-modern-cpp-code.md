@@ -37,6 +37,98 @@ Were move and copy costs changed intentionally? Value semantics are powerful, bu
 
 Good review comments in this area are concrete. "This looks risky" is weak. "This queue now stores `std::string_view` derived from request-local storage, so queued work can outlive the buffer" is strong.
 
+### What the reviewer should flag: dangling references
+
+Dangling references are the single most productive category of bugs for reviewers to catch because they are invisible to the type system and often survive testing until a race or reallocation makes them observable.
+
+```cpp
+// FLAG THIS: dangling reference from temporary
+auto& config = get_configs()["database"];
+// if get_configs() returns by value, the temporary map is destroyed
+// at the semicolon. config is now a dangling reference.
+// fix: auto config = get_configs()["database"];  (copy the value)
+
+// FLAG THIS: reference into a vector that may reallocate
+auto& first = items.front();
+items.push_back(new_item);  // may reallocate, invalidating first
+use(first);                 // undefined behavior
+
+// FLAG THIS: string_view outliving its source
+std::string_view name = get_user().name();
+// if get_user() returns by value, the std::string inside the
+// temporary is destroyed. name now points to freed memory.
+// fix: std::string name = std::string{get_user().name()};
+
+// FLAG THIS: lambda capturing reference to local
+auto make_callback(request& req) {
+    auto& headers = req.headers();  // reference to req's member
+    return [&headers]() {           // captures by reference
+        log(headers);               // dangling if req is destroyed
+    };
+    // fix: capture by value, or capture a copy of headers
+}
+```
+
+The reviewer's question is always the same: does the referenced object provably outlive every use of the reference? If the answer requires reasoning about framework scheduling, queue timing, or caller discipline, the code should copy instead.
+
+### What the reviewer should flag: missing noexcept on move operations
+
+A move constructor or move assignment operator that is not marked `noexcept` silently degrades standard library container performance. `std::vector` will copy instead of move during reallocation if the move constructor can throw, because the strong exception guarantee requires it.
+
+```cpp
+// FLAG THIS: move constructor without noexcept
+class connection {
+    std::unique_ptr<socket> sock_;
+    std::string endpoint_;
+public:
+    connection(connection&& other)  // missing noexcept!
+        : sock_(std::move(other.sock_))
+        , endpoint_(std::move(other.endpoint_))
+    {}
+    // std::vector<connection> will COPY during reallocation
+    // instead of moving. For large vectors, this is a silent
+    // performance cliff — and may fail to compile if the type
+    // is move-only.
+};
+
+// CORRECT:
+connection(connection&& other) noexcept
+    : sock_(std::move(other.sock_))
+    , endpoint_(std::move(other.endpoint_))
+{}
+// now vector::push_back uses move during reallocation
+```
+
+This also applies to move assignment. Both `std::move_if_noexcept` and container implementations check `noexcept` at compile time. If either move operation is potentially throwing, the fallback is always more expensive.
+
+### What the reviewer should flag: exception-unsafe resource acquisition
+
+Resource leaks hide in code that acquires multiple resources without RAII guards, especially when the acquisitions are interleaved with operations that can throw.
+
+```cpp
+// FLAG THIS: raw acquire/release with throwing code between
+void setup_pipeline(config const& cfg) {
+    auto* buf = allocate_buffer(cfg.buffer_size);  // raw allocation
+    auto fd = open_file(cfg.path);                 // may throw
+    auto conn = connect_to_db(cfg.db_url);         // may throw
+    register_pipeline(buf, fd, conn);
+    // if open_file throws, buf leaks
+    // if connect_to_db throws, buf leaks AND fd leaks
+}
+
+// CORRECT: RAII from the first acquisition
+void setup_pipeline(config const& cfg) {
+    auto buf = std::unique_ptr<std::byte[]>(
+        allocate_buffer(cfg.buffer_size));
+    auto fd = owned_fd{open_file(cfg.path)};       // RAII wrapper
+    auto conn = connect_to_db(cfg.db_url);         // already RAII (or should be)
+    register_pipeline(buf.release(), fd.release(), std::move(conn));
+    // every intermediate throw is safe — destructors clean up
+}
+```
+
+The pattern to watch for is any gap between resource acquisition and RAII ownership. Even a single line of throwing code in that gap is a leak. Reviewers should also flag `new` expressions passed directly as function arguments, where an exception in another argument evaluation can leak the allocation before the smart pointer is constructed.
+
 ## Invariants and Error Boundary Questions
 
 The next pass is about invalid state and failure shape. Does the change make invalid state easier to create, easier to observe, or harder to recover from? Construction paths, configuration objects, partial initialization, and mutation APIs are common places where invariants become weaker silently.
@@ -58,6 +150,40 @@ If templates, concepts, callbacks, or type erasure were added, why this form? Co
 For library changes, ask whether the public surface leaked implementation detail. Did a new header expose a transport type, allocator strategy, synchronization primitive, or error type that callers should not have to know? Did a seemingly harmless inline helper change the ABI or source compatibility story? Did the docs or examples change with the contract, or is the new behavior discoverable only by reading the diff?
 
 Reviewing interfaces well means thinking like the next caller, not like the current author.
+
+### What the reviewer should flag: implicit conversion and narrowing in APIs
+
+Public interfaces that silently accept wrong types or narrow values are a source of bugs that survive unit tests and only appear under production data.
+
+```cpp
+// FLAG THIS: implicit conversion hides a bug
+class rate_limiter {
+public:
+    rate_limiter(int max_requests, int window_seconds);
+};
+
+// caller writes:
+rate_limiter limiter(30, 60);     // OK: 30 requests per 60 seconds
+rate_limiter limiter(60, 30);     // compiles fine, but the arguments
+                                   // are swapped — 60 req per 30s
+// no type safety distinguishes max_requests from window_seconds
+
+// BETTER: use distinct types or a builder
+struct max_requests { int value; };
+struct window_seconds { int value; };
+
+rate_limiter(max_requests max, window_seconds window);
+// rate_limiter limiter(window_seconds{60}, max_requests{30}); // compile error
+```
+
+```cpp
+// FLAG THIS: narrowing conversion in initialization
+void set_buffer_size(std::size_t bytes);
+
+int user_input = get_config_value("buffer_size");  // may be negative
+set_buffer_size(user_input);  // silent narrowing: -1 becomes SIZE_MAX
+// fix: validate before conversion, or use std::size_t throughout
+```
 
 ## Concurrency, Time, and Shutdown Questions
 

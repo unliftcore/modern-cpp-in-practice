@@ -75,6 +75,112 @@ For example, an internal parsing engine probably does not need to be a giant pol
 
 This is also where library authors need discipline about dependencies. If the public headers include a networking stack, formatting library, metrics SDK, and filesystem abstraction just to support optional features, the library has already lost portability and build hygiene. Optional operational concerns belong behind narrow seams or in companion adapters, not in the center of the API.
 
+### Mistake: exposing internal types in public headers
+
+One of the most common library design failures is leaking implementation types into the public API surface. This creates hidden coupling: callers transitively depend on headers they never asked for, build times grow, and internal refactors become breaking changes.
+
+```cpp
+// BAD: public header pulls in implementation details
+#pragma once
+#include <boost/asio/io_context.hpp>      // transport detail
+#include <spdlog/spdlog.h>                // logging detail
+#include "internal/parser_state_machine.h" // implementation detail
+
+class document_parser {
+public:
+    document_parser(boost::asio::io_context& io,
+                    std::shared_ptr<spdlog::logger> log);
+
+    auto parse(std::string_view input) -> document;
+
+private:
+    boost::asio::io_context& io_;          // caller now depends on Boost.Asio
+    std::shared_ptr<spdlog::logger> log_;  // caller now depends on spdlog
+    internal::parser_state_machine fsm_;   // caller now depends on internal layout
+};
+// Every caller's translation unit now includes Boost.Asio and spdlog headers.
+// Changing the logging library is a breaking change for all consumers.
+```
+
+The fix is to keep the public header minimal and push implementation types behind forward declarations, PIMPL, or narrow callback interfaces.
+
+```cpp
+// BETTER: public header exposes only the library's own vocabulary
+#pragma once
+#include <string_view>
+#include <expected>
+#include <memory>
+
+namespace mylib {
+
+enum class parse_error { invalid_syntax, resource_limit_exceeded };
+
+struct diagnostic_event {
+    std::string_view message;
+    std::size_t line;
+};
+
+using diagnostic_sink = std::function<void(diagnostic_event const&)>;
+
+class document_parser {
+public:
+    struct options {
+        std::size_t max_bytes = 1 << 20;
+        diagnostic_sink on_diagnostic = {};  // optional, no spdlog dependency
+    };
+
+    explicit document_parser(options opts = {});
+    ~document_parser();
+    document_parser(document_parser&&) noexcept;
+    document_parser& operator=(document_parser&&) noexcept;
+
+    [[nodiscard]] auto parse(std::string_view input)
+        -> std::expected<document, parse_error>;
+
+private:
+    struct impl;
+    std::unique_ptr<impl> impl_;  // Boost, spdlog, FSM all hidden here
+};
+
+} // namespace mylib
+// Callers include only standard headers. Internal deps are invisible.
+// Changing from spdlog to another logger requires zero caller changes.
+```
+
+### Mistake: poor error reporting
+
+Libraries that report errors as raw integers, bare `std::string` messages, or platform-specific exception types force callers to reverse-engineer failure semantics from implementation details. The result is fragile error handling that breaks whenever the library changes its internals.
+
+```cpp
+// BAD: error reporting through mixed, unstable channels
+auto parse(std::string_view input) -> document {
+    if (input.empty())
+        throw std::runtime_error("empty input");  // string-based
+    if (input.size() > max_size)
+        return {};  // default-constructed "null" document — is this an error?
+    if (!validate_header(input))
+        throw parser_exception(ERR_INVALID_HEADER);  // internal enum leaked
+    // caller must catch two exception types AND check for empty documents
+}
+```
+
+```cpp
+// BETTER: single, stable error channel with actionable categories
+[[nodiscard]] auto parse(std::string_view input)
+    -> std::expected<document, parse_error>
+{
+    if (input.empty())
+        return std::unexpected(parse_error::invalid_syntax);
+    if (input.size() > max_size)
+        return std::unexpected(parse_error::resource_limit_exceeded);
+    if (!validate_header(input))
+        return std::unexpected(parse_error::invalid_syntax);
+    // one return type, one error vocabulary, no exceptions for routine failures
+}
+```
+
+For richer diagnostics beyond the category, provide a separate channel (a diagnostic sink, an error details accessor, or a structured log) rather than overloading the primary error type with implementation-specific fields that callers cannot act on programmatically.
+
 ## Versioning and ABI Need a Policy, Not Optimism
 
 Even an internal shared library benefits from treating versioning as part of design rather than release paperwork. The practical question is what kinds of change the library promises callers they can survive. Source compatibility, ABI compatibility, wire-format stability, serialized-data stability, and semantic compatibility are related but different promises.
@@ -82,6 +188,77 @@ Even an internal shared library benefits from treating versioning as part of des
 For many C++ libraries, the easiest honest policy is source compatibility within a major version and no blanket ABI promise across arbitrary toolchains. That is often a stronger real-world posture than pretending ABI stability while exposing standard-library types, inline-heavy templates, or platform-dependent layout in the public surface.
 
 If ABI stability does matter, the design must change accordingly. That usually means narrower exported surfaces, opaque types, PIMPL-like boundaries, stricter exception policy, reduced template exposure, and controlled compiler and standard-library assumptions. Those are not finishing touches. They affect the entire API shape.
+
+### Mistake: breaking ABI with inline changes
+
+A change that appears safe at the source level can break binary compatibility silently. Adding a member to a class, changing a default parameter value in an inline function, or reordering fields all change the ABI without any compiler diagnostic.
+
+```cpp
+// v1.0 — shipped as shared library
+struct document {
+    std::pmr::vector<entry> entries;
+    // sizeof(document) == N, known to callers at compile time
+};
+
+// v1.1 — "just added a field"
+struct document {
+    std::pmr::vector<entry> entries;
+    std::optional<metadata> meta;  // sizeof(document) changed
+    // callers compiled against v1.0 still assume size N
+    // stack allocations, memcpy, placement new — all wrong
+};
+```
+
+The fix for ABI-stable libraries is to hide layout behind a PIMPL boundary, so that callers never depend on `sizeof` or field offsets.
+
+```cpp
+// ABI-stable public header
+class document {
+public:
+    document();
+    ~document();
+    document(document&&) noexcept;
+    document& operator=(document&&) noexcept;
+
+    [[nodiscard]] auto entries() const -> std::span<entry const>;
+    [[nodiscard]] auto metadata() const -> std::optional<metadata_view>;
+
+private:
+    struct impl;
+    std::unique_ptr<impl> impl_;
+};
+
+// In the .cpp file (not visible to callers):
+struct document::impl {
+    std::pmr::vector<entry> entries;
+    std::optional<metadata> meta;
+    // add fields freely — callers see only the pointer
+};
+```
+
+PIMPL adds one heap allocation per object and one indirection per access. For types created infrequently (documents, connections, sessions), this is nearly always an acceptable cost. For types created millions of times per second in a hot loop, it is not, and ABI stability for those types should be reconsidered.
+
+### Versioning pattern: inline namespaces for source versioning
+
+When the library must support multiple API versions simultaneously (for example, during a migration period), inline namespaces let you version the symbols without forcing callers to change their code.
+
+```cpp
+namespace mylib {
+inline namespace v2 {
+    struct document { /* v2 layout */ };
+    auto parse_document(std::string_view input) -> std::expected<document, parse_error>;
+}
+
+namespace v1 {
+    struct document { /* v1 layout, kept for compatibility */ };
+    auto parse_document(std::string_view input) -> std::expected<document, parse_error>;
+}
+}
+
+// Callers using `mylib::document` get v2 by default.
+// Callers that need v1 use `mylib::v1::document` explicitly.
+// Linker symbols are distinct, so v1 and v2 can coexist in one binary.
+```
 
 Modules improve build structure and distribution hygiene, but they do not erase ABI reality. Likewise, concepts improve diagnostics and constraints, but they do not automatically make a heavily templated library versionable. Treat these tools as local improvements, not policy substitutes.
 

@@ -45,6 +45,50 @@ This is intentionally boring. The service has one ownership root, one stop path,
 
 That root should usually own concrete infrastructure types, not a graph of heap-allocated interfaces stitched together with shared ownership. Dependency inversion still matters, but the inversion point is usually at boundaries such as storage, transport, or telemetry adapters. Within the process, static ownership is simpler and cheaper than a forest of `std::shared_ptr` objects whose real owners no longer exist on paper.
 
+### Anti-pattern: shared_ptr soup for request state
+
+A common failure mode is using `std::shared_ptr` to extend request lifetimes across callbacks, queues, and retries without an explicit ownership model. The code compiles and appears safe, but nobody can say when request resources actually release, whether cancellation reaches all holders, or whether shutdown can complete deterministically.
+
+```cpp
+// BAD: shared_ptr soup — every callback extends lifetime indefinitely
+void handle_request(std::shared_ptr<http_request> req) {
+    auto ctx = std::make_shared<request_context>(req->parse_body());
+    ctx->db_future = db_.async_query(ctx->query, [ctx](auto result) {
+        ctx->result = result;
+        cache_.async_store(ctx->key, ctx->result, [ctx](auto status) {
+            ctx->respond(status);  // when does ctx die? who knows
+        });
+    });
+    // ctx is now kept alive by two lambdas, the future, and possibly
+    // a retry timer. cancellation cannot reach it. shutdown cannot
+    // drain it. memory profile is non-deterministic.
+}
+```
+
+The fix is to extract an owned work item and move it through the pipeline with clear handoff points.
+
+```cpp
+// BETTER: owned work item with explicit lifetime boundaries
+struct request_work {
+    parsed_query query;
+    std::stop_token stop;
+    response_sink sink;  // move-only, writes exactly once
+};
+
+void handle_request(http_request& req, std::stop_token stop) {
+    auto work = request_work{
+        .query = req.parse_body(),
+        .stop  = stop,
+        .sink  = req.take_response_sink(),
+    };
+    executor_.submit(std::move(work));
+    // work is now owned by the executor. cancellation reaches it
+    // through stop_token. shutdown drains the executor.
+}
+```
+
+The owned work item makes the design questions visible: what data survives the request boundary, who can cancel it, and where does it end up during shutdown.
+
 ## Startup Should Either Produce a Running Service or Fail Cleanly
 
 Many service incidents start before the first request. Configuration is partially loaded. One subsystem is healthy, another is not. Threads start before health state exists. Background timers begin before dependencies are validated. The process reports "ready" because some constructor returned.
@@ -82,6 +126,90 @@ First, the amount of concurrent work must be bounded. If overload can translate 
 Second, work must be owned. Detached threads and fire-and-forget tasks are attractive because they make local code short. They also destroy shutdown semantics. If the service can enqueue work, the service should know when that work starts, when it finishes, and how cancellation reaches it.
 
 Third, cancellation must be part of the normal model rather than an afterthought. `std::jthread` and `std::stop_token` help here because they make stop propagation part of the type-level contract. They do not solve everything. You still need work units that check the token at sensible boundaries and storage or network operations that map cancellation into consistent errors. But they force the question into the code instead of leaving it in comments.
+
+### Anti-pattern: blocking the event loop
+
+One of the most common service failures is performing synchronous blocking work on a thread that should be driving I/O or dispatching requests. The service appears healthy under light load, then collapses under traffic because the event loop is stuck in a database call, a DNS resolution, or a file read.
+
+```cpp
+// BAD: synchronous blocking on the listener thread
+void on_request(http_request& req) {
+    auto record = db_.query_sync(req.key());   // blocks for 5-200ms
+    auto enriched = enrich(record);             // CPU work, fine
+    auto blob = fs::read_file(enriched.path()); // blocks again
+    req.respond(200, serialize(blob));
+}
+// Under 50 concurrent requests, the listener thread is blocked
+// for the entire duration of each request. Tail latency explodes.
+// New connections queue at the OS level with no backpressure signal.
+```
+
+The fix is to dispatch blocking work to a bounded executor and keep the listener thread non-blocking.
+
+```cpp
+// BETTER: dispatch blocking work off the listener thread
+void on_request(http_request& req) {
+    auto work = request_work{req.key(), req.take_response_sink()};
+    if (!executor_.try_submit(std::move(work))) {
+        req.respond(503, "overloaded");  // explicit rejection
+        metrics_.increment("request.rejected.overload");
+    }
+    // listener thread returns immediately, ready for next connection
+}
+
+// In the executor's worker threads:
+void process(request_work work) {
+    auto record = db_.query_sync(work.key);
+    auto enriched = enrich(record);
+    auto blob = fs::read_file(enriched.path());
+    work.sink.respond(200, serialize(blob));
+}
+```
+
+### Anti-pattern: no graceful shutdown
+
+Services that lack explicit shutdown logic produce use-after-free bugs, partial writes, orphaned connections, and hung processes that must be `SIGKILL`-ed by the orchestrator. The failure is rarely visible in development because the process exits quickly. In production, in-flight work and background timers create real races.
+
+```cpp
+// BAD: shutdown by destruction order and hope
+class service {
+    http_listener listener_;
+    database_pool db_;
+    std::vector<std::jthread> workers_;
+public:
+    ~service() {
+        // listener_ destructor closes the socket (maybe)
+        // workers_ destructors request stop and join (maybe)
+        // db_ destructor closes connections (maybe)
+        // but workers_ may still be using db_ when db_ destructs
+        // destruction order is reverse-of-declaration, so db_
+        // is destroyed BEFORE workers_ — use-after-free
+    }
+};
+```
+
+The fix is to make shutdown an explicit, ordered operation that drains work before destroying resources.
+
+```cpp
+// BETTER: explicit drain-then-destroy shutdown
+class service {
+    database_pool db_;           // destroyed last
+    http_listener listener_;
+    bounded_executor executor_;  // owns worker threads
+    std::atomic<bool> stopping_{false};
+public:
+    void shutdown() noexcept {
+        stopping_.store(true, std::memory_order_relaxed);
+        listener_.stop_accepting();               // 1. stop new work
+        executor_.drain(std::chrono::seconds{5});  // 2. finish in-flight
+        db_.close();                               // 3. release deps
+        metrics_.flush();                          // 4. final telemetry
+    }
+    // destructor now only releases already-drained resources
+};
+```
+
+The key insight is that destruction order is a language mechanism, not a shutdown policy. The two must be designed together, and explicit drain logic should precede any resource teardown that in-flight work might depend on.
 
 Coroutines can improve structure if the service already benefits from asynchronous composition, especially around I/O-heavy request paths. They are a bad bargain when used only to avoid writing callbacks while the lifetime model remains vague. If a coroutine frame captures borrowed request data, executor references, and cancellation state without a clear owner, you have compressed the bug, not removed it. Use coroutines when they simplify a design whose ownership model is already sound.
 

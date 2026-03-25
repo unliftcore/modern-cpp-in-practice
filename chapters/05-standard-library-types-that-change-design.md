@@ -34,6 +34,22 @@ This signature says several important things immediately.
 
 The older alternatives blur those statements. `const std::string&` suggests string ownership exists somewhere, even when callers are holding a slice into a larger buffer. `const std::vector<std::byte>&` excludes stack buffers, `std::array`, memory-mapped regions, and packet views for no good reason. `const char*` quietly reintroduces lifetime ambiguity and C-string assumptions.
 
+To see the difference concretely, consider how the same boundary looked before borrowing types existed:
+
+```cpp
+// Pre-C++17: raw pointer + length, no type safety on the binary side
+auto parse_metric_line(const char* line, std::size_t line_len,
+                       const unsigned char* attr_bytes, std::size_t attr_len,
+                       MetricRecord* out_record) -> int; // 0 = success, -1 = error
+
+// Or the "safe" version that forces callers into specific containers
+auto parse_metric_line(const std::string& line,
+                       const std::vector<unsigned char>& attribute_bytes)
+    -> MetricRecord; // throws on failure, no way to distinguish absence from error
+```
+
+The pointer-and-length version has no type system support for contiguity, read-only access, or even the fact that the binary buffer represents bytes rather than characters. Every caller must manually track two raw values per parameter, and a transposition bug (passing `attr_len` where `line_len` was expected) compiles silently. The container-reference version forces every caller to allocate a `std::string` and a `std::vector` even when the data already lives in a memory-mapped file or a stack buffer. Neither version communicates the ownership contract through the type system.
+
 Borrowing types do impose discipline. A `std::string_view` is safe only while its source remains alive and unchanged. A `std::span` is safe only while the referenced storage remains valid. That is not a weakness of the types. It is the point. They force the boundary to say, in the type system, that this is a borrowing relationship and not an ownership transfer.
 
 The failure mode is storing the borrow when the lifetime guarantee was local.
@@ -71,6 +87,49 @@ The mistake is treating these types as interchangeable wrappers around uncertain
 - `variant` is for one-of-several-valid-forms.
 
 Once you phrase them that way, many API debates end quickly.
+
+### What Designs Looked Like Before These Types
+
+Before `std::optional`, the standard idiom for "maybe a value" was a sentinel or an out-parameter:
+
+```cpp
+// Sentinel: -1 means "not found." Every caller must know the convention.
+int find_port(const Config& cfg); // returns -1 if unset
+
+// Out-parameter: success indicated by bool return, value written through pointer.
+bool find_port(const Config& cfg, int* out_port);
+
+// Nullable pointer: caller must check for null, and ownership is ambiguous.
+const Config* find_override(std::string_view key); // null means absent... or error?
+```
+
+Every one of these forces callers to remember an informal protocol. Sentinels like `-1` or `nullptr` are invisible in the type system; nothing prevents a caller from using the sentinel value in arithmetic. Out-parameters invert the data flow and make chaining awkward. With `std::optional<int>`, the type itself carries the "maybe absent" semantics and the compiler helps enforce the check.
+
+Before `std::variant`, closed sets of alternatives were modeled with `union`, an enum discriminator, and manual discipline:
+
+```cpp
+// C-style tagged union: no automatic destruction, no compiler-checked exhaustiveness
+enum class ValueKind { Integer, Float, String };
+
+struct Value {
+    ValueKind kind;
+    union {
+        std::int64_t as_int;
+        double as_float;
+        char as_string[64]; // fixed buffer, truncation risk
+    };
+};
+
+void process(const Value& v) {
+    switch (v.kind) {
+    case ValueKind::Integer: /* ... */ break;
+    case ValueKind::Float:   /* ... */ break;
+    // Forgot String? Compiles fine. UB at runtime if String arrives.
+    }
+}
+```
+
+The `union` holds the data but the language provides no guarantee that `kind` and the active member stay in sync. Adding a new alternative requires updating every `switch` site manually, and the compiler is not required to warn about missing cases. `std::variant` makes the active alternative part of the type's runtime state, destructs the previous value correctly on reassignment, and `std::visit` provides a pattern where the compiler can warn if a case is missing.
 
 Suppose a configuration loader may find no override, may parse a valid override, or may reject malformed input. Those are three semantically different outcomes. Cramming them into `optional<Config>` loses the reason malformed input was rejected. Returning `expected<optional<Config>, ConfigError>` may look slightly heavier, but it states the contract precisely: absence is normal, malformed input is failure.
 

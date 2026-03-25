@@ -14,6 +14,61 @@ This matters because most of the old pain in C++ metaprogramming came from forci
 
 That changes the design trade. If a compile-time routine still looks like normal code, review and debugging stay tolerable. If moving work to compile time requires a second, stranger version of the algorithm, the benefit has to be substantial.
 
+### The Old World: Recursive Templates and Type-Level Arithmetic
+
+To appreciate how much `constexpr` changed, consider a common pre-C++11 task: computing a factorial at compile time. Without `constexpr`, the only option was recursive template instantiation:
+
+```cpp
+// Pre-C++11: compile-time factorial via template recursion
+template <int N>
+struct Factorial {
+    static const int value = N * Factorial<N - 1>::value;
+};
+
+template <>
+struct Factorial<0> {
+    static const int value = 1;
+};
+
+// Usage: Factorial<10>::value
+```
+
+This works, but the logic is encoded in the type system rather than in code. There are no loops, no variables, and no debugger support. Errors from exceeding the recursion depth produce long chains of template instantiation backtraces. More complex computations, such as compile-time string processing or table generation, required increasingly arcane techniques: variadic template packs as value lists, recursive `struct` hierarchies to simulate arrays, and SFINAE tricks to simulate conditionals.
+
+The modern equivalent is just a function:
+
+```cpp
+constexpr auto factorial(int n) -> int {
+    int result = 1;
+    for (int i = 2; i <= n; ++i)
+        result *= i;
+    return result;
+}
+
+// Usage: constexpr auto f = factorial(10);
+```
+
+Same result, evaluated at compile time, but written as ordinary code that any C++ programmer can read and that a debugger can step through at runtime if needed. This is the shift that matters: compile-time programming no longer requires a separate mental model.
+
+A more realistic example is compile-time lookup table construction. In the old style, generating a table of, say, CRC values required a recursive template that instantiated itself once per table entry, accumulated results through nested type aliases, and was practically impossible to extend or debug. With `constexpr`, you write a loop that fills a `std::array`:
+
+```cpp
+constexpr auto build_crc_table() -> std::array<std::uint32_t, 256> {
+    std::array<std::uint32_t, 256> table{};
+    for (std::uint32_t i = 0; i < 256; ++i) {
+        std::uint32_t crc = i;
+        for (int j = 0; j < 8; ++j)
+            crc = (crc >> 1) ^ (0xEDB88320u & (~(crc & 1u) + 1u));
+        table[i] = crc;
+    }
+    return table;
+}
+
+constexpr auto crc_table = build_crc_table();
+```
+
+This replaces what would have been hundreds of lines of template machinery with a plain function that happens to run at compile time.
+
 Good candidates are fixed translation tables, protocol field layout helpers, validated lookup maps for small enums, and command metadata assembled from constant inputs. These are cases where the inputs are static by nature and computing the result earlier can remove startup work or make invalid combinations impossible.
 
 ## Use `consteval` Only When Delayed Failure Would Be a Design Bug
@@ -45,11 +100,11 @@ consteval auto validate_descriptors(std::array<MessageDescriptor, N> table)
 	return table;
 }
 
-constexpr auto descriptors = validate_descriptors<3>({{
-	{0x10, 1024},
-	{0x11, 4096},
-	{0x12, 512},
-}});
+constexpr auto descriptors = validate_descriptors(std::array{
+	MessageDescriptor{0x10, 1024},
+	MessageDescriptor{0x11, 4096},
+	MessageDescriptor{0x12, 512},
+});
 ```
 
 The exact error text and mechanism can be refined, but the design point is solid. These descriptors are static program structure. Rejecting an invalid table during compilation is worth the cost.
@@ -63,6 +118,41 @@ The mistake is using `consteval` to force evaluation of logic that is not inhere
 Used badly, it turns a function template into a dumping ground for unrelated behavior.
 
 The right use case is something like storage strategy differences between trivially copyable payloads and non-trivial domain objects, or a formatting helper that handles byte buffers differently from structured records while preserving one public contract. The variation belongs to representation or capability.
+
+Before `if constexpr`, this kind of type-dependent branching required either tag dispatch or SFINAE overload sets:
+
+```cpp
+// Pre-C++17 tag dispatch: two overloads selected by a type trait
+template <typename T>
+void serialize_impl(const T& val, Buffer& buf, std::true_type /*trivially_copyable*/) {
+    buf.append(reinterpret_cast<const std::byte*>(&val), sizeof(T));
+}
+
+template <typename T>
+void serialize_impl(const T& val, Buffer& buf, std::false_type /*trivially_copyable*/) {
+    val.serialize(buf); // requires a member function
+}
+
+template <typename T>
+void serialize(const T& val, Buffer& buf) {
+    serialize_impl(val, buf, std::is_trivially_copyable<T>{});
+}
+```
+
+This works but scatters a single logical function across multiple overloads. The reader must trace through the tag dispatch to understand the branching. With `if constexpr`, the same logic is local and linear:
+
+```cpp
+template <typename T>
+void serialize(const T& val, Buffer& buf) {
+    if constexpr (std::is_trivially_copyable_v<T>) {
+        buf.append(reinterpret_cast<const std::byte*>(&val), sizeof(T));
+    } else {
+        val.serialize(buf);
+    }
+}
+```
+
+Both branches exist in the same function. The discarded branch is not instantiated, so it does not need to compile for the actual type. The intent is immediately visible.
 
 The wrong use case is encoding every product-specific rule as another compile-time branch because “the compiler can optimize it away.” That approach ties application policy to type structure and makes the function harder to review each time a new condition is added. When the branching is really about runtime business meaning rather than static type capability, ordinary runtime code is usually clearer.
 

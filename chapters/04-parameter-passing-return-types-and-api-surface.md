@@ -41,6 +41,45 @@ This has two advantages.
 
 The main misuse is allowing borrowed parameters to leak into retained state. A function that accepts `string_view` and then caches it beyond the call is not clever; it is lying about the contract.
 
+### Dangling Borrows: The Cost of Getting This Wrong
+
+When a borrowed parameter outlives its source, the result is undefined behavior that often manifests as intermittent corruption rather than a clean crash:
+
+```cpp
+class Logger {
+public:
+	void set_prefix(std::string_view prefix) {
+		prefix_ = prefix; // BUG: stores a view, not a copy
+	}
+
+	void log(std::string_view message) {
+		fmt::print("[{}] {}\n", prefix_, message); // reads dangling view
+	}
+
+private:
+	std::string_view prefix_; // non-owning -- lifetime depends on caller
+};
+
+void configure_logger(Logger& logger) {
+	std::string name = build_service_name();
+	logger.set_prefix(name); // name is destroyed at end of scope
+} // name destroyed here -- logger.prefix_ is now dangling
+```
+
+The fix is straightforward: if the member must outlive the call, it must own its data.
+
+```cpp
+class Logger {
+public:
+	void set_prefix(std::string prefix) { // takes ownership by value
+		prefix_ = std::move(prefix);
+	}
+	// ...
+private:
+	std::string prefix_; // owning -- no lifetime dependency on caller
+};
+```
+
 That is why a useful review heuristic is simple: if the parameter type says borrow, all retention must be visible in the implementation as an explicit copy or transformation to an owning type.
 
 ## Pass by Value When the Callee Needs Its Own Copy Anyway
@@ -68,6 +107,57 @@ This constructor is often better than both `const std::string&` and `std::string
 - There is no temptation to retain a borrowed view accidentally.
 
 The rule is not "always pass expensive types by const reference." The rule is "pass by value when ownership transfer into the callee is the intended contract and the extra move/copy story is acceptable."
+
+### Wrong Parameter Choices and Their Costs
+
+The cost of getting parameter passing wrong is not always dramatic, but it compounds across hot paths and large objects.
+
+**Unnecessary copy from `const std::string&` when ownership is needed:**
+
+```cpp
+class Registry {
+public:
+	void register_name(const std::string& name) {
+		names_.push_back(name); // always copies, even if caller passed a temporary
+	}
+private:
+	std::vector<std::string> names_;
+};
+
+// Caller:
+registry.register_name(build_name()); // builds a temporary string, copies it,
+									  // then destroys the temporary. The move
+									  // that pass-by-value would have enabled
+									  // is lost.
+```
+
+With pass-by-value-and-move, the temporary is moved directly into the container at zero copy cost:
+
+```cpp
+void register_name(std::string name) {
+	names_.push_back(std::move(name)); // rvalue callers: 1 move. lvalue callers: 1 copy + 1 move.
+}
+```
+
+**Forced allocation from `const std::vector<T>&` when `std::span` suffices:**
+
+```cpp
+// Anti-pattern: forces callers to allocate a vector even if data is in an array or span.
+double average(const std::vector<double>& values);
+
+// Caller with a C array or std::array must construct a vector just to call this:
+std::array<double, 4> readings = {1.0, 2.0, 3.0, 4.0};
+auto avg = average(std::vector<double>(readings.begin(), readings.end())); // pointless heap allocation
+```
+
+With `std::span<const double>`, the function accepts any contiguous source without forcing a container choice:
+
+```cpp
+double average(std::span<const double> values);
+
+// Now works with vector, array, C array, span -- no allocation required.
+auto avg = average(readings);
+```
 
 The tradeoff is that pass-by-value can be wrong for polymorphic types, very large aggregates where copying lvalues is rarely desired, or APIs where retention is conditional and uncommon. As always, the semantic contract comes first.
 
@@ -144,6 +234,35 @@ Now the caller chooses between owned result production and append-style mutation
 Creation functions are where unclear ownership becomes especially expensive. A factory returning `T*` leaves callers asking who deletes it. A factory writing into an out-parameter plus bool return often hides partial-construction rules. A factory returning `shared_ptr<T>` by default may impose shared ownership long before the design proved it necessary.
 
 For ordinary exclusive ownership, `std::unique_ptr<T>` is usually the clearest result. For value-like created objects, return the value directly or use `expected<T, E>` when failure belongs at the boundary. For shared ownership, return `shared_ptr<T>` only when the product being created is genuinely intended for shared lifetime.
+
+The difference is concrete:
+
+```cpp
+// Anti-pattern: raw pointer factory -- caller does not know who owns the result.
+Widget* create_widget(const WidgetConfig& cfg);
+
+void setup() {
+	auto* w = create_widget(cfg);
+	// Does the caller own w? Does a global registry own it?
+	// Must the caller call delete? delete[]? A custom deallocator?
+	// Nothing in the signature answers these questions.
+	use(w);
+	// If the caller guesses wrong, the result is a leak or a double-free.
+}
+```
+
+```cpp
+// Clear: unique_ptr states exclusive caller ownership unambiguously.
+auto create_widget(const WidgetConfig& cfg)
+	-> std::expected<std::unique_ptr<Widget>, WidgetError>;
+
+void setup() {
+	auto result = create_widget(cfg);
+	if (!result) { /* handle error */ }
+	auto widget = std::move(*result); // ownership transferred, no ambiguity
+	// widget is destroyed automatically when it leaves scope
+}
+```
 
 The important point is not the specific vocabulary type. It is that creation boundaries are where ownership should become unmistakable.
 

@@ -93,6 +93,129 @@ authorize_payment(CreditPolicyPort& credit, const PaymentRequest& request);
 
 Now the workflow depends on domain meaning rather than storage shape. The adapter that talks to SQL does the translation. That translation is work, but it is the right work: contain volatility near the volatile thing.
 
+## Anti-pattern: Fat Interfaces That Attract Everything Nearby
+
+A bloated interface does not just violate aesthetics. It creates coupling gravity: every new feature gets bolted onto the existing surface because adding a method is easier than rethinking the boundary.
+
+```cpp
+// Anti-pattern: a "god interface" that mixes query, mutation, lifecycle,
+// metrics, and configuration concerns in one surface.
+class UserService {
+public:
+	virtual std::expected<UserProfile, ServiceError>
+	get_profile(UserId id) = 0;
+
+	virtual void update_profile(UserId id, const ProfilePatch& patch) = 0;
+
+	virtual void ban_user(UserId id, std::string_view reason) = 0;
+
+	virtual std::vector<AuditEntry>
+	get_audit_log(UserId id, TimeRange range) = 0;
+
+	virtual void flush_cache() = 0;
+
+	virtual MetricsSnapshot get_metrics() const = 0;
+
+	virtual void set_rate_limit(RateLimitConfig config) = 0;
+
+	virtual ~UserService() = default;
+};
+```
+
+This interface has at least four unrelated axes of change: user data access, moderation policy, operational observability, and runtime configuration. A caller who only needs to read a profile now transitively depends on audit, caching, metrics, and rate-limiting types. Test doubles must implement seven methods to fake one. Adding a new moderation action forces recompilation of read-only consumers. The interface is not flexible. It is a dependency sink that makes every change expensive and every test fragile.
+
+The fix is to split along responsibility boundaries:
+
+```cpp
+class UserProfileQuery {
+public:
+	virtual std::expected<UserProfile, ServiceError>
+	get_profile(UserId id) = 0;
+	virtual ~UserProfileQuery() = default;
+};
+
+class ModerationActions {
+public:
+	virtual void ban_user(UserId id, std::string_view reason) = 0;
+	virtual std::vector<AuditEntry>
+	get_audit_log(UserId id, TimeRange range) = 0;
+	virtual ~ModerationActions() = default;
+};
+```
+
+Now read-only consumers depend only on `UserProfileQuery`, moderation tools depend on `ModerationActions`, and operational concerns live in yet another interface. Each can evolve independently. Test doubles are trivial.
+
+## Anti-pattern: Leaking Implementation Details Through the Interface
+
+Even a small interface can damage a system if it exposes the wrong types.
+
+```cpp
+// Anti-pattern: interface leaks the JSON library into every consumer.
+#include <nlohmann/json.hpp>
+
+class ConfigProvider {
+public:
+	virtual nlohmann::json get_config(std::string_view key) = 0;
+	virtual ~ConfigProvider() = default;
+};
+```
+
+Every translation unit that includes this header now depends on the JSON library, whether or not it cares about JSON. Changing to TOML, YAML, or a binary config format becomes a breaking change across the entire codebase. The JSON library's compile time, macro definitions, and transitive includes spread into unrelated components. Worse, callers now navigate JSON trees instead of working with typed configuration values, scattering implicit schema knowledge throughout the codebase.
+
+The fix is to return domain-meaningful types:
+
+```cpp
+struct RetryConfig {
+	std::chrono::milliseconds initial_backoff;
+	std::chrono::milliseconds max_backoff;
+	std::uint32_t max_attempts;
+};
+
+class RetryConfigProvider {
+public:
+	virtual std::expected<RetryConfig, ConfigError>
+	load_retry_config() = 0;
+	virtual ~RetryConfigProvider() = default;
+};
+```
+
+Now the JSON dependency stays inside the adapter implementation. Consumers work with typed, validated values. The interface communicates domain meaning, not serialization format.
+
+## Anti-pattern: Wrong Abstraction Level
+
+Interfaces pitched at the wrong level of abstraction force callers to do work that should be encapsulated, or prevent them from doing work they need.
+
+```cpp
+// Anti-pattern: too low-level. Caller must assemble SQL semantics
+// even though this is supposed to abstract away storage.
+class DataStore {
+public:
+	virtual std::expected<RowSet, DbError>
+	execute_query(std::string_view sql) = 0;
+
+	virtual std::expected<std::size_t, DbError>
+	execute_update(std::string_view sql) = 0;
+
+	virtual ~DataStore() = default;
+};
+```
+
+This interface claims to abstract storage, but it exposes SQL as a string protocol. Callers must know the schema, construct correct SQL, and parse `RowSet` results. The abstraction prevents neither SQL injection nor schema coupling. It is a pass-through that adds indirection without reducing dependency.
+
+Conversely, an interface can be too high-level and prevent legitimate use:
+
+```cpp
+// Anti-pattern: too high-level. No way to paginate, filter,
+// or control what gets loaded.
+class OrderRepository {
+public:
+	virtual std::vector<Order> get_all_orders() = 0;
+	virtual ~OrderRepository() = default;
+};
+```
+
+The right abstraction level matches the operations the caller actually performs, using domain vocabulary and offering enough control to be efficient.
+
 ## Keep Interfaces Small by Separating Commands From Queries
 
 Bloated interfaces usually come from mixing unrelated reasons to change. A boundary that both retrieves state, mutates state, emits audit events, opens transactions, and exposes metrics snapshots is not flexible. It is a dependency sink.

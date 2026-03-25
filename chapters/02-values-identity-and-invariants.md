@@ -32,6 +32,43 @@ Usually the better design is this:
 
 That design makes each reader's world explicit. Code processing one request can reason against one configuration value. There is no half-updated object graph, no lock required merely to read a timeout value, and no mystery about whether two callers are looking at the same mutable instance.
 
+### What Goes Wrong Without Value Semantics
+
+When configuration is modeled as a shared mutable object rather than a value snapshot, aliasing bugs appear:
+
+```cpp
+// Anti-pattern: shared mutable configuration.
+struct AppConfig {
+	std::string db_host;
+	int db_port;
+	std::chrono::seconds timeout;
+};
+
+// A single global mutable instance, shared by reference.
+AppConfig g_config;
+
+void handle_request(RequestContext& ctx) {
+	auto conn = connect(g_config.db_host, g_config.db_port);
+	// ... long operation ...
+	// BUG: another thread calls reload_config(), mutating g_config
+	// mid-request. conn was opened with the old host, but now
+	// ctx uses the new timeout. The request operates against
+	// an incoherent mix of old and new configuration.
+	conn.set_timeout(g_config.timeout);
+}
+```
+
+With value semantics, each request captures its own immutable snapshot. No lock is needed to read fields, and no mid-flight mutation can create incoherent state:
+
+```cpp
+void handle_request(RequestContext& ctx, const ServiceConfig& config) {
+	// config is a value -- it cannot change during this call.
+	auto conn = connect(config.db_host(), config.db_port());
+	conn.set_timeout(config.timeout());
+	// Entire request sees a single consistent configuration.
+}
+```
+
 The deeper point is that values compose well. They can sit inside containers, cross threads, participate in deterministic tests, and form stable inputs to hashing or comparison. Identity-bearing objects can do those things too, but they require more rules and more caution. Use that complexity only when the model truly needs it.
 
 ## Invariants Are the Reason to Have Types at All
@@ -82,6 +119,30 @@ The details of error transport belong more fully in the next chapter, but the mo
 
 If a type does not enforce its invariants, the burden moves outward into every caller and every code review.
 
+### What Happens When Invariants Are Not Enforced
+
+Compare the factory-validated `RetryPolicy` above with a plain aggregate that leaves validation to callers:
+
+```cpp
+// Anti-pattern: invariants left to the caller.
+struct RetryPolicy {
+	std::chrono::milliseconds base_delay;
+	std::chrono::milliseconds max_delay;
+	std::uint32_t max_attempts;
+};
+
+void schedule_retries(const RetryPolicy& policy) {
+	// Caller forgot to validate. base_delay is negative, max_attempts is 0.
+	// This loop does nothing, silently dropping work.
+	for (std::uint32_t i = 0; i < policy.max_attempts; ++i) {
+		auto delay = std::min(policy.base_delay * (1 << i), policy.max_delay);
+		enqueue_after(delay); // never executes when max_attempts == 0
+	}
+}
+```
+
+Every function that receives `RetryPolicy` must now independently check for nonsense values, or assume some earlier layer already did. In practice, some callers check and some do not, producing inconsistent behavior depending on the call path. The factory approach shown earlier makes this class of bug structurally impossible: if you have a `RetryPolicy`, it is valid.
+
 ## Anti-pattern: Entity Semantics Smuggled Into a Value Type
 
 One recurring failure is a type that looks like a value because it is copied and compared, but actually carries identity-bearing mutation.
@@ -118,6 +179,45 @@ If a team cannot answer what equality should mean for a type, the type is probab
 
 This matters operationally. Equality influences cache keys, deduplication logic, diff generation, test assertions, and change detection. A semantically vague type tends to produce semantically vague equality, which then breaks several systems at once.
 
+### Shallow Copies and Aliasing: A Concrete Trap
+
+When a type looks like a value but shares internal state through pointers or references, copies become aliases rather than independent values:
+
+```cpp
+// Anti-pattern: shallow copy creates aliasing bugs.
+struct Route {
+	std::string name;
+	std::shared_ptr<std::vector<Endpoint>> endpoints; // shared, not owned
+};
+
+void reconfigure(Route primary) {
+	Route backup = primary; // looks like a copy, but endpoints are shared
+
+	backup.name = "backup-" + primary.name;
+	backup.endpoints->push_back(fallback_endpoint()); // BUG: mutates primary too
+
+	// primary.endpoints and backup.endpoints point to the same vector.
+	// The caller who passed primary now sees an endpoint they never added.
+}
+```
+
+The fix is to give the type genuine value semantics. Either store the vector directly as a member (so copies are deep), or use a copy-on-write strategy, or make the type immutable so sharing is safe:
+
+```cpp
+struct Route {
+	std::string name;
+	std::vector<Endpoint> endpoints; // owned, copied on assignment
+
+	auto with_endpoint(Endpoint ep) const -> Route {
+		Route copy = *this;
+		copy.endpoints.push_back(std::move(ep));
+		return copy;
+	}
+};
+```
+
+Now `Route` behaves as a value. Copies are independent. Mutation through `with_endpoint` produces a new value without disturbing the original. No aliasing surprise is possible.
+
 ## Mutation Should Respect the Modeling Choice
 
 Values and entities tolerate mutation differently.
@@ -129,6 +229,55 @@ For entities, mutation is natural because the object models continuity over time
 The real design question is not whether mutation is allowed. It is where mutation is allowed and what guarantees survive it.
 
 If mutation can break invariants between two field assignments, the type likely needs a stronger operation boundary. If callers must lock, update three fields, and remember to recompute a derived flag, the invariant was never really owned by the type.
+
+```cpp
+// Anti-pattern: public fields allow invariant-breaking mutation.
+struct TimeWindow {
+	std::chrono::system_clock::time_point start;
+	std::chrono::system_clock::time_point end;
+};
+
+void extend_deadline(TimeWindow& window, std::chrono::hours extra) {
+	window.end += extra; // fine
+}
+
+void shift_start(TimeWindow& window, std::chrono::hours shift) {
+	window.start += shift;
+	// BUG: if shift is large enough, start > end.
+	// Every consumer of TimeWindow must now defend against this.
+}
+```
+
+An encapsulated type eliminates this class of bug by making the invariant un-breakable from outside:
+
+```cpp
+class TimeWindow {
+public:
+	static auto create(system_clock::time_point start,
+					   system_clock::time_point end)
+		-> std::optional<TimeWindow>
+	{
+		if (start > end) return std::nullopt;
+		return TimeWindow{start, end};
+	}
+
+	auto start() const noexcept { return start_; }
+	auto end() const noexcept { return end_; }
+
+	auto with_extended_end(std::chrono::hours extra) const -> TimeWindow {
+		return TimeWindow{start_, end_ + extra}; // always valid: end moves forward
+	}
+
+private:
+	TimeWindow(system_clock::time_point s, system_clock::time_point e)
+		: start_(s), end_(e) {}
+
+	system_clock::time_point start_;
+	system_clock::time_point end_;
+};
+```
+
+Callers cannot produce an invalid `TimeWindow`. The invariant `start <= end` is enforced once, in the type, rather than diffusely across every mutation site.
 
 ## Small Domain Types Are Worth the Ceremony
 

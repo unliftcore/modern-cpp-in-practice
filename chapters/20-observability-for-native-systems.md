@@ -25,6 +25,77 @@ For a library, the questions shift:
 
 Those questions determine which fields, metrics, and spans are worth recording. Without them, teams default to verbose but low-value telemetry: string-heavy logs, counters with no dimensions, or traces that show everything except queueing, retries, and cancellation.
 
+### What debugging looks like without observability
+
+To make the value concrete, consider a service that processes file uploads. A user reports that uploads are timing out. Here is the investigation with no structured observability:
+
+```
+// Actual log output from the service:
+[2026-03-14 09:41:02] INFO: Processing upload
+[2026-03-14 09:41:02] INFO: Starting validation
+[2026-03-14 09:41:32] ERROR: Operation timed out
+[2026-03-14 09:41:32] INFO: Processing upload
+[2026-03-14 09:41:33] INFO: Starting validation
+[2026-03-14 09:41:33] INFO: Validation complete
+[2026-03-14 09:41:34] INFO: Upload complete
+```
+
+Which upload timed out? Was it the same user or a different one? What was it waiting on -- disk I/O, a downstream service, a lock? Was it retried? Did the retry succeed for the same file or a different one? None of these questions are answerable. The on-call engineer resorts to grepping logs by timestamp ranges, guessing at correlation, and asking the user to reproduce.
+
+Now the same service with structured logging, correlation IDs, and dimensional metrics:
+
+```cpp
+void handle_upload(upload_context& ctx) {
+	auto span = ctx.tracer().start_span("handle_upload", {
+		{"request_id", ctx.request_id()},
+		{"user_id",    ctx.user_id()},
+		{"file_size",  ctx.file_size()},
+		{"shard",      ctx.shard_id()},
+	});
+
+	ctx.log(severity::info, "upload_started", {
+		{"request_id", ctx.request_id()},
+		{"file_name",  ctx.file_name()},
+		{"file_size",  std::to_string(ctx.file_size())},
+	});
+
+	auto validation = validate(ctx);
+	if (!validation) {
+		ctx.log(severity::warning, "validation_failed", {
+			{"request_id", ctx.request_id()},
+			{"reason",     validation.error().category()},
+		});
+		ctx.metrics().increment("upload_failures", 1,
+			{{"reason", "validation"}, {"shard", ctx.shard_id()}});
+		return;
+	}
+
+	auto store_result = store(ctx);
+	if (!store_result) {
+		ctx.log(severity::error, "store_failed", {
+			{"request_id",  ctx.request_id()},
+			{"dependency",  "blob_store"},
+			{"error_class", store_result.error().category()},
+			{"latency_ms",  std::to_string(store_result.elapsed_ms())},
+		});
+		ctx.metrics().increment("upload_failures", 1,
+			{{"reason", "store"}, {"shard", ctx.shard_id()}});
+		return;
+	}
+
+	ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
+		{{"shard", ctx.shard_id()}});
+	ctx.log(severity::info, "upload_complete", {
+		{"request_id", ctx.request_id()},
+		{"latency_ms", std::to_string(span.elapsed_ms())},
+	});
+}
+```
+
+Now the on-call engineer filters by `request_id`, sees that the timeout happened during `store` with `dependency=blob_store`, checks the `upload_duration_ms` histogram by shard, and discovers that shard-3 latency spiked at 09:40. The blob store dashboard confirms the dependency was degraded. Total investigation time drops from hours to minutes.
+
+The difference is not more code. It is code that was written with operating questions in mind from the start.
+
 ## Logs Should Explain Decisions and State Transitions
 
 Logs are most useful when they capture decisions the system made and the state that mattered at the time, not when they narrate every function call. In native systems, this discipline matters even more because the volume and overhead of logging can become a performance problem quickly.
@@ -49,6 +120,31 @@ Avoid two common mistakes.
 First, do not make logs the only source of truth for metrics-like questions. If you need to know retry rate or queue depth, emit those as metrics instead of forcing operators to reconstruct them from text. Second, do not log high-cardinality payloads or sensitive blobs just because an incident once needed them. Put those behind deliberate sampling or debug paths.
 
 `std::source_location` can be useful in low-volume internal diagnostics or infrastructure code, especially when you need a stable call-site tag without hand-maintaining strings. It is not a substitute for a meaningful operation name. A log saying `source=foo.cpp:412` is weaker than one saying `operation=manifest_reload phase=commit`.
+
+### Unstructured versus structured logging in practice
+
+The difference between unstructured and structured logs matters most during incidents, when the person reading logs is under time pressure and may not have written the code.
+
+```cpp
+// Unstructured: human-readable but machine-hostile.
+log("Failed to connect to database server db-prod-3 after 3 retries "
+    "(last error: connection refused), request will be dropped");
+```
+
+This line contains useful information, but extracting it requires parsing English. You cannot filter by retry count, dependency name, or error class without fragile regex. Across a fleet of instances, aggregating failure patterns from lines like this is expensive and error-prone.
+
+```cpp
+// Structured: same information, machine-queryable.
+ctx.log(severity::error, "dependency_connect_failed", {
+    {"dependency",  "db-prod-3"},
+    {"attempts",    "3"},
+    {"last_error",  "connection_refused"},
+    {"action",      "request_dropped"},
+    {"request_id",  ctx.request_id()},
+});
+```
+
+Now `dependency_connect_failed` events can be counted, filtered by dependency name, and correlated with specific requests. The field names are stable across code changes, so dashboards and alerts do not break when someone rewords a log message.
 
 ## Metrics Should Track Throughput, Saturation, and Failure Shape
 
@@ -81,6 +177,45 @@ Record spans for stages that correspond to actual waiting or service boundaries.
 - Time lost to cancellation, shutdown, or overload shedding.
 
 Do not create spans for every helper function. That produces trace noise without causal value. The purpose of tracing is to explain latency structure and dependency shape, not to restate the call graph.
+
+### Without trace context: the invisible queue
+
+A common failure mode in async native services is latency that lives in queueing, not in execution. Without trace propagation across executor boundaries, this is invisible:
+
+```cpp
+// No trace context propagation. The span only covers execution, not waiting.
+void enqueue_work(thread_pool& pool, request req) {
+	pool.submit([req = std::move(req)] {
+		auto span = tracer::start_span("process_request");  // Starts when work RUNS.
+		process(req);
+	});
+	// Time between submit() and when the lambda actually executes is lost.
+	// If the pool is saturated, requests wait 500ms in the queue,
+	// but traces show 2ms of execution time. Operators see low latency
+	// in traces while users experience high latency. The queue time is a
+	// blind spot.
+}
+```
+
+With proper context propagation, the full picture is visible:
+
+```cpp
+void enqueue_work(thread_pool& pool, request req, trace_context ctx) {
+	auto enqueue_time = steady_clock::now();
+	pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
+		auto queue_span = ctx.start_span("queued", {
+			{"queue_ms", std::to_string(duration_cast<milliseconds>(
+				steady_clock::now() - enqueue_time).count())},
+		});
+		queue_span.end();
+
+		auto exec_span = ctx.start_span("process_request");
+		process(req);
+	});
+}
+```
+
+Now the trace shows two spans -- queueing and execution -- both linked to the parent request. When queue time dominates, it is immediately visible in the trace waterfall. This is the kind of latency that metrics alone (average processing time) systematically hide.
 
 ## Crash Diagnostics Are Part of Observability, Not a Separate Emergency Hobby
 

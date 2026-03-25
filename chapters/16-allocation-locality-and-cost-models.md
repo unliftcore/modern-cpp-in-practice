@@ -22,6 +22,63 @@ Inventory work should separate three questions:
 
 That last question matters most. If a system allocates because it insistently decomposes dense processing into many short-lived heap objects, changing the allocator may reduce pain without fixing the design. The highest-leverage change is often to stop needing the allocations.
 
+Here is a concrete example of what allocation-heavy code looks like on a hot path, and what the alternative can be:
+
+```cpp
+// Allocation-heavy: every event creates a temporary string,
+// a vector, and a map entry.  Under load this path may perform
+// 5-10 heap allocations per event.
+struct Event {
+	std::string type;
+	std::string payload;
+	std::vector<std::string> tags;
+	std::unordered_map<std::string, std::string> metadata;
+};
+
+void process_batch_heavy(std::span<const RawEvent> raw,
+                         std::vector<Event>& out) {
+	for (const auto& r : raw) {
+		Event e;
+		e.type = parse_type(r);         // allocates
+		e.payload = parse_payload(r);   // allocates
+		e.tags = parse_tags(r);         // allocates vector + each string
+		e.metadata = parse_meta(r);     // allocates map buckets + nodes
+		out.push_back(std::move(e));    // may reallocate out's buffer
+	}
+}
+```
+
+```cpp
+// Allocation-light: pre-sized arena, string views into stable
+// input buffer, fixed-capacity inline storage.
+struct EventView {
+	std::string_view type;
+	std::string_view payload;
+	// Use a small fixed-capacity container for tags.
+	// boost::static_vector or a similar stack-allocated small vector.
+	std::array<std::string_view, 8> tags;
+	std::uint8_t tag_count = 0;
+};
+
+void process_batch_light(std::string_view input_buffer,
+                         std::span<const RawEvent> raw,
+                         std::vector<EventView>& out) {
+	out.clear();
+	out.reserve(raw.size());  // one allocation, amortized
+	for (const auto& r : raw) {
+		EventView e;
+		e.type = parse_type_view(r, input_buffer);
+		e.payload = parse_payload_view(r, input_buffer);
+		e.tag_count = parse_tags_view(r, input_buffer, e.tags);
+		out.push_back(e);
+	}
+	// Zero heap allocations per event if input_buffer is stable
+	// and out has sufficient capacity.
+}
+```
+
+The light version imposes constraints: the input buffer must outlive the views, tags are bounded, and metadata is handled differently. Those constraints are the cost of avoiding allocations. Whether that cost is acceptable depends on the workload, but making it visible is the point.
+
 ## Allocation Cost Is More Than the Call to `new`
 
 Engineers sometimes talk about allocation as though the only cost were the allocator function call. In production, that is usually a minority of the bill. Allocation also affects cache locality, synchronization behavior, fragmentation, page working set, and destruction cost later. If an object graph spreads logically adjacent data across unrelated heap locations, every later traversal pays for that decision. If per-request allocations hit a shared global allocator from many threads, allocator contention becomes part of latency variance. If many short-lived objects are destroyed individually, cleanup traffic can dominate tail latency during bursts.
@@ -47,6 +104,51 @@ struct RequestScratch {
 
 This design says something important: the strings and containers are not independent heap citizens. They are request-scoped scratch. That reduces allocation overhead and makes teardown a bulk operation.
 
+A more complete example shows the difference in practice. Compare standard allocation versus `pmr` with a stack-local buffer for a request-processing path:
+
+```cpp
+#include <memory_resource>
+#include <vector>
+#include <string>
+#include <array>
+
+// Standard allocation: every string, every vector growth, and the
+// map internals go through the global allocator.  Under contention
+// from many threads, this serializes on allocator locks.
+void handle_request_standard(std::span<const std::byte> input) {
+	std::vector<std::string> tokens;
+	std::unordered_map<std::string, std::string> headers;
+	parse(input, tokens, headers);  // many small allocations
+	route(tokens, headers);
+	// Destruction: each string freed individually, each map node freed.
+}
+
+// PMR with stack buffer: small requests never touch the heap.
+// The monotonic_buffer_resource first allocates from the stack buffer.
+// If the request is large enough to exhaust it, it falls back to
+// the upstream resource (default: new/delete).
+void handle_request_pmr(std::span<const std::byte> input) {
+	std::array<std::byte, 4096> stack_buf;
+	std::pmr::monotonic_buffer_resource arena{
+		stack_buf.data(), stack_buf.size(),
+		std::pmr::null_memory_resource()
+		// null_memory_resource: fail loudly if buffer is exceeded.
+		// Replace with std::pmr::new_delete_resource() to allow
+		// fallback to heap for oversized requests.
+	};
+
+	std::pmr::vector<std::pmr::string> tokens{&arena};
+	std::pmr::unordered_map<std::pmr::string, std::pmr::string>
+		headers{&arena};
+	parse_pmr(input, tokens, headers);
+	route_pmr(tokens, headers);
+	// Destruction: arena destructor releases everything in one shot.
+	// No per-string, per-node deallocation calls.
+}
+```
+
+The pmr version eliminates all per-object deallocation calls and avoids global allocator contention entirely for requests that fit within the stack buffer. On a high-throughput server handling small requests, this can reduce allocator overhead by an order of magnitude. The tradeoff is that `std::pmr` containers carry an extra pointer to the memory resource (increasing `sizeof` slightly) and that the monotonic resource does not reclaim memory from individual deallocations -- it only grows until the resource itself is destroyed. This is fine for request-scoped scratch; it is wrong for long-lived containers that grow and shrink over time.
+
 But monotonic allocation is not a universal upgrade. It is a bad fit when objects need selective deallocation, when memory spikes from one pathological request must not bloat the steady-state footprint, or when accidentally retaining a single object would retain an entire arena. Regional allocation sharpens lifetime assumptions. If the assumptions are wrong, the failure is bigger than with individual ownership.
 
 ## Locality Is About Graph Shape, Not Just Raw Bytes
@@ -58,6 +160,50 @@ Pointer-rich designs are often semantically attractive because they mirror domai
 The cure is not “never use pointers.” The cure is to distinguish identity and topology from storage. A graph can be stored in contiguous node arrays with index-based adjacency. A polymorphic pipeline can often be represented as a small closed `std::variant` of step types when the set of operations is known. A string-heavy parser can intern repeated tokens or keep slices into a stable input buffer rather than allocating owned strings for every field.
 
 Those are not language-trick optimizations. They are graph-shape decisions. They reduce the amount of memory chasing required before useful work begins.
+
+## The Hidden Cost of `std::shared_ptr`
+
+`std::shared_ptr` deserves special attention because its costs are frequently underestimated. The allocation cost is the most visible: `std::make_shared` performs one allocation for the control block and the managed object together, while constructing from a raw pointer performs two. But allocation is only the beginning.
+
+The deeper cost is reference counting. Every copy of a `std::shared_ptr` performs an atomic increment; every destruction performs an atomic decrement with acquire-release semantics. On x86, an atomic increment is relatively cheap (a locked instruction, roughly 10-20 ns under no contention), but under cross-core sharing, the cache line holding the control block bounces between cores. Under heavy contention, this serializes otherwise parallel work.
+
+```cpp
+// Looks innocent: passing shared_ptr by value into a thread pool.
+// Each enqueue copies the shared_ptr (atomic increment), and each
+// task completion destroys it (atomic decrement + potential dealloc).
+void submit_work(std::shared_ptr<Config> cfg,
+                 ThreadPool& pool,
+                 std::span<const Request> requests) {
+	for (const auto& req : requests) {
+		// Copies cfg: atomic ref-count increment per task.
+		pool.enqueue([cfg, &req] {
+			handle(req, *cfg);
+		});
+	}
+	// If 10,000 requests are enqueued, that is 10,000 atomic
+	// increments on submission and 10,000 atomic decrements
+	// on completion, all contending on the same cache line.
+}
+```
+
+```cpp
+// Fix: cfg outlives all tasks, so pass a raw pointer or reference.
+void submit_work_fixed(const Config& cfg,
+                       ThreadPool& pool,
+                       std::span<const Request> requests) {
+	for (const auto& req : requests) {
+		pool.enqueue([&cfg, &req] {
+			handle(req, cfg);
+		});
+	}
+	// Zero reference-counting overhead.  Caller guarantees
+	// cfg lives until all tasks complete.
+}
+```
+
+The rule is not "never use `std::shared_ptr`." It is: do not use shared ownership to avoid thinking about lifetime. When an object has a clear owner and borrowers, express that with a unique owner and references or views. Reserve `std::shared_ptr` for genuinely shared, non-deterministic lifetimes. And never pass `std::shared_ptr` by value when a `const&` or raw reference suffices -- each copy is an atomic round-trip you are paying for nothing.
+
+Additional costs that accumulate: `std::shared_ptr` is two pointers wide (pointer to object + pointer to control block), doubling the size of a raw pointer. Containers of `std::shared_ptr` therefore have worse cache density. The weak reference count adds another atomic variable. And custom deleters stored in the control block add type-erased indirection at destruction time.
 
 ## Hidden Allocation Is a Design Smell
 

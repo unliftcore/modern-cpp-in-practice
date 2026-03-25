@@ -28,6 +28,44 @@ Many programmers first encounter RAII as "use smart pointers instead of manual `
 
 RAII means tying a resource to the lifetime of an object whose destructor releases it. The resource might be memory. It might just as easily be a file descriptor, a kernel event, a transaction lock, or a metrics registration that must be unregistered before shutdown completes.
 
+### What Happens Without RAII
+
+Before illustrating the RAII pattern, it is worth seeing the manual approach in full, because production codebases still contain code that looks exactly like this.
+
+```cpp
+// Manual resource management: C-style socket handling.
+void serve_request(const Config& config) {
+	socket_t sock = ::open_socket(config.port());
+	if (sock == invalid_socket) {
+		throw NetworkError{"bind failed"};
+	}
+
+	char* buffer = new char[config.buffer_size()]; // second resource
+
+	auto* sub = event_bus::subscribe("health_check"); // third resource
+
+	// -- any throw between here and the cleanup block leaks all three --
+
+	process(sock, buffer, sub); // may throw
+
+	event_bus::unsubscribe(sub);
+	delete[] buffer;
+	::close_socket(sock);
+}
+```
+
+The problems compound quickly:
+
+1. **Exception unsafety.** If `process` throws, or if `event_bus::subscribe` throws after the buffer is allocated, the preceding resources leak silently. Adding `try`/`catch` blocks for each acquisition creates deeply nested cleanup ladders that are painful to write and easy to get wrong.
+
+2. **Double-free risk.** If a maintenance change adds an early return or a second call path, a developer may call `delete[] buffer` twice or call `::close_socket` on an already-closed handle. Neither failure is caught at compile time.
+
+3. **Order-dependent teardown.** Every new resource added to the function forces the developer to update every exit path. With three resources there are already multiple combinations of partially-acquired state. With five or six, the cleanup logic dominates the function.
+
+4. **Fragility under maintenance.** Code review cannot verify cleanup correctness locally. The reviewer must trace every path through the function to confirm that every resource is released exactly once. This does not scale.
+
+The RAII alternative eliminates these problems by construction. Each resource is held by an owning object whose destructor performs the release. Stack unwinding does the rest.
+
 Consider a service component that needs a socket and a temporary subscription to an internal event stream.
 
 ```cpp
@@ -95,7 +133,29 @@ void publish_snapshot(Publisher& publisher, std::string_view path) {
 
 This is not controversial because manual cleanup is ugly. It is wrong because cleanup policy is now interleaved with every exit path. Once the function acquires a second or third resource, the control flow becomes harder to audit than the work the function actually performs.
 
-RAII fixes this by moving the release policy into the owning object. Error paths then recover their main job: describing failure rather than describing teardown.
+The RAII version eliminates every manual release and every conditional cleanup path:
+
+```cpp
+void publish_snapshot(Publisher& publisher, std::string_view path) {
+	auto file = ConfigFile::open(path); // RAII: destructor calls ::close_config
+	if (!file) {
+		throw ConfigError{"open failed"};
+	}
+
+	auto payload = read_payload(*file);
+	if (!payload) {
+		throw ConfigError{"parse failed"};
+		// file releases automatically -- no manual cleanup needed
+	}
+
+	publisher.send(*payload);
+	// file releases automatically at scope exit, whether normal or exceptional
+}
+```
+
+The function now has one concern: its actual logic. Cleanup is invisible because it is guaranteed. Adding a third, fourth, or tenth exit path changes nothing about resource safety. That composability is the real payoff of RAII -- not prettier code, but correct code under maintenance pressure.
+
+RAII fixes cleanup-by-convention by moving the release policy into the owning object. Error paths then recover their main job: describing failure rather than describing teardown.
 
 ## Exclusive Ownership Should Be the Default
 
@@ -106,6 +166,24 @@ In practice this means preferring plain object members or `std::unique_ptr` when
 Shared ownership should be treated as a deliberate exception. There are valid cases: asynchronous fan-out where several components must keep the same immutable state alive, graph-like structures with genuine shared lifetime, caches whose entries remain valid while multiple users still hold them. But `shared_ptr` is not a generic safety blanket. It changes destruction timing, adds atomic reference-count traffic in many implementations, and often hides the real question: why can no component name the owner?
 
 If a review finds `shared_ptr` at a boundary, the follow-up question should be concrete: what lifetime relationship made exclusive ownership impossible here? If the answer is vague, the shared ownership is probably compensating for a design that never decided where the resource belongs.
+
+A common symptom is shutdown non-determinism. When the last `shared_ptr` to a resource is released from an unpredictable callback or thread, the destructor runs at an unpredictable time and place:
+
+```cpp
+// Risky: destruction timing depends on which callback finishes last.
+void start_fanout(std::shared_ptr<Connection> conn) {
+	for (auto& shard : shards_) {
+		shard.post([conn] {           // each lambda extends lifetime
+			conn->send(shard_ping()); // last lambda to finish destroys conn
+		});
+	}
+	// conn may already be destroyed here, or may live much longer --
+	// depends on thread scheduling. Destructor side effects (logging,
+	// metric flush, socket close) now happen at an uncontrolled point.
+}
+```
+
+When destruction order matters -- and in production it almost always does -- prefer `unique_ptr` with explicit lifetime scoping, and pass non-owning raw pointers or references to work that is guaranteed to complete within the owner's lifetime.
 
 ## Borrowing Needs Tighter Discipline Than Owning
 
@@ -138,6 +216,64 @@ Not every type should be movable, and not every move is cheap. A mutex is typica
 Programmers tend to think about lifetime during the main work path. Production bugs often show up during startup failure and shutdown instead.
 
 Partial construction is one example. If an object acquires three resources and the second acquisition throws, the first one must still release correctly. RAII handles this automatically when ownership is layered into members rather than performed manually in constructor bodies with cleanup flags.
+
+The manual approach is fragile:
+
+```cpp
+// Anti-pattern: manual multi-resource construction with cleanup flags.
+class Pipeline {
+public:
+	Pipeline(const Config& cfg) {
+		db_ = ::open_db(cfg.db_path().c_str());
+		if (!db_) throw InitError{"db open failed"};
+
+		cache_ = ::create_cache(cfg.cache_size());
+		if (!cache_) {
+			::close_db(db_); // must remember to clean up db_
+			throw InitError{"cache alloc failed"};
+		}
+
+		listener_ = ::bind_listener(cfg.port());
+		if (listener_ == invalid_socket) {
+			::destroy_cache(cache_); // must remember both prior resources
+			::close_db(db_);
+			throw InitError{"bind failed"};
+		}
+	}
+
+	~Pipeline() {
+		::close_listener(listener_);
+		::destroy_cache(cache_);
+		::close_db(db_);
+	}
+
+private:
+	db_handle_t db_ = nullptr;
+	cache_handle_t cache_ = nullptr;
+	socket_t listener_ = invalid_socket;
+};
+```
+
+Every new resource added to this constructor requires updating every prior failure branch. A maintenance change that reorders acquisitions silently breaks the cleanup logic.
+
+The RAII version uses member wrappers and relies on the language rule that already-constructed members are destroyed when a constructor throws:
+
+```cpp
+class Pipeline {
+public:
+	Pipeline(const Config& cfg)
+		: db_(DbHandle::open(cfg.db_path()))       // destroyed automatically if
+		, cache_(Cache::create(cfg.cache_size()))   // a later member throws
+		, listener_(Listener::bind(cfg.port())) {}
+
+private:
+	DbHandle db_;
+	Cache cache_;
+	Listener listener_;
+};
+```
+
+No cleanup flags, no cascading `if` blocks, no order-sensitive manual teardown. The language does the work.
 
 Shutdown is the other major pressure point. Destructors run when the system is already under state transition. Background work may still hold references. Logging infrastructure may be partially torn down. A destructor that blocks indefinitely, calls back into unstable subsystems, or depends on thread affinity that the type never documented can turn a tidy ownership model into a deploy-time failure.
 

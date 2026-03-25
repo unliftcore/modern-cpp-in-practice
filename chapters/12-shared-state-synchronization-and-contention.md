@@ -50,6 +50,151 @@ If readers dominate and they can tolerate slightly stale data, publish immutable
 
 None of these is free. Confinement can create bottlenecks. Sharding complicates cross-shard operations. Snapshotting increases allocation and copy cost. But those are explicit costs, which is better than paying accidental contention everywhere.
 
+## What Happens Without Synchronization
+
+Before discussing which primitives to use, it is worth seeing what happens when they are absent. The following code has a data race, which is undefined behavior in C++.
+
+```cpp
+// BUG: data race — two threads read and write counter without synchronization.
+struct metrics {
+	int request_count = 0;
+	int error_count = 0;
+};
+
+metrics g_metrics;
+
+void record_request(bool success) {
+	++g_metrics.request_count;            // unsynchronized read-modify-write
+	if (!success) ++g_metrics.error_count; // same
+}
+```
+
+This is not merely a correctness risk; it is undefined behavior per the standard. The compiler and hardware are free to reorder, tear, or elide these operations. In practice, counters may lose updates, report impossible values, or corrupt adjacent memory on architectures with non-atomic word stores. Sanitizers will flag this immediately, but sanitizers are not always running in production.
+
+A subtler variant involves multi-field invariants:
+
+```cpp
+// BUG: readers can observe state_ == READY while payload_ is half-written.
+struct shared_result {
+	std::string payload_;
+	enum { EMPTY, READY } state_ = EMPTY;
+};
+
+// Writer thread:
+result.payload_ = build_payload();   // not yet visible to readers
+result.state_ = READY;              // may be reordered before payload_ write
+
+// Reader thread:
+if (result.state_ == READY)
+	process(result.payload_);        // may see partially constructed string
+```
+
+Even if `state_` were atomic, the write to `payload_` could be reordered past it without an appropriate memory order. The lesson: data races are not just about single variables. They are about the visibility ordering of related mutations.
+
+## Raw Mutex Misuse vs. Scoped Guards
+
+Manual lock/unlock is the oldest source of mutex bugs. Consider:
+
+```cpp
+// BUG: exception between lock and unlock leaks the lock.
+std::mutex mtx;
+std::vector<int> data;
+
+void push(int value) {
+	mtx.lock();
+	data.push_back(value); // may throw (allocation failure)
+	mtx.unlock();          // never reached if push_back throws — deadlock on next access
+}
+```
+
+If `push_back` throws, `unlock()` is skipped. Every subsequent thread that tries to acquire `mtx` will block forever. This is not hypothetical; allocation failure under memory pressure or a throwing copy constructor will trigger it.
+
+The fix is mechanical: use RAII guards.
+
+```cpp
+void push(int value) {
+	std::scoped_lock lock(mtx);
+	data.push_back(value); // if this throws, ~scoped_lock releases the mutex
+}
+```
+
+`std::scoped_lock` handles single and multiple mutexes with deadlock avoidance. `std::unique_lock` adds the ability to defer locking, transfer ownership, and use condition variables. Prefer `scoped_lock` unless you need the extra flexibility.
+
+```cpp
+// unique_lock: needed when the lock must be released before scope exit.
+void transfer_expired(registry& reg, std::vector<session>& out) {
+	std::unique_lock lock(reg.mutex_);
+	auto expired = reg.extract_expired(); // modifies registry under lock
+	lock.unlock();                        // release before expensive cleanup
+	for (auto& s : expired)
+		s.close_socket();                 // no lock held — safe to block
+	// out is caller-owned, no synchronization needed
+	out.insert(out.end(),
+		std::make_move_iterator(expired.begin()),
+		std::make_move_iterator(expired.end()));
+}
+```
+
+## Deadlock from Inconsistent Lock Ordering
+
+When code acquires multiple mutexes, inconsistent ordering is the classic deadlock source.
+
+```cpp
+// BUG: deadlock if thread 1 calls transfer(a, b) while thread 2 calls transfer(b, a).
+struct account {
+	std::mutex mtx;
+	int balance = 0;
+};
+
+void transfer(account& from, account& to, int amount) {
+	std::lock_guard lock_from(from.mtx); // locks 'from' first
+	std::lock_guard lock_to(to.mtx);     // then 'to' — opposite order on another thread
+	from.balance -= amount;
+	to.balance += amount;
+}
+```
+
+Thread 1 locks `a.mtx` and waits for `b.mtx`. Thread 2 locks `b.mtx` and waits for `a.mtx`. Neither can proceed. `std::scoped_lock` solves this by using `std::lock` internally to acquire both mutexes with deadlock avoidance:
+
+```cpp
+void transfer(account& from, account& to, int amount) {
+	std::scoped_lock lock(from.mtx, to.mtx); // deadlock-free acquisition
+	from.balance -= amount;
+	to.balance += amount;
+}
+```
+
+This is not just a convenience. It is a correctness boundary. Any design requiring multiple mutexes should either use `std::scoped_lock` for simultaneous acquisition or enforce a documented total ordering on locks. Ad hoc ordering disciplines rarely survive refactoring.
+
+## The Performance Cost of Over-Synchronization
+
+Contention is not just about correctness. Excessive locking serializes work that could run in parallel.
+
+```cpp
+// Over-synchronized: every stat update contends on one lock.
+class request_stats {
+	std::mutex mtx_;
+	uint64_t total_requests_ = 0;
+	uint64_t total_bytes_ = 0;
+	uint64_t error_count_ = 0;
+public:
+	void record(uint64_t bytes, bool error) {
+		std::scoped_lock lock(mtx_);
+		++total_requests_;
+		total_bytes_ += bytes;
+		if (error) ++error_count_;
+	}
+};
+```
+
+On a 64-core machine handling millions of requests per second, every thread serializes on one cache line. Lock acquisition, cache-line bouncing, and scheduler wakeups dominate. The better design depends on tolerances:
+
+- If exact consistency between fields is unnecessary, use per-thread counters and merge periodically.
+- If only approximate totals are needed, use `std::atomic<uint64_t>` with `memory_order_relaxed` for each counter independently.
+- If cross-field consistency is required (e.g., error rate = errors / total), keep the mutex but shard by thread or request key.
+
+The point is not that mutexes are slow. It is that one mutex shared across all cores turns a parallel workload into a serial bottleneck. Measure lock hold time and wait time separately; high wait time with low hold time is the signature of over-synchronization.
+
 ## Design Around Invariants, Not Fields
 
 Locks do not protect variables. They protect invariants.
