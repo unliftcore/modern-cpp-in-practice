@@ -1,3 +1,7 @@
 # mdBook build output
 site/
 .worktrees/
+
+# C++ build artifacts
+examples/*/build/
+compile_commands.json
