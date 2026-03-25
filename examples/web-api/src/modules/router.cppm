@@ -19,7 +19,6 @@ module;
 #include <functional>
 #include <string>
 #include <string_view>
-#include <variant>
 #include <vector>
 
 export module webapi.router;

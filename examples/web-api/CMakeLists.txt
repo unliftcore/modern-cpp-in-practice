@@ -33,17 +33,33 @@ target_compile_options(project_warnings INTERFACE
 )
 
 # ── libc++ (required for C++23 modules + jthread with Clang) ────────────────
-# We use libc++ 20 headers for std::jthread / std::stop_token support, and
-# explicitly link the matching runtime from /usr/lib/llvm-20/lib.
+# We need libc++ 20+ headers for std::jthread / std::stop_token support.
+# Detect the LLVM installation path from the compiler's location.
+get_filename_component(_CLANG_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+get_filename_component(_LLVM_PREFIX "${_CLANG_DIR}" DIRECTORY)
+
+# Try compiler's own directory first, then fall back to /usr/lib/llvm-20
+if(EXISTS "${_LLVM_PREFIX}/include/c++/v1/__config")
+    set(_LIBCXX_INCLUDE "${_LLVM_PREFIX}/include/c++/v1")
+    set(_LIBCXX_LIB     "${_LLVM_PREFIX}/lib")
+elseif(EXISTS "/usr/lib/llvm-20/include/c++/v1/__config")
+    set(_LIBCXX_INCLUDE "/usr/lib/llvm-20/include/c++/v1")
+    set(_LIBCXX_LIB     "/usr/lib/llvm-20/lib")
+else()
+    message(FATAL_ERROR
+        "Cannot find libc++ 20+ headers. Install libc++-20-dev or set "
+        "CMAKE_CXX_COMPILER to a Clang that ships with libc++ 20+.")
+endif()
+
 add_library(project_stdlib INTERFACE)
 target_compile_options(project_stdlib INTERFACE
     -stdlib=libc++
-    -stdlib++-isystem /usr/lib/llvm-20/include/c++/v1
+    -stdlib++-isystem "${_LIBCXX_INCLUDE}"
 )
 target_link_options(project_stdlib INTERFACE
     -stdlib=libc++
-    -L/usr/lib/llvm-20/lib
-    -Wl,-rpath,/usr/lib/llvm-20/lib
+    -L${_LIBCXX_LIB}
+    -Wl,-rpath,${_LIBCXX_LIB}
 )
 target_link_libraries(project_stdlib INTERFACE c++)
 

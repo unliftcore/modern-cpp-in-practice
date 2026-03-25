@@ -174,7 +174,7 @@ cmake -G Ninja -B build-rel -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_BUILD_TYPE=R
 
 ## Requirements
 
-- **Clang 18+** (tested with Clang 20)
+- **Clang 20+** with libc++ 20+ (for complete C++23 module and `std::jthread` support)
 - **libc++ 20** headers and runtime (`libc++-20-dev`, `libc++abi-20-dev`)
 - **CMake 3.28+** (for `FILE_SET CXX_MODULES` support)
 - **Ninja** generator (required for CMake module dependency scanning)
