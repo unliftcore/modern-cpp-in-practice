@@ -1,0 +1,128 @@
+# Ranges, Views, and Generators
+
+Ranges and generators are attractive because they compress iteration into something that reads like data flow. Sometimes that is exactly what a production codebase needs. Sometimes it is how lifetime bugs, hidden work, and impossible-to-debug lazy behavior enter otherwise plain code.
+
+The useful question is not whether range pipelines are elegant. The useful question is when lazy composition makes the structure of the work clearer than an ordinary loop, and when it obscures ownership, error handling, or cost. C++23 gives you powerful range machinery and `std::generator` for pull-based sequences. Neither should become the default shape for all iteration.
+
+The sample domains here are realistic ones: filtering logs before export, transforming rows in a batch job, and exposing paged or coroutine-backed sources as pull-based sequences. The design pressure is the same in each case. Work arrives over time. The code wants to express a sequence of transformations. The risks are delayed execution, borrowed state, and confusion about where the data actually lives.
+
+## Pipelines Earn Their Place When the Dataflow Is the Main Story
+
+An ordinary loop is still the right tool for many jobs. It keeps sequencing obvious, makes side effects explicit, and is easy to step through. A range pipeline earns its place when the essential structure of the work is “take a sequence, discard some elements, transform the survivors, then materialize or consume.”
+
+Suppose a log-export worker receives a batch of parsed records and needs to ship only security-relevant entries after projecting them into an export schema:
+
+```cpp
+auto export_rows = records
+	| std::views::filter([](const LogRecord& r) {
+		  return r.severity >= Severity::warning && !r.redacted;
+	  })
+	| std::views::transform([](const LogRecord& r) {
+		  return ExportRow{
+			  .timestamp = r.timestamp,
+			  .service = r.service,
+			  .message = r.message,
+		  };
+	  })
+	| std::ranges::to<std::vector>();
+```
+
+This is good range code because the pipeline is the business logic. There is no tricky mutation, no lifetime ambiguity in the source, and a clear materialization point at the end. The intermediate storage never existed conceptually, so not allocating it improves both clarity and cost.
+
+Now compare that with a loop that updates shared counters, emits metrics, mutates records in place, and conditionally retries downstream writes. A pipeline there often hides the part that matters most: sequencing and side effects. Range syntax is not a readability win when the computation is stateful and effect-heavy.
+
+The rule is straightforward. Use range pipelines for linear dataflow over a sequence. Use loops when control flow, mutation, or operational steps are the story.
+
+## Views Borrow, and Laziness Moves Bugs Later in Time
+
+The hardest production bug class with ranges is not algorithmic. It is lifetime. Views are often non-owning, and lazy pipelines delay work until iteration. That means the place where a view is constructed and the place where its bug becomes visible may be far apart.
+
+Consider an anti-pattern that shows up in request processing code:
+
+```cpp
+auto tenant_ids() {
+	return load_tenants()
+		| std::views::transform([](const Tenant& t) {
+			  return std::string_view{t.id};
+		  }); // BUG: returned view depends on destroyed temporary container
+}
+```
+
+The code looks tidy. It is wrong. `load_tenants()` returns an owning container temporary. The view pipeline borrows from that container. Returning the view returns a delayed lifetime bug.
+
+This is the central design rule for views: the owner must outlive the view, and that fact must stay obvious to readers. If the lifetime relationship is subtle, the abstraction is already too clever.
+
+There are several safe patterns.
+
+- Build and consume the pipeline in one local scope where the owner is visibly alive.
+- Materialize an owning result before crossing a boundary.
+- Return an owning range or domain object when the caller cannot reasonably track the source lifetime.
+- Use `std::generator` or another owning abstraction when the sequence is produced over time rather than borrowed from existing storage.
+
+Borrowing is not a defect. Hidden borrowing is.
+
+## Do Not Export Deep Lazy Pipelines as Casual APIs
+
+Internally, ranges are often excellent glue. At subsystem boundaries, they deserve more caution. Returning a deep view stack from a public API exports not just a sequence but a bundle of lifetime assumptions, iterator category behavior, evaluation timing, and sometimes surprising invalidation rules.
+
+That is a lot of semantic surface for a caller who may only want “the filtered records.”
+
+In a library or large service boundary, ask what the caller really needs.
+
+- If they need an owned result, return one.
+- If they need pull-based traversal over expensive or paged data, consider a generator.
+- If they need customizable traversal with local control, expose a callback-based visitor or a dedicated iterator abstraction.
+
+Returning a lazily composed view is strongest inside a local implementation region where one team owns both sides of the contract and the lifetime story is visually short.
+
+The same caution applies to `string_view` and `span` inside pipelines. A transform that produces borrowed slices is fine if the source lifetime stays local and obvious. It is risky if those slices are smuggled across threads, queued for later work, or cached.
+
+## `std::generator` Is for Pull-Based Sources, Not for Replacing Every Loop
+
+C++23's `std::generator` is useful because some sequences are not naturally “stored then traversed.” They are produced incrementally: paged database scans, directory walks, chunked file reads, retry-aware polling, or protocol decoders that yield complete messages as bytes arrive.
+
+This is where generators change design. They let the producer keep state between elements without forcing the caller into callback inversion or hand-written iterator machinery.
+
+A batch job that reads pages from a remote API is a good example. Materializing all rows before processing may waste memory and delay first useful work. A generator can express a sequence of yielded rows while keeping page tokens, buffers, and retry state local to the producer.
+
+That said, generators are coroutine machinery. They come with suspension points, frame lifetime, and sometimes allocation cost depending on implementation and optimization. They are not free. They are also harder to debug than a local vector and a loop. Use them when incremental production is the real structure of the problem, not as a fashionable replacement for ordinary containers.
+
+Another boundary question matters here. Does the generator yield owned values or borrowed references into internal buffers? Yielding borrowed references can be correct, but only when the lifetime across suspension points is explicit and easy to reason about. In many cases, yielding small owning values is the safer trade.
+
+If your standard library support for `std::generator` is incomplete on a target toolchain, the same design guidance still applies to an equivalent coroutine-backed generator type. The question is structural, not vendor-specific.
+
+## Laziness Helps Until Observability and Error Handling Matter More
+
+Lazy pipelines are appealing because they delay work until needed. That is often useful. It also means instrumentation, exceptions or `expected` propagation, and failure attribution may happen later than readers expect.
+
+In a log processing path, a pipeline that filters, parses, enriches, and serializes on demand may look elegant, but operationally it can smear a failure across the eventual consumer. When parsing fails, where does the error belong? When metrics should count discarded records, where is the increment performed? When tracing needs stage-level timing, what exactly is a stage in a fused lazy pipeline?
+
+This is where materialization points earn their keep. Breaking a long pipeline into named phases with owned intermediate results can make the system easier to observe and reason about, even if it costs a little memory. Not every temporary allocation is waste. Some are what let you attach metrics, isolate faults, and put the debugger in the right place.
+
+Do not confuse laziness with efficiency. Sometimes fusing operations reduces work. Sometimes it blocks parallelization, complicates branch prediction, or simply makes the expensive part harder to see. Benchmark the whole path rather than assuming the pipeline form is faster.
+
+## Where Ranges and Generators Stop Being the Right Tool
+
+Ranges are a poor fit when mutation is central, when control flow is irregular, when early exits carry important side effects, or when the algorithm is already dominated by external I/O or locking. Generators are a poor fit when a plain container result is cheaper and simpler, when the sequence must be revisited multiple times, or when coroutine lifetime across subsystems would be harder to reason about than a local buffer.
+
+Another common failure is turning pipelines into performance theater. A chain of five adaptors over unstable borrowed state is not better engineering than a loop with three well-named variables. The winning design is the one whose ownership, cost, and failure behavior remain easy to explain.
+
+## Verification and Review
+
+Ranges and generators deserve specific review questions.
+
+- What owns the data a view is traversing, and is that owner visibly alive for the full iteration?
+- Where does lazy work actually execute, and is that timing acceptable for error handling and metrics?
+- Is there a deliberate materialization point where ownership or observability should become explicit?
+- Would an ordinary loop communicate control flow and side effects more clearly?
+- Does a generator yield owned values or borrowed ones, and is that lifetime valid across suspension?
+
+Dynamic tools matter here. AddressSanitizer and UndefinedBehaviorSanitizer are good at exposing view lifetime mistakes once exercised. Benchmarks help when pipelines are adopted for throughput claims. But review still carries most of the burden because many lazy-lifetime bugs are structurally obvious if the ownership story is traced carefully.
+
+## Takeaways
+
+- Use range pipelines when linear dataflow is the main story and side effects are secondary.
+- Treat every view as a borrowing abstraction whose owner must remain obvious and alive.
+- Avoid exporting deep lazy pipelines across broad API boundaries unless the lifetime contract is genuinely clear.
+- Use generators for incrementally produced sequences, not as a replacement for simple stored results.
+- Insert materialization points when observability, error boundaries, or lifetime clarity matter more than maximal laziness.

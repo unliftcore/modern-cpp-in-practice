@@ -5,42 +5,53 @@
 
 ---
 
-# Part I: Foundations Under Production Pressure
+# Part I: Core Mental Models
 
-- [Ownership, Lifetime, and Resource Management](01-ownership-lifetime-and-resource-management.md)
-- [Errors, Results, and Failure Boundaries](02-errors-results-and-failure-boundaries.md)
-- [Value Semantics, Identity, and Invariants](03-value-semantics-identity-and-invariants.md)
-- [Compile-Time Programming: constexpr, consteval, and Metaprogramming](04-compile-time-programming.md)
+- [Ownership, Lifetime, and RAII](01-ownership-lifetime-and-raii.md)
+- [Values, Identity, and Invariants](02-values-identity-and-invariants.md)
+- [Errors, Results, and Failure Boundaries](03-errors-results-and-failure-boundaries.md)
+- [Parameter Passing, Return Types, and API Surface](04-parameter-passing-return-types-and-api-surface.md)
 
-# Part II: Type-Level Design and Generic Programming
+# Part II: Writing Modern C++ Code
 
-- [Concepts, Constraints, and Generic Interfaces](05-concepts-constraints-and-generic-interfaces.md)
-- [Ranges, Views, and Functional Composition](06-ranges-views-and-functional-composition.md)
+- [Standard Library Types That Change Design](05-standard-library-types-that-change-design.md)
+- [Generic Code with Concepts and Constraints](06-generic-code-with-concepts-and-constraints.md)
+- [Ranges, Views, and Generators](07-ranges-views-and-generators.md)
+- [Compile-Time Programming Without Losing Your Mind](08-compile-time-programming-without-losing-your-mind.md)
 
-# Part III: Interfaces, Modules, and Boundaries
+# Part III: Interfaces, Libraries, and Architecture
 
-- [Interfaces, APIs, and Dependency Direction](07-interfaces-apis-and-dependency-direction.md)
-- [Modules, Libraries, ABI, and Versioning](08-modules-libraries-abi-and-versioning.md)
+- [Interface Design and Dependency Direction](09-interface-design-and-dependency-direction.md)
+- [Runtime Polymorphism, Type Erasure, and Callbacks](10-runtime-polymorphism-type-erasure-and-callbacks.md)
+- [Modules, Libraries, Packaging, and ABI Reality](11-modules-libraries-packaging-and-abi-reality.md)
 
-# Part IV: Concurrency and Structured Async
+# Part IV: Concurrency and Asynchronous Systems
 
-- [Shared State, Synchronization, and Contention](09-shared-state-synchronization-and-contention.md)
-- [Coroutines and Generators](10-coroutines-and-generators.md)
-- [Senders, Receivers, and Structured Concurrency](11-senders-receivers-and-structured-concurrency.md)
-- [Pipelines, Backpressure, and Service Throughput](12-pipelines-backpressure-and-service-throughput.md)
+- [Shared State, Synchronization, and Contention](12-shared-state-synchronization-and-contention.md)
+- [Coroutines, Tasks, and Suspension Boundaries](13-coroutines-tasks-and-suspension-boundaries.md)
+- [Structured Concurrency, Cancellation, and Backpressure](14-structured-concurrency-cancellation-and-backpressure.md)
 
-# Part V: Data, Performance, and Measurement
+# Part V: Data, Memory, and Performance
 
-- [Data Structures, Layout, and Memory Behavior](13-data-structures-layout-and-memory-behavior.md)
-- [Cost Models, Allocation, and Locality](14-cost-models-allocation-and-locality.md)
-- [Benchmarking, Profiling, and Regression Control](15-benchmarking-profiling-and-regression-control.md)
+- [Data Layout, Containers, and Memory Behavior](15-data-layout-containers-and-memory-behavior.md)
+- [Allocation, Locality, and Cost Models](16-allocation-locality-and-cost-models.md)
+- [Benchmarking and Profiling Without Lying to Yourself](17-benchmarking-and-profiling-without-lying-to-yourself.md)
 
-# Part VI: Tooling and Verification
+# Part VI: Verification and Delivery
 
-- [Builds, Diagnostics, and Static Analysis](16-builds-diagnostics-and-static-analysis.md)
-- [Testing, Fuzzing, Sanitizers, and Observability](17-testing-fuzzing-sanitizers-and-observability.md)
+- [Testing Strategy for Resource and Boundary Bugs](18-testing-strategy-for-resource-and-boundary-bugs.md)
+- [Sanitizers, Static Analysis, and Build Diagnostics](19-sanitizers-static-analysis-and-build-diagnostics.md)
+- [Observability for Native Systems](20-observability-for-native-systems.md)
 
-# Part VII: Evolution and Long-Term Maintenance
+# Part VII: Production Patterns
 
-- [Legacy Migration, Interop, and Incremental Modernization](18-legacy-migration-interop-and-incremental-modernization.md)
-- [Large Codebases, C++26 Horizon, and Maintainability](19-large-codebases-cpp26-horizon-and-maintainability.md)
+- [Building a Small Service in Modern C++](21-building-a-small-service-in-modern-cpp.md)
+- [Building a Reusable Library in Modern C++](22-building-a-reusable-library-in-modern-cpp.md)
+- [Reviewer’s Checklist for Modern C++ Code](23-reviewers-checklist-modern-cpp-code.md)
+
+# Appendices
+
+- [C++23 Feature Index by Engineering Use](appendices/cpp23-feature-index-by-engineering-use.md)
+- [Toolchain Baseline](appendices/toolchain-baseline.md)
+- [Code Review Checklists](appendices/code-review-checklists.md)
+- [Glossary](appendices/glossary.md)

@@ -1,0 +1,205 @@
+# Shared State, Synchronization, and Contention
+
+This chapter assumes you already reason precisely about ownership and invariants in single-threaded code. The question now is what survives once multiple threads can observe and mutate the same state.
+
+## The Production Problem
+
+Most concurrency failures are not caused by missing primitives. They are caused by vague sharing policy.
+
+A cache is "mostly reads." A connection pool has "just one mutex." A metrics registry uses atomics "for speed." A request coordinator stores a few counters and a queue behind a lock and appears correct in code review. Then production load arrives. Lock hold time couples unrelated work. A reader observes half-updated state because the invariant spans two fields. A background cleanup path waits under the same mutex as the hot path. Throughput collapses before anyone sees a crash, and once crashes do appear they are often data-race UB, deadlock, or starvation rather than a clean failure.
+
+This chapter is about the shape of shared mutable state in production C++23 systems. The core question is not which mutex type to memorize. It is how much state should be shared at all, which invariants require synchronization, how contention appears under real traffic, and what reviewable designs look like when sharing is unavoidable.
+
+Keep the boundary with the next chapters clear. This chapter is about simultaneous access to shared mutable state. Chapter 13 is about coroutine lifetime across suspension. Chapter 14 is about orchestrating groups of tasks, cancellation, and backpressure. Those topics interact, but they are not interchangeable.
+
+## Shared Mutable State Is a Cost Center
+
+Shared state buys coordination convenience at the price of coupling.
+
+Once two threads can mutate the same object graph, local reasoning stops being enough. Every access now depends on synchronization policy, lock ordering, memory ordering, wakeup behavior, and destruction timing. Reviewers must ask not only whether an operation is correct in isolation, but whether the state can be observed between two steps, whether a callback re-enters under a lock, whether waiting code holds resources needed for progress, and whether contention turns a correct design into a slow one.
+
+That cost means the first concurrency decision should be structural:
+
+1. Can this state become thread-confined instead?
+2. Can updates be batched, sharded, snapshotted, or message-passed?
+3. If sharing is unavoidable, what invariant must be preserved atomically?
+
+Teams often skip directly to lock selection. That is backward. The expensive choice is the sharing topology, not the spelling of `std::mutex`.
+
+## Start by Narrowing the Sharing Surface
+
+The safest shared state is the state you never share.
+
+In service code, many apparently shared structures can be split by traffic key, request lifetime, or ownership role. Metrics ingestion can aggregate per thread and merge periodically. A session table can be sharded by session identifier. A cache can separate immutable value blobs from a small mutable index. A queue consumer can own its local work buffer and publish only completed snapshots.
+
+These moves matter more than switching from one primitive to another because they reduce the number of places where correctness depends on interleaving.
+
+Three reductions are especially common in production systems:
+
+### Thread confinement
+
+Let one thread or one executor own mutation. Everyone else communicates by message, snapshot, or handoff. This is often the simplest answer for request schedulers, connection managers, and event loops. The benefit is not merely fewer locks. It is that the invariants stay local.
+
+### Sharding
+
+Partition state by a stable key so that contention is proportional to hot-key concentration rather than total traffic. Sharding does not remove synchronization, but it narrows the blast radius of each critical section.
+
+### Snapshotting
+
+If readers dominate and they can tolerate slightly stale data, publish immutable snapshots and update them off to the side. Readers get cheap, stable access. Writers pay the complexity cost once.
+
+None of these is free. Confinement can create bottlenecks. Sharding complicates cross-shard operations. Snapshotting increases allocation and copy cost. But those are explicit costs, which is better than paying accidental contention everywhere.
+
+## Design Around Invariants, Not Fields
+
+Locks do not protect variables. They protect invariants.
+
+That distinction matters because production objects rarely fail at the field level. They fail when multiple fields must change together and one thread can observe the state between those changes.
+
+A connection pool is not correct because `available_count` is atomic. It is correct if the following relationship always holds under concurrent access: checked-out connections are not also on the idle list, closed connections are not reissued, and waiters are woken when progress becomes possible. Those are invariant statements. If the design does not name them explicitly, the synchronization boundary is already underspecified.
+
+This is where coarse-grained locking sometimes wins. If one mutex cleanly covers one invariant domain, that may be a better design than several finer locks that allow impossible intermediate states or require fragile lock ordering. Fine-grained locking is not advanced by default. It is often just harder to review.
+
+## Anti-pattern: One Lock Around a Growing Service Object
+
+The most common failure shape is not "no synchronization." It is "one reasonable lock that gradually became the service boundary."
+
+```cpp
+// Anti-pattern: one mutex protects unrelated invariants and long operations.
+class session_registry {
+public:
+	std::optional<session_info> find(session_id id) {
+		std::scoped_lock lock(mutex_);
+		auto it = sessions_.find(id);
+		if (it == sessions_.end()) {
+			return std::nullopt;
+		}
+		return it->second;
+	}
+
+	void expire_idle_sessions(std::chrono::steady_clock::time_point now) {
+		std::scoped_lock lock(mutex_);
+		for (auto it = sessions_.begin(); it != sessions_.end();) {
+			if (it->second.expires_at <= now) {
+				close_socket(it->second.socket); // RISK: blocking work under the lock.
+				it = sessions_.erase(it);
+			} else {
+				++it;
+			}
+		}
+	}
+
+private:
+	std::mutex mutex_;
+	std::unordered_map<session_id, session_info> sessions_;
+};
+```
+
+This object may survive early testing because it is locally simple. It fails later because unrelated work now shares one queueing point. A read blocks on cleanup. Cleanup holds the mutex while doing I/O. Future features will add metrics, callbacks, and logging inside the same critical section because the lock already exists.
+
+The problem is not just duration of the critical section. It is that the object has no explicit invariant boundaries. Lifetime management, lookup, expiration, and side effects have been collapsed into one synchronization domain.
+
+The better direction is usually to separate state transition from external action: identify which sessions should expire under the lock, move them out, release the lock, then close sockets afterward. That shortens lock scope and makes the invariant easier to state: the protected region updates the registry; external cleanup happens after ownership has been transferred out of the shared structure.
+
+## Minimize Lock Scope, But Do Not Split Logic Blindly
+
+"Keep lock scope small" is correct and incomplete.
+
+A critical section should contain exactly the work required to preserve the invariant, no more and no less. That means:
+
+1. No blocking I/O under the lock.
+2. No callbacks into foreign code under the lock.
+3. No allocation-heavy or logging-heavy slow paths under the lock if they can be moved out.
+4. No splitting of logically atomic state updates merely to make the scope visually shorter.
+
+The last point is where teams get into trouble. A lock that protects a multi-step invariant may need to span several operations. If you release it between steps to look "faster," you may create impossible states. Optimize after you can state what must remain atomic.
+
+## Atomics Are for Narrow Facts, Not Complex Ownership
+
+Atomics are essential and easy to misuse.
+
+Use atomics when the shared fact is truly narrow: a stop flag, a generation counter, an index into a ring buffer, a reference count in an already-sound ownership model, or a statistics counter where relaxed ordering is sufficient. Avoid using atomics as a substitute for structured ownership or for multi-field invariants.
+
+An atomic counter does not make a queue safe. An atomic pointer does not make object lifetime trivial. A handful of `memory_order` arguments does not fix a design that lets one thread observe partially published state.
+
+C++23 gives useful tools here, including `std::atomic::wait` and `notify_one` or `notify_all`. They can remove some condition-variable boilerplate for narrow state transitions. They do not change the need to design the state machine first.
+
+If a reviewer cannot explain which value transitions are legal and why the chosen ordering is sufficient, the atomic code is not done.
+
+## Reader-Heavy Data Wants Different Shapes
+
+Contention is often caused less by write frequency than by read design.
+
+A configuration table, routing map, or feature-policy snapshot may be read on every request and updated rarely. Protecting that with a central mutex works functionally and creates avoidable tail latency. In these cases, immutable snapshots or copy-on-write style publication often produce a better system than finer locking.
+
+The tradeoff is explicit:
+
+1. Readers get stable, low-contention access.
+2. Writers pay copy and publication cost.
+3. Memory pressure may increase due to overlapping generations.
+4. Staleness must be acceptable for the domain.
+
+That is often the right trade in request routing, authorization policy, and read-mostly metadata. It is the wrong trade for highly write-heavy order books or frequently mutating shared indexes.
+
+## Condition Variables and Wakeup Discipline
+
+Condition variables are where many otherwise careful designs become hand-wavy.
+
+The rule is simple: the wait predicate is part of the invariant, not a convenience expression. A waiting thread must re-check a predicate that is protected by the same synchronization domain that makes the predicate meaningful. Notifications are signals to re-check, not proofs that progress is guaranteed.
+
+In practical terms:
+
+1. Name the predicate precisely: queue not empty, shutdown requested, capacity available, generation changed.
+2. Update the predicate state before notifying.
+3. Keep waiting code robust against spurious wakeups and shutdown races.
+4. Decide whether waking one waiter or all waiters matches the progress model.
+
+Most broken condition-variable code is not broken because the author forgot the loop. It is broken because the predicate is underspecified or split across state that different code paths update inconsistently.
+
+## Hidden Shared State Is Still Shared State
+
+Concurrency bugs often hide in objects that do not look shared from the call site.
+
+Examples include:
+
+1. Allocators or memory resources used by many threads.
+2. Logging sinks with internal buffers.
+3. Reference-counted handles with shared control blocks.
+4. Caches behind seemingly pure helper APIs.
+5. Global registries used for plugin discovery, metrics, or tracing.
+
+These deserve the same scrutiny as explicit shared maps and queues. "This helper is thread-safe" is not enough. Ask whether it serializes all callers, whether it allocates under contention, whether it can call user code while holding internal locks, and whether it introduces contention in the hot path without making that cost visible in the API.
+
+## Measuring Contention Changes the Design
+
+Correctness is only the first gate. After that, shared-state design is a measurement problem.
+
+Contention rarely appears as a clear source-level smell. It shows up as queueing time, lock hold distributions, convoy behavior, cache-line bouncing, and scheduler-visible stalls. That means verification must include operational evidence:
+
+1. Measure lock hold time and wait time on hot paths.
+2. Track tail latency, not only throughput averages.
+3. Observe hot-key skew when using sharding.
+4. Profile allocation inside critical sections.
+5. Use ThreadSanitizer for race detection and targeted stress tests for deadlock and starvation patterns.
+
+A design that is logically correct but collapses at the ninety-ninth percentile is still a bad concurrency design.
+
+## Review Questions for Shared State
+
+Before approving concurrent shared-state code, ask:
+
+1. What exact invariant does each lock or atomic protect?
+2. Could this state be confined, sharded, or snapshotted instead of shared?
+3. Does any critical section perform I/O, allocation-heavy work, logging, or callbacks?
+4. Are cross-field updates truly atomic with respect to observers?
+5. Are condition-variable predicates precise and updated under the right synchronization domain?
+6. Where will contention appear under burst load or hot-key skew?
+7. What evidence do we have beyond "it passed tests"?
+
+If those questions do not have crisp answers, the design is not ready for production load.
+
+## Takeaways
+
+Shared mutable state is not the default shape of concurrent design. It is the expensive shape.
+
+When sharing is unavoidable, define invariants before choosing primitives. Prefer confinement, sharding, and snapshots over ever more clever locking. Use mutexes to protect invariant domains, atomics for narrow facts, and condition variables only with clearly stated predicates. Then measure the result under realistic load, because correct synchronization can still produce the wrong system if contention dominates behavior.

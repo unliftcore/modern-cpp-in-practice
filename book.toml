@@ -1,9 +1,9 @@
 [book]
-title = "Modern C++ in Production"
+title = "Modern CPP in Practice"
 authors = ["Qiao Wang"]
 language = "en"
 src = "chapters"
-description = "A production handbook for modern C++. Ownership, interfaces, failure handling, concurrency, performance, tooling, and long-term maintainability."
+description = "A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification."
 
 [build]
 build-dir = "site"

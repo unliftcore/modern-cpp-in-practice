@@ -1,0 +1,126 @@
+# Compile-Time Programming Without Losing Your Mind
+
+Compile-time programming is one of the places where C++ expertise most easily turns into self-harm. The language lets you move work into constant evaluation, dispatch on types, reject invalid configurations early, and synthesize tables or metadata before runtime begins. Those are real powers. They also consume build time, damage diagnostics, spread logic into headers, and tempt engineers to encode business rules in forms nobody wants to debug.
+
+The right production question is not “can this be done at compile time?” It is “what becomes safer, cheaper, or harder to misuse if this is done at compile time, and is that worth the cost to builds and maintainability?”
+
+That framing keeps compile-time techniques in their proper role: they are engineering tools for eliminating invalid states, verifying fixed configuration, and specializing low-level behavior where the variation is truly static. They are not a moral upgrade over runtime code.
+
+## Prefer `constexpr` Code That Still Reads Like Ordinary Code
+
+The healthiest modern compile-time programming is often just ordinary code written so it can also run during constant evaluation. If a parser helper, small lookup builder, or unit conversion routine can be `constexpr` without becoming cryptic, that is usually the sweet spot.
+
+This matters because most of the old pain in C++ metaprogramming came from forcing logic into type-level encodings or template recursion that no human would choose if runtime code were allowed. C++20 and C++23 reduced that pressure substantially. You can often write loops, branches, and small local data structures directly in `constexpr` functions.
+
+That changes the design trade. If a compile-time routine still looks like normal code, review and debugging stay tolerable. If moving work to compile time requires a second, stranger version of the algorithm, the benefit has to be substantial.
+
+Good candidates are fixed translation tables, protocol field layout helpers, validated lookup maps for small enums, and command metadata assembled from constant inputs. These are cases where the inputs are static by nature and computing the result earlier can remove startup work or make invalid combinations impossible.
+
+## Use `consteval` Only When Delayed Failure Would Be a Design Bug
+
+`consteval` is stronger than `constexpr`: it requires evaluation at compile time. That is useful when accepting runtime fallback would hide a configuration mistake you never want in production.
+
+Imagine a wire protocol subsystem with a fixed set of message descriptors that must have unique opcodes and bounded payload sizes. Those constraints are not dynamic business logic. They are part of the static shape of the program. Catching a duplicate opcode at compile time is materially better than discovering it during startup or, worse, through a routing bug in integration.
+
+```cpp
+struct MessageDescriptor {
+	std::uint16_t opcode;
+	std::size_t max_payload;
+};
+
+template <std::size_t N>
+consteval auto validate_descriptors(std::array<MessageDescriptor, N> table)
+	-> std::array<MessageDescriptor, N>
+{
+	for (std::size_t i = 0; i < N; ++i) {
+		if (table[i].max_payload > 64 * 1024) {
+			throw "payload limit exceeded";
+		}
+		for (std::size_t j = i + 1; j < N; ++j) {
+			if (table[i].opcode == table[j].opcode) {
+				throw "duplicate opcode";
+			}
+		}
+	}
+	return table;
+}
+
+constexpr auto descriptors = validate_descriptors<3>({{
+	{0x10, 1024},
+	{0x11, 4096},
+	{0x12, 512},
+}});
+```
+
+The exact error text and mechanism can be refined, but the design point is solid. These descriptors are static program structure. Rejecting an invalid table during compilation is worth the cost.
+
+The mistake is using `consteval` to force evaluation of logic that is not inherently static. If a value may legitimately come from deployment configuration, user input, or external data, trying to drag it into compile time usually produces an awkward and brittle design.
+
+## `if constexpr` Should Separate Real Families, Not Encode Arbitrary Business Logic
+
+`if constexpr` is one of the most useful tools in modern generic code because it keeps type-dependent branching local and readable. Used well, it lets one implementation adapt to a small number of meaningful model differences without splitting into a forest of specializations.
+
+Used badly, it turns a function template into a dumping ground for unrelated behavior.
+
+The right use case is something like storage strategy differences between trivially copyable payloads and non-trivial domain objects, or a formatting helper that handles byte buffers differently from structured records while preserving one public contract. The variation belongs to representation or capability.
+
+The wrong use case is encoding every product-specific rule as another compile-time branch because “the compiler can optimize it away.” That approach ties application policy to type structure and makes the function harder to review each time a new condition is added. When the branching is really about runtime business meaning rather than static type capability, ordinary runtime code is usually clearer.
+
+Compile-time branching is best when it explains a stable family relationship. If it is there mostly to avoid writing a second straightforward function, it is often a mistake.
+
+## The Main Costs Are Build Cost, Diagnostic Quality, and Organizational Drag
+
+Runtime code has visible execution cost. Compile-time code has visible team cost.
+
+Large constant-evaluated tables, heavily instantiated templates, and header-defined helper frameworks slow incremental builds and make dependency graphs more fragile. Diagnostics from failed constant evaluation can still be difficult to interpret, especially once several templates and concepts stack together. And because compile-time machinery often lives in headers, implementation details leak farther across the codebase than their runtime equivalents would.
+
+This is why production compile-time programming should stay close to a few recurring wins.
+
+- Reject statically invalid program structure early.
+- Remove small startup work for fixed data.
+- Specialize low-level operations based on static capability.
+- Keep generated tables and metadata consistent with declared types.
+
+Outside those zones, the return on investment drops quickly.
+
+There is also an organizational cost. Once a team normalizes elaborate compile-time infrastructure, more engineers start building on top of it because it exists, not because it is the clearest solution. The abstraction surface expands. Fewer people can confidently review it. Eventually the project has two complexity layers: runtime code and the compile-time framework that shapes it.
+
+That is why restraint matters more here than almost anywhere else in modern C++.
+
+## Code Generation Is Sometimes Better Than Metaprogramming
+
+If the source of truth is external or large, code generation is often the better engineering trade. A protocol schema, telemetry catalog, SQL query inventory, or command registry drawn from external definitions may be easier to validate and evolve with a generator than with an elaborate tower of templates and `constexpr` parsers.
+
+This is not an admission of defeat. It is a recognition that some complexity is easier to manage in build tooling than in the C++ type system. Generated C++ can still expose clean typed interfaces. The difference is where the complexity lives and how visible the failure modes are.
+
+As a rule, prefer compile-time programming inside C++ when the source data is small, static, and naturally expressed in code. Prefer code generation when the source data is large, external, or already maintained in another format. The break-even point arrives earlier than template enthusiasts like to admit.
+
+## Failure Modes and Boundaries
+
+Compile-time programming tends to fail in familiar ways.
+
+One failure mode is replacing readable runtime code with dense template machinery to save a startup cost that was never measured. Another is pulling deploy-time configuration into compile time, which forces rebuilds for changes that should have remained operational choices. Another is treating `constexpr` success as proof that the overall design is better, even when build time and diagnostics have become markedly worse.
+
+There is also a boundary around what compile time can prove. It can validate fixed shapes, constant relationships, and type-level capability. It cannot replace integration testing, resource-boundary testing, or operational verification. A compile-time validated dispatch table can still point to handlers whose runtime side effects are wrong.
+
+Keep compile-time logic close to the part of the design that is truly static. Do not let it metastasize into a general architecture style.
+
+## Verification and Review
+
+Verification here includes both correctness and cost.
+
+- Add focused `static_assert` checks for core compile-time helpers when they encode rules you do not want to regress.
+- Keep representative runtime tests even for compile-time-built tables and metadata; constant evaluation does not prove dynamic correctness.
+- Watch incremental build times when adding header-heavy compile-time infrastructure.
+- Review error messages from failure cases. If the diagnostics are unusable, the abstraction is not production-ready.
+- Ask whether the same outcome could be achieved with simpler runtime code or with code generation.
+
+The last question is the one teams skip most often, and it is usually the most valuable.
+
+## Takeaways
+
+- Prefer `constexpr` code that still looks like ordinary code.
+- Use `consteval` only when runtime fallback would represent a real design error.
+- Apply `if constexpr` to stable capability differences, not to arbitrary business branching.
+- Count build time, diagnostics, and reviewability as first-class costs.
+- When compile-time machinery stops clarifying the static structure of the program, step back to simpler runtime code or to generation tooling.
