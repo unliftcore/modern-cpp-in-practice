@@ -1,0 +1,29 @@
+[book]
+title = "现代 C++ 实战"
+authors = ["Qiao Wang"]
+language = "zh-CN"
+src = "chapters"
+description = "面向有经验程序员的现代 C++ 生产实践指南：所有权、接口、失败边界、并发、性能与验证。"
+
+[build]
+build-dir = "site"
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/nodew/modern-cpp-in-practice"
+edit-url-template = "https://github.com/nodew/modern-cpp-in-practice/edit/main/translations/zh-CN/chapters/{path}"
+no-section-label = false
+additional-css = ["theme/custom.css"]
+
+[output.html.search]
+enable = true
+limit-results = 20
+boost-hierarchy = 2
+
+[output.html.print]
+enable = true
+
+[output.html.fold]
+enable = true
+level = 1
