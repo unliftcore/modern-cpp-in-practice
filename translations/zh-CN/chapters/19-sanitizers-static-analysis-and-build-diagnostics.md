@@ -96,7 +96,7 @@ void log_and_remove_session(session_registry& registry, session_id id)
 
 没有 ASan 时，这段代码通常能通过测试，甚至在生产环境里正确运行好几个月。被释放的内存仍然保留着旧的字符串数据，直到被其他内容覆盖。测试通过了，代码评审也未必能发现问题——函数看起来很简单。等到真正出问题时，症状却是乱码日志或某个毫不相干的分配处崩溃，离实际 bug 的位置很远。
 
-在 ASan 下，它会立刻产生精确失败：
+在 ASan 下，它会立刻报出精确的错误：
 
 ```
 ==41032==ERROR: AddressSanitizer: heap-use-after-free on address 0x6020000000d0

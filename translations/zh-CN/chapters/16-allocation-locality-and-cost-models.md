@@ -207,7 +207,7 @@ void submit_work_fixed(const Config& cfg,
 
 示例项目对这一原则的实践值得参考。在 `examples/web-api/src/modules/handlers.cppm` 中，每个 handler 工厂（如 `list_tasks()`、`get_task()`、`create_task()`）都通过引用接收 `TaskRepository&`，并在返回的 lambda 中以引用方式捕获。repository 由 `main()` 持有，生命周期覆盖所有 handler，因此完全不需要 `std::shared_ptr<TaskRepository>`。这样每次请求都避免了原子引用计数的开销，handler 的捕获也更紧凑——只是一个普通指针，而不是两指针宽的 `shared_ptr` 外加控制块。
 
-还有一些逐步累积的成本：`std::shared_ptr` 自身就有两个指针宽（对象指针 + 控制块指针），是裸指针的两倍大。容器里装 `std::shared_ptr` 时缓存密度自然更差。弱引用计数又多出一个原子变量。控制块里存放的自定义 deleter 还会在析构时引入一层类型擦除间接调用。
+还有一些零碎但容易忽视的开销：`std::shared_ptr` 自身就有两个指针宽（对象指针 + 控制块指针），是裸指针的两倍大。容器里装 `std::shared_ptr` 时缓存密度自然更差。弱引用计数又多出一个原子变量。控制块里存放的自定义 deleter 还会在析构时引入一层类型擦除间接调用。
 
 ## 隐式分配是设计异味
 

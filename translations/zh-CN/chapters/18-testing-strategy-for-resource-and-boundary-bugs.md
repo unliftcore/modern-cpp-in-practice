@@ -236,7 +236,7 @@ TEST(config_survives_input_destruction)
 
 示例项目中有这几种模式的具体实践。在 `examples/web-api/tests/test_http.cpp` 中，`test_parse_request_malformed()` 向解析器喂入字符串 `"not a valid request"`，断言 `parse_request()` 返回 `std::nullopt` 而非崩溃或产出半初始化的 `Request`。这正是那种能抓住"默认假设输入格式正确"的解析器 bug 的畸形输入边界测试。同一文件还测试了 header 缺失的情况（`test_header_missing()`），确认返回 `std::optional` 的 `header()` 方法在 header 不存在时能正确处理缺失，而非返回悬空 view 或默认构造的字符串。
 
-在 `examples/web-api/tests/test_task.cpp` 中，边界验证测试同样值得关注。`test_task_validation_rejects_empty_title()` 和 `test_task_validation_rejects_long_title()`（后者构造了一个 257 字符的字符串）验证了领域不变量在极端值处依然成立。这些不是实现顺序测试——它们断言的是业务规则：task 标题必须非空且在长度上限内，并且错误通过 `std::expected` 以正确的 `ErrorCode::bad_request` 报告，而非被吞掉或转化为异常。
+在 `examples/web-api/tests/test_task.cpp` 中，边界验证测试同样值得关注。`test_task_validation_rejects_empty_title()` 和 `test_task_validation_rejects_long_title()`（后者构造了一个 257 字符的字符串）验证了领域不变量在极端值处依然成立。这些不是验证调用顺序的测试——它们断言的是业务规则：task 标题必须非空且在长度上限内，并且错误通过 `std::expected` 以正确的 `ErrorCode::bad_request` 报告，而非被吞掉或转化为异常。
 
 ## 失败注入比更多 mock 更有价值
 
