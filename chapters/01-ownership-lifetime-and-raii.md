@@ -30,7 +30,7 @@ RAII means tying a resource to the lifetime of an object whose destructor releas
 
 ### Anti-pattern: Manual Socket Lifetime in Control Flow
 
-Before illustrating the RAII pattern, it is worth seeing the manual approach in a fuller form. The following anti-pattern is intentionally buggy on purpose, because production codebases still contain code that looks exactly like this.
+Before illustrating the RAII pattern, it is worth seeing the manual approach in a fuller form. The following anti-pattern is intentionally buggy, because production codebases still contain code that looks exactly like this.
 
 ```cpp
 socket_t create_server_socket(std::uint16_t port) {
@@ -162,7 +162,7 @@ That class is enough to explain the whole RAII story:
 - **Transfer is explicit** because moves use `std::exchange` to leave the source empty.
 - **Release is automatic** because the destructor always calls `close()`.
 
-The surrounding code in the same module shows how this behaves in real use. The following is an intentional partial excerpt: only the ownership-relevant lines are shown, so supporting declarations and unrelated error-handling details are omitted for clarity.
+The surrounding code in the same module shows how this behaves in real use. The following is a partial excerpt: only the ownership-relevant lines are shown, so supporting declarations and unrelated error-handling details are omitted for clarity.
 
 ```cpp
 [[nodiscard]] Socket create_server_socket() const {
