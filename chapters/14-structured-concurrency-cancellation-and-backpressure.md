@@ -264,7 +264,7 @@ void run(std::stop_token stop_token) {
         // select() with 1-second timeout, then check stop again
         // accept and handle connection ...
     }
-    std::cout << "Server shutting down gracefully\n";
+    std::println("Server shutting down gracefully");
 }
 ```
 

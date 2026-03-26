@@ -70,7 +70,7 @@ curl -X DELETE http://localhost:8080/tasks/1
 | `std::unexpected` | `error.cppm` | Ch 3 |
 | `std::optional<T>` | `task.cppm`, `repository.cppm`, `http.cppm`, `json.cppm` | Ch 5 |
 | `std::string_view` | Throughout — parameter passing, header lookup | Ch 4, 5 |
-| `std::format` | All response construction, error messages, logging | Ch 5 |
+| `std::format`, `std::print`, `std::println` | Response construction, startup/error messages, logging | Ch 5 |
 | Concepts (`concept`, `requires`) | `json.cppm`, `repository.cppm`, `middleware.cppm` | Ch 6 |
 | `std::ranges` / `std::views` | `repository.cppm` filter/transform, `json.cppm` serialize | Ch 7 |
 | `constexpr` / `consteval` | `error.cppm` HTTP status mapping, `http.cppm` method parsing | Ch 8 |

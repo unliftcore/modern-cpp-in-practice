@@ -5,7 +5,7 @@
 
 #include <cassert>
 #include <format>
-#include <iostream>
+#include <print>
 #include <optional>
 #include <string>
 #include <thread>
@@ -139,6 +139,6 @@ int main() {
     test_remove_missing();
     test_concurrent_access();
 
-    std::cout << "All repository tests passed\n";
+    std::println("All repository tests passed");
     return 0;
 }

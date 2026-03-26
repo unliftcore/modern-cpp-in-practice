@@ -14,15 +14,14 @@
 //   • C++20 modules (Ch 11)           — import declarations
 //   • std::jthread / std::stop_token  — cooperative cancellation (in Server)
 //   • RAII throughout                 — automatic cleanup
-//   • std::format                     — structured output
+//   • std::print / std::println       — structured output
 //   • Designated initializers         — readable construction
 // ============================================================================
 
 #include <atomic>
 #include <csignal>
 #include <cstdint>
-#include <format>
-#include <iostream>
+#include <print>
 #include <vector>
 
 import webapi.handlers;
@@ -88,16 +87,18 @@ int main() {
     constexpr std::uint16_t port = 8080;
     webapi::http::Server server{port, std::move(handler)};
 
-    std::cout << std::format("Task API server starting on port {}\n", port);
-    std::cout << "Press Ctrl+C to stop\n\n";
-    std::cout << "Available endpoints:\n";
-    std::cout << "  GET    /health        — health check\n";
-    std::cout << "  GET    /tasks         — list all tasks\n";
-    std::cout << "  GET    /tasks/:id     — get task by id\n";
-    std::cout << "  POST   /tasks         — create a task\n";
-    std::cout << "  PUT    /tasks/:id     — replace a task\n";
-    std::cout << "  PATCH  /tasks/:id     — partial update\n";
-    std::cout << "  DELETE /tasks/:id     — delete a task\n\n";
+    std::println("Task API server starting on port {}", port);
+    std::println("Press Ctrl+C to stop");
+    std::println("");
+    std::println("Available endpoints:");
+    std::println("  GET    /health        — health check");
+    std::println("  GET    /tasks         — list all tasks");
+    std::println("  GET    /tasks/:id     — get task by id");
+    std::println("  POST   /tasks         — create a task");
+    std::println("  PUT    /tasks/:id     — replace a task");
+    std::println("  PATCH  /tasks/:id     — partial update");
+    std::println("  DELETE /tasks/:id     — delete a task");
+    std::println("");
 
     // Run server with cooperative cancellation (Ch 14: jthread + stop_token).
     // The jthread and stop_token mechanism lives inside Server::run_until(),

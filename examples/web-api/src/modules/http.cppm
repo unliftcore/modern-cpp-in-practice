@@ -28,14 +28,15 @@ module;
 #include <cerrno>
 #include <chrono>
 #include <cstdint>
-#include <cstring>
+#include <cstdio>
 #include <format>
 #include <functional>
-#include <iostream>
 #include <optional>
+#include <print>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -104,7 +105,7 @@ inline void close_socket(socket_handle socket_fd) noexcept {
 }
 
 [[nodiscard]] inline std::string last_socket_error() {
-    return std::strerror(errno);
+    return std::error_code(errno, std::generic_category()).message();
 }
 #endif
 
@@ -322,11 +323,11 @@ public:
     void run(std::stop_token stop_token) {
         auto server_sock = create_server_socket();
         if (!server_sock) {
-            std::cerr << "Failed to create server socket\n";
+            std::println(stderr, "Failed to create server socket");
             return;
         }
 
-        std::cout << std::format("Listening on port {}\n", port_);
+        std::println("Listening on port {}", port_);
 
         while (!stop_token.stop_requested()) {
             // Use select() with timeout to allow periodic stop checks
@@ -356,7 +357,7 @@ public:
             handle_connection(std::move(client));
         }
 
-        std::cout << "Server shutting down gracefully\n";
+        std::println("Server shutting down gracefully");
     }
 
     // Run the server on a jthread, blocking until the stop predicate fires.
@@ -407,7 +408,7 @@ private:
         addr.sin_port = htons(port_);
 
         if (::bind(sock.fd(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
-            std::cerr << std::format("bind failed: {}\n", last_socket_error());
+            std::println(stderr, "bind failed: {}", last_socket_error());
             return {};
         }
 

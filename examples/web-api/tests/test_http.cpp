@@ -3,7 +3,7 @@
 // ============================================================================
 
 #include <cassert>
-#include <iostream>
+#include <print>
 #include <string>
 #include <string_view>
 
@@ -125,6 +125,6 @@ int main() {
     test_socket_raii();
     test_socket_move();
 
-    std::cout << "All HTTP tests passed\n";
+    std::println("All HTTP tests passed");
     return 0;
 }
