@@ -190,28 +190,28 @@
 <p>The service object should therefore model ownership directly. It should be the place where long-lived dependencies are constructed, started, and stopped. That does not mean one giant god object. It means one clear root that owns the parts whose lifetimes must end together.</p>
 <h3 id="intentional-partial-a-service-root-that-owns-time-and-shutdown"><a class="header" href="#intentional-partial-a-service-root-that-owns-time-and-shutdown">Intentional partial: a service root that owns time and shutdown</a></h3>
 <pre><code class="language-cpp">struct service_components {
-	config cfg;
-	request_router router;
-	storage_client storage;
-	bounded_executor executor;
-	telemetry telemetry;
-	http_listener listener;
+    config cfg;
+    request_router router;
+    storage_client storage;
+    bounded_executor executor;
+    telemetry telemetry;
+    http_listener listener;
 };
 
 class service {
 public:
-	explicit service(service_components components)
-		: components_(std::move(components)) {}
+    explicit service(service_components components)
+        : components_(std::move(components)) {}
 
-	auto run(std::stop_token stop) -&gt; std::expected&lt;void, service_error&gt;;
-	void request_stop() noexcept;
+    auto run(std::stop_token stop) -&gt; std::expected&lt;void, service_error&gt;;
+    void request_stop() noexcept;
 
 private:
-	auto start() -&gt; std::expected&lt;void, service_error&gt;;
-	auto drain() noexcept -&gt; void;
+    auto start() -&gt; std::expected&lt;void, service_error&gt;;
+    auto drain() noexcept -&gt; void;
 
-	service_components components_;
-	std::atomic&lt;bool&gt; stopping_{false};
+    service_components components_;
+    std::atomic&lt;bool&gt; stopping_{false};
 };
 </code></pre>
 <p>This is intentionally boring. The service has one ownership root, one stop path, and one place to reason about startup and drain order. A small service does not need architectural theater.</p>

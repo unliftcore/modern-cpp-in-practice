@@ -14,14 +14,14 @@ Consider a telemetry ingestion layer that parses line-based text records and bin
 
 ```cpp
 struct MetricRecord {
-	std::string name;
-	std::int64_t value;
-	std::vector<std::byte> attributes;
+    std::string name;
+    std::int64_t value;
+    std::vector<std::byte> attributes;
 };
 
 auto parse_metric_line(std::string_view line,
-					   std::span<const std::byte> attribute_bytes)
-	-> std::expected<MetricRecord, ParseError>;
+                       std::span<const std::byte> attribute_bytes)
+    -> std::expected<MetricRecord, ParseError>;
 ```
 
 This signature says several important things immediately.
@@ -57,12 +57,12 @@ The failure mode is storing the borrow when the lifetime guarantee was local.
 ```cpp
 class RequestContext {
 public:
-	void set_tenant(std::string_view tenant) {
-		tenant_ = tenant; // BUG: borrowed view may outlive caller storage
-	}
+    void set_tenant(std::string_view tenant) {
+        tenant_ = tenant; // BUG: borrowed view may outlive caller storage
+    }
 
 private:
-	std::string_view tenant_;
+    std::string_view tenant_;
 };
 ```
 

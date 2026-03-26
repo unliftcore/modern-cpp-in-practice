@@ -236,26 +236,26 @@
 <pre><code class="language-cpp">// BROKEN: the compiler may eliminate the entire loop because
 // 'total' is never observed.
 static void BM_bad_dce(benchmark::State&amp; state) {
-	std::vector&lt;double&gt; data(1'000'000, 1.0);
-	for (auto _ : state) {
-		double total = 0.0;
-		for (double d : data)
-			total += d * d;
-		// total is dead.  Optimizer removes the loop.
-		// Benchmark reports ~0 ns/iteration.
-	}
+    std::vector&lt;double&gt; data(1'000'000, 1.0);
+    for (auto _ : state) {
+        double total = 0.0;
+        for (double d : data)
+            total += d * d;
+        // total is dead.  Optimizer removes the loop.
+        // Benchmark reports ~0 ns/iteration.
+    }
 }
 </code></pre>
 <pre><code class="language-cpp">// FIXED: benchmark::DoNotOptimize prevents the compiler from
 // proving the result is unused.
 static void BM_good_dce(benchmark::State&amp; state) {
-	std::vector&lt;double&gt; data(1'000'000, 1.0);
-	for (auto _ : state) {
-		double total = 0.0;
-		for (double d : data)
-			total += d * d;
-		benchmark::DoNotOptimize(total);
-	}
+    std::vector&lt;double&gt; data(1'000'000, 1.0);
+    for (auto _ : state) {
+        double total = 0.0;
+        for (double d : data)
+            total += d * d;
+        benchmark::DoNotOptimize(total);
+    }
 }
 </code></pre>
 <p><code>benchmark::DoNotOptimize</code> 并非万能。在大多数实现中，它本质上是对目标值做一次不透明读取（通常通过 inline asm 让编译器认为该变量”可能被观察”）。应当只在最终结果上使用，而不是对每个中间步骤都加——否则可能抑制生产代码同样能受益的正常优化。如果拿不准 DCE 是否影响了结果，用 <code>-S</code> 编译后检查汇编即可。</p>
@@ -263,22 +263,22 @@ static void BM_good_dce(benchmark::State&amp; state) {
 <pre><code class="language-cpp">// BROKEN: construction cost dominates. The benchmark is
 // measuring vector allocation and initialization, not lookup.
 static void BM_bad_lookup(benchmark::State&amp; state) {
-	for (auto _ : state) {
-		std::vector&lt;int&gt; v(1'000'000);
-		std::iota(v.begin(), v.end(), 0);
-		auto it = std::lower_bound(v.begin(), v.end(), 500'000);
-		benchmark::DoNotOptimize(it);
-	}
+    for (auto _ : state) {
+        std::vector&lt;int&gt; v(1'000'000);
+        std::iota(v.begin(), v.end(), 0);
+        auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+        benchmark::DoNotOptimize(it);
+    }
 }
 
 // FIXED: setup goes outside the timing loop.
 static void BM_good_lookup(benchmark::State&amp; state) {
-	std::vector&lt;int&gt; v(1'000'000);
-	std::iota(v.begin(), v.end(), 0);
-	for (auto _ : state) {
-		auto it = std::lower_bound(v.begin(), v.end(), 500'000);
-		benchmark::DoNotOptimize(it);
-	}
+    std::vector&lt;int&gt; v(1'000'000);
+    std::iota(v.begin(), v.end(), 0);
+    for (auto _ : state) {
+        auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+        benchmark::DoNotOptimize(it);
+    }
 }
 </code></pre>
 <h3 id="典型反面教材选错了比较基线"><a class="header" href="#典型反面教材选错了比较基线">典型反面教材：选错了比较基线</a></h3>
@@ -288,13 +288,13 @@ static void BM_good_lookup(benchmark::State&amp; state) {
 // in production is sorted vector with binary search, which may
 // be within 2x and uses half the memory.
 static void BM_linear_scan(benchmark::State&amp; state) {
-	std::vector&lt;std::pair&lt;int,int&gt;&gt; data(100'000);
-	// ... fill with random kv pairs, unsorted ...
-	for (auto _ : state) {
-		auto it = std::find_if(data.begin(), data.end(),
-			[](const auto&amp; p) { return p.first == 42; });
-		benchmark::DoNotOptimize(it);
-	}
+    std::vector&lt;std::pair&lt;int,int&gt;&gt; data(100'000);
+    // ... fill with random kv pairs, unsorted ...
+    for (auto _ : state) {
+        auto it = std::find_if(data.begin(), data.end(),
+            [](const auto&amp; p) { return p.first == 42; });
+        benchmark::DoNotOptimize(it);
+    }
 }
 </code></pre>
 <p>正确的基线应当是实际可能采用的替代方案，而不是最差的选项。每次做比较都要说清楚：在跟什么比？为什么选它作为对照？</p>
@@ -303,15 +303,15 @@ static void BM_linear_scan(benchmark::State&amp; state) {
 // iteration.  Production accesses the same structure after
 // processing unrelated data that evicts it from cache.
 static void BM_warm_cache(benchmark::State&amp; state) {
-	std::vector&lt;int&gt; v(1'000);  // ~4 KB, fits in L1
-	std::iota(v.begin(), v.end(), 0);
-	for (auto _ : state) {
-		int sum = 0;
-		for (int x : v) sum += x;
-		benchmark::DoNotOptimize(sum);
-	}
-	// Reports ~50 ns.  In production, with cache-cold data,
-	// the same operation takes 10-50x longer.
+    std::vector&lt;int&gt; v(1'000);  // ~4 KB, fits in L1
+    std::iota(v.begin(), v.end(), 0);
+    for (auto _ : state) {
+        int sum = 0;
+        for (int x : v) sum += x;
+        benchmark::DoNotOptimize(sum);
+    }
+    // Reports ~50 ns.  In production, with cache-cold data,
+    // the same operation takes 10-50x longer.
 }
 </code></pre>
 <p>如果生产环境中实际会遇到冷数据，就要么把工作集做大到超出缓存容量，要么在迭代之间显式刷新缓存行（依赖平台、比较脆弱，但有时为了拿到真实结果别无选择）。</p>
@@ -321,14 +321,14 @@ static void BM_warm_cache(benchmark::State&amp; state) {
 <li><strong>忘记 <code>benchmark::ClobberMemory()</code></strong>：<code>DoNotOptimize</code> 能阻止编译器消除某个值的 dead store，但不会让编译器认为内存内容已经改变。如果基准测试在原地修改数据结构，编译器可能将读取提到写入之前，甚至跨迭代重排。修改之后需要调用 <code>benchmark::ClobberMemory()</code> 来强制重新加载：</li>
 </ol>
 <pre><code class="language-cpp">static void BM_modify(benchmark::State&amp; state) {
-	std::vector&lt;int&gt; v(10'000, 0);
-	for (auto _ : state) {
-		for (auto&amp; x : v) x += 1;
-		benchmark::ClobberMemory();
-		// Without ClobberMemory, the compiler could theoretically
-		// observe that v is never read and eliminate the writes,
-		// or combine multiple iterations into one.
-	}
+    std::vector&lt;int&gt; v(10'000, 0);
+    for (auto _ : state) {
+        for (auto&amp; x : v) x += 1;
+        benchmark::ClobberMemory();
+        // Without ClobberMemory, the compiler could theoretically
+        // observe that v is never read and eliminate the writes,
+        // or combine multiple iterations into one.
+    }
 }
 </code></pre>
 <ol start="2">

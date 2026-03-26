@@ -248,69 +248,69 @@
 <h3 id="没有-raii-会发生什么"><a class="header" href="#没有-raii-会发生什么">没有 RAII 会发生什么</a></h3>
 <p>在展示 RAII 模式之前，有必要先完整看一遍更接近真实情况的手工方式。下面这个反面示例是故意写得有缺陷的，因为生产代码库里至今仍有长得一模一样的代码。</p>
 <pre><code class="language-cpp">socket_t create_server_socket(std::uint16_t port) {
-	socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
-	if (server == invalid_socket) {
-		throw NetworkError{"socket failed"};
-	}
+    socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (server == invalid_socket) {
+        throw NetworkError{"socket failed"};
+    }
 
-	int opt = 1;
-	if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"setsockopt failed"};
-	}
+    int opt = 1;
+    if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"setsockopt failed"};
+    }
 
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons(port);
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port);
 
-	if (::bind(server, reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"bind failed"};
-	}
+    if (::bind(server, reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"bind failed"};
+    }
 
-	if (::listen(server, 16) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"listen failed"};
-	}
+    if (::listen(server, 16) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"listen failed"};
+    }
 
-	return server; // RISK: caller now owns the raw descriptor by convention
+    return server; // RISK: caller now owns the raw descriptor by convention
 }
 
 void serve_once(std::uint16_t port) {
-	socket_t server = create_server_socket(port);
-	socket_t client = invalid_socket;
+    socket_t server = create_server_socket(port);
+    socket_t client = invalid_socket;
 
-	try {
-		sockaddr_in client_addr{};
-		socket_length addr_len = sizeof(client_addr);
-		client = ::accept(server,
-		                  reinterpret_cast&lt;sockaddr*&gt;(&amp;client_addr),
-		                  &amp;addr_len);
-		if (client == invalid_socket) {
-			::close_socket(server); // BUG: server will be closed twice (here + in catch)
-			throw NetworkError{"accept failed"};
-		}
+    try {
+        sockaddr_in client_addr{};
+        socket_length addr_len = sizeof(client_addr);
+        client = ::accept(server,
+                          reinterpret_cast&lt;sockaddr*&gt;(&amp;client_addr),
+                          &amp;addr_len);
+        if (client == invalid_socket) {
+            ::close_socket(server); // BUG: server will be closed twice (here + in catch)
+            throw NetworkError{"accept failed"};
+        }
 
-		std::array&lt;char, 8192&gt; buffer{};
-		auto n = read_from_socket(client, buffer.data(), buffer.size());
-		if (n &lt;= 0) {
-			::close_socket(client);
-			::close_socket(server);
-			return;
-		}
+        std::array&lt;char, 8192&gt; buffer{};
+        auto n = read_from_socket(client, buffer.data(), buffer.size());
+        if (n &lt;= 0) {
+            ::close_socket(client);
+            ::close_socket(server);
+            return;
+        }
 
-		process_request(client, std::string_view{buffer.data(), static_cast&lt;std::size_t&gt;(n)}); // RISK: any throw must preserve cleanup correctness
+        process_request(client, std::string_view{buffer.data(), static_cast&lt;std::size_t&gt;(n)}); // RISK: any throw must preserve cleanup correctness
 
-		::close_socket(client);
-		::close_socket(server);
-	} catch (...) {
-		if (client != invalid_socket) {
-			::close_socket(client);
-		}
-		::close_socket(server);
-		throw;
-	}
+        ::close_socket(client);
+        ::close_socket(server);
+    } catch (...) {
+        if (client != invalid_socket) {
+            ::close_socket(client);
+        }
+        ::close_socket(server);
+        throw;
+    }
 }
 </code></pre>
 <p>问题会迅速叠加起来：</p>
@@ -2312,14 +2312,14 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <pre><code class="language-cpp">// Anti-pattern: a growing base class that every derived type must satisfy.
 class Widget {
 public:
-	virtual void draw(Canvas&amp; c) = 0;
-	virtual void handle_input(const InputEvent&amp; e) = 0;
-	virtual Size preferred_size() const = 0;
-	virtual void set_theme(const Theme&amp; t) = 0;
-	virtual void serialize(Archive&amp; ar) = 0;    // added in v2
-	virtual void animate(Duration dt) = 0;       // added in v3
-	virtual AccessibilityInfo accessibility() = 0; // added in v4
-	virtual ~Widget() = default;
+    virtual void draw(Canvas&amp; c) = 0;
+    virtual void handle_input(const InputEvent&amp; e) = 0;
+    virtual Size preferred_size() const = 0;
+    virtual void set_theme(const Theme&amp; t) = 0;
+    virtual void serialize(Archive&amp; ar) = 0;    // added in v2
+    virtual void animate(Duration dt) = 0;       // added in v3
+    virtual AccessibilityInfo accessibility() = 0; // added in v4
+    virtual ~Widget() = default;
 };
 </code></pre>
 <p>每新增一个虚方法，所有派生类要么实现它，要么继承一个可能根本不对的默认实现。只需要绘制能力的类也得应付输入、序列化、动画和无障碍。测试一个最简单的叶子 widget，却不得不构造 <code>Canvas</code>、<code>InputEvent</code>、<code>Theme</code>、<code>Archive</code> 和 <code>AccessibilityInfo</code> 等一堆对象。基类成了变更放大器——往 <code>Widget</code> 加一个方法，整个代码库的派生类都要重新编译，甚至逐个修改。</p>
@@ -2328,28 +2328,28 @@ public:
 <p>接口层级中的多重继承会引入菱形问题，而 <code>virtual</code> 继承只能部分缓解它。</p>
 <pre><code class="language-cpp">class Readable {
 public:
-	virtual std::expected&lt;std::size_t, IoError&gt;
-	read(std::span&lt;std::byte&gt; buffer) = 0;
-	virtual void close() = 0;  // close the read side
-	virtual ~Readable() = default;
+    virtual std::expected&lt;std::size_t, IoError&gt;
+    read(std::span&lt;std::byte&gt; buffer) = 0;
+    virtual void close() = 0;  // close the read side
+    virtual ~Readable() = default;
 };
 
 class Writable {
 public:
-	virtual std::expected&lt;std::size_t, IoError&gt;
-	write(std::span&lt;const std::byte&gt; data) = 0;
-	virtual void close() = 0;  // close the write side
-	virtual ~Writable() = default;
+    virtual std::expected&lt;std::size_t, IoError&gt;
+    write(std::span&lt;const std::byte&gt; data) = 0;
+    virtual void close() = 0;  // close the write side
+    virtual ~Writable() = default;
 };
 
 // Diamond: what does close() mean here? Read side? Write side? Both?
 class ReadWriteStream : public virtual Readable, public virtual Writable {
 public:
-	// Single close() must now serve two different semantic contracts.
-	// Callers holding a Readable* expect close() to close the read side.
-	// Callers holding a Writable* expect close() to close the write side.
-	// There is no way to satisfy both through one override.
-	void close() override { /* ??? */ }
+    // Single close() must now serve two different semantic contracts.
+    // Callers holding a Readable* expect close() to close the read side.
+    // Callers holding a Writable* expect close() to close the write side.
+    // There is no way to satisfy both through one override.
+    void close() override { /* ??? */ }
 };
 </code></pre>
 <p>虚继承解决了内存布局的重复问题，却解决不了语义上的冲突。代码能编译过，但运行行为取决于调用方手里拿的是哪个基类指针。这种歧义是结构性的，实现得再小心也无济于事。</p>
@@ -2361,17 +2361,17 @@ using DrawAction = std::move_only_function&lt;void(Canvas&amp;)&gt;;
 using InputHandler = std::move_only_function&lt;bool(const InputEvent&amp;)&gt;;
 
 struct WidgetBehavior {
-	DrawAction draw;
-	InputHandler handle_input;
+    DrawAction draw;
+    InputHandler handle_input;
 };
 
 // A simple widget only provides what it needs.
 // No obligation to implement serialize, animate, or accessibility.
 WidgetBehavior make_label(std::string text) {
-	return {
-		.draw = [t = std::move(text)](Canvas&amp; c) { c.draw_text(t); },
-		.handle_input = [](const InputEvent&amp;) { return false; }
-	};
+    return {
+        .draw = [t = std::move(text)](Canvas&amp; c) { c.draw_text(t); },
+        .handle_input = [](const InputEvent&amp;) { return false; }
+    };
 }
 </code></pre>
 <p>这里不存在会不断膨胀的基类。新增动画支持不会逼着 label widget 改动，测试 <code>draw</code> 也不需要构造 <code>InputEvent</code>。各关注点可以独立组合。代价是失去了类层级所带来的、具名对象协议的清晰度——如果协议确实稳定且丰富，这一点可能很关键。这种取舍需要逐案权衡。</p>
@@ -2406,14 +2406,14 @@ chain(R&amp;&amp; middlewares, http::Handler base) {
 <p><code>std::function</code> 要求其 target 可拷贝。这个限制看起来人畜无害，直到真实的回调状态登场。</p>
 <pre><code class="language-cpp">// This will not compile. std::function requires CopyConstructible.
 auto handler = std::function&lt;void()&gt;{
-	[conn = std::make_unique&lt;DbConnection&gt;()](){ conn-&gt;heartbeat(); }
+    [conn = std::make_unique&lt;DbConnection&gt;()](){ conn-&gt;heartbeat(); }
 };
 </code></pre>
 <p>团队常见的做法是把 <code>unique_ptr</code> 换成 <code>shared_ptr</code> 来绕过编译错误，结果给原本天然属于单一所有者的代码凭空引入了引用计数和共享可变性。编译倒是通过了，所有权模型却被破坏了。</p>
 <pre><code class="language-cpp">// Workaround: shared_ptr "fixes" compilation but lies about ownership.
 auto conn = std::make_shared&lt;DbConnection&gt;();
 auto handler = std::function&lt;void()&gt;{
-	[conn]() { conn-&gt;heartbeat(); }
+    [conn]() { conn-&gt;heartbeat(); }
 };
 // Now conn is shared. Who shuts it down? When? The ownership story is gone.
 </code></pre>
@@ -2438,9 +2438,9 @@ auto handler = std::function&lt;void()&gt;{
 <p>只会触发一次的完成路径，从一开始就应该建模为 move-only。这样类型本身就反映了“只用一次“的事实，也能防止有状态的 handler 被意外共享。</p>
 <pre><code class="language-cpp">class TimerQueue {
 public:
-	using Task = std::move_only_function&lt;void() noexcept&gt;;
+    using Task = std::move_only_function&lt;void() noexcept&gt;;
 
-	void schedule_after(std::chrono::milliseconds delay, Task task);
+    void schedule_after(std::chrono::milliseconds delay, Task task);
 };
 </code></pre>
 <p>这个签名传递了丰富的信息：队列接管所有权，可能延后运行，且要求任务不得跨调度器边界抛异常。这比笼统的 <code>std::function&lt;void()&gt;</code> 参数精确得多。</p>
@@ -2449,14 +2449,14 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: ambiguous retention and capture lifetime.
 class EventSource {
 public:
-	void on_message(std::function&lt;void(std::string_view)&gt; handler);
+    void on_message(std::function&lt;void(std::string_view)&gt; handler);
 };
 
 void wire(EventSource&amp; source, Session&amp; session) {
-	source.on_message([&amp;session](std::string_view payload) {
-		session.record(payload);
-	});
-	// RISK: if EventSource stores the handler past Session lifetime, this dangles.
+    source.on_message([&amp;session](std::string_view payload) {
+        session.record(payload);
+    });
+    // RISK: if EventSource stores the handler past Session lifetime, this dangles.
 }
 </code></pre>
 <p>问题不仅是引用捕获本身，而在于 API 根本没交代 handler 的去向：是只在一次操作中借用，还是存到注销为止？会不会被并发调用，或者在析构期间调用？抽象追求了泛化，却没给出可用的契约。</p>
@@ -2616,20 +2616,20 @@ import webapi.task;
 <p><strong>新增私有成员导致类大小变化。</strong> 使用方基于库 v1 编译，按当时的 <code>sizeof(Widget)</code> 分配对象。v2 新增了一个私有成员后，库的方法就会写越使用方分配的空间。结果不是链接报错，而是静默的内存踩踏。</p>
 <pre><code class="language-cpp">// v1: shipped in libwidget.so
 class EXPORT Widget {
-	int x_;
-	int y_;
+    int x_;
+    int y_;
 public:
-	void move(int dx, int dy);  // accesses x_, y_
+    void move(int dx, int dy);  // accesses x_, y_
 };
 // sizeof(Widget) == 8 for the consumer
 
 // v2: added a z-index member
 class EXPORT Widget {
-	int x_;
-	int y_;
-	int z_;  // sizeof(Widget) is now 12
+    int x_;
+    int y_;
+    int z_;  // sizeof(Widget) is now 12
 public:
-	void move(int dx, int dy);  // same signature, same symbol
+    void move(int dx, int dy);  // same signature, same symbol
 };
 // Consumer still allocates 8 bytes. Library writes 12. Corruption.
 </code></pre>
@@ -2656,8 +2656,8 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: fragile ABI surface for a shared library.
 class EXPORT Session {
 public:
-	virtual std::string send(const std::string&amp; request) = 0;
-	virtual ~Session() = default;
+    virtual std::string send(const std::string&amp; request) = 0;
+    virtual ~Session() = default;
 };
 
 std::unique_ptr&lt;Session&gt; create_session();
@@ -2668,21 +2668,21 @@ std::unique_ptr&lt;Session&gt; create_session();
 <pre><code class="language-cpp">struct session_v1;
 
 struct request_buffer {
-	const std::byte* data;
-	std::size_t size;
+    const std::byte* data;
+    std::size_t size;
 };
 
 struct response_buffer {
-	const std::byte* data;
-	std::size_t size;
+    const std::byte* data;
+    std::size_t size;
 };
 
 struct session_api_v1 {
-	std::uint32_t struct_size;
-	session_v1* (*create)() noexcept;
-	void (*destroy)(session_v1*) noexcept;
-	status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
-	void (*release_response)(response_buffer*) noexcept;
+    std::uint32_t struct_size;
+    session_v1* (*create)() noexcept;
+    void (*destroy)(session_v1*) noexcept;
+    status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
+    void (*release_response)(response_buffer*) noexcept;
 };
 </code></pre>
 <p>写法上不那么漂亮，但诚实得多。这种边界把内存分配归属、版本化接口面和错误传递方式全都摆到了明面上。墙的另一边，内部实现照样可以用 <code>std::expected</code>、<code>std::pmr</code>、协程、模块，以及任何 C++23 技术。</p>
@@ -2715,16 +2715,16 @@ struct session_api_v1 {
 <pre><code class="language-cpp">// Anti-pattern: cross-boundary allocation mismatch.
 // Library (built with MSVC debug runtime, uses debug heap):
 EXPORT char* get_name() {
-	char* buf = new char[64];
-	std::strcpy(buf, "session-001");
-	return buf;
+    char* buf = new char[64];
+    std::strcpy(buf, "session-001");
+    return buf;
 }
 
 // Consumer (built with MSVC release runtime, uses release heap):
 void use_library() {
-	char* name = get_name();
-	// ...
-	delete[] name;  // CRASH: freeing debug-heap memory on release heap
+    char* name = get_name();
+    // ...
+    delete[] name;  // CRASH: freeing debug-heap memory on release heap
 }
 </code></pre>
 <p>解决办法是绝不让分配和释放跨越边界。谁分配谁释放——库负责分配，就必须同时提供释放函数；或者改用调用方预先提供的 buffer。</p>
@@ -2785,23 +2785,23 @@ EXPORT status_code get_name(char* buffer, std::size_t buffer_size);
 <p>在讨论该用哪种原语之前，先看看完全没有同步保护会怎样。下面的代码存在数据竞争，在 C++ 中属于未定义行为。</p>
 <pre><code class="language-cpp">// BUG: data race — two threads read and write counter without synchronization.
 struct metrics {
-	int request_count = 0;
-	int error_count = 0;
+    int request_count = 0;
+    int error_count = 0;
 };
 
 metrics g_metrics;
 
 void record_request(bool success) {
-	++g_metrics.request_count;            // unsynchronized read-modify-write
-	if (!success) ++g_metrics.error_count; // same
+    ++g_metrics.request_count;            // unsynchronized read-modify-write
+    if (!success) ++g_metrics.error_count; // same
 }
 </code></pre>
 <p>这不只是正确性风险——按照标准，这就是未定义行为。编译器和硬件完全可以对这些操作进行重排、撕裂或省略。实际表现上，计数器可能丢失更新、报告不可能的值，甚至在不支持原子字存储的架构上破坏相邻内存。Sanitizer 能立刻检测到这类问题，但 sanitizer 不一定在生产环境中开启。</p>
 <p>一个更隐蔽的变体涉及多字段不变量：</p>
 <pre><code class="language-cpp">// BUG: readers can observe state_ == READY while payload_ is half-written.
 struct shared_result {
-	std::string payload_;
-	enum { EMPTY, READY } state_ = EMPTY;
+    std::string payload_;
+    enum { EMPTY, READY } state_ = EMPTY;
 };
 
 // Writer thread:
@@ -2810,7 +2810,7 @@ result.state_ = READY;              // may be reordered before payload_ write
 
 // Reader thread:
 if (result.state_ == READY)
-	process(result.payload_);        // may see partially constructed string
+    process(result.payload_);        // may see partially constructed string
 </code></pre>
 <p>即使 <code>state_</code> 是原子的，如果内存序不对，<code>payload_</code> 的写入仍可能被重排到 <code>state_</code> 之后。这里的教训是：数据竞争不只是单个变量的问题，更是相关修改之间可见性顺序的问题。</p>
 <h2 id="裸-mutex-操作的误用与-raii-guard"><a class="header" href="#裸-mutex-操作的误用与-raii-guard">裸 mutex 操作的误用与 RAII guard</a></h2>
@@ -2820,52 +2820,52 @@ std::mutex mtx;
 std::vector&lt;int&gt; data;
 
 void push(int value) {
-	mtx.lock();
-	data.push_back(value); // may throw (allocation failure)
-	mtx.unlock();          // never reached if push_back throws — deadlock on next access
+    mtx.lock();
+    data.push_back(value); // may throw (allocation failure)
+    mtx.unlock();          // never reached if push_back throws — deadlock on next access
 }
 </code></pre>
 <p>一旦 <code>push_back</code> 抛出异常，<code>unlock()</code> 就被跳过了。之后所有试图获取 <code>mtx</code> 的线程都将永久阻塞。这绝非假想场景——内存压力下的分配失败，或者一个会抛异常的拷贝构造函数，都足以触发它。</p>
 <p>修复方式很机械：使用 RAII guard。</p>
 <pre><code class="language-cpp">void push(int value) {
-	std::scoped_lock lock(mtx);
-	data.push_back(value); // if this throws, ~scoped_lock releases the mutex
+    std::scoped_lock lock(mtx);
+    data.push_back(value); // if this throws, ~scoped_lock releases the mutex
 }
 </code></pre>
 <p><code>std::scoped_lock</code> 可以处理单个或多个 mutex，并自带死锁规避。<code>std::unique_lock</code> 在此基础上增加了延迟加锁、转移所有权和配合 condition variable 的能力。除非确实需要这些额外灵活性，否则优先选择 <code>scoped_lock</code>。</p>
 <pre><code class="language-cpp">// unique_lock: needed when the lock must be released before scope exit.
 void transfer_expired(registry&amp; reg, std::vector&lt;session&gt;&amp; out) {
-	std::unique_lock lock(reg.mutex_);
-	auto expired = reg.extract_expired(); // modifies registry under lock
-	lock.unlock();                        // release before expensive cleanup
-	for (auto&amp; s : expired)
-		s.close_socket();                 // no lock held — safe to block
-	// out is caller-owned, no synchronization needed
-	out.insert(out.end(),
-		std::make_move_iterator(expired.begin()),
-		std::make_move_iterator(expired.end()));
+    std::unique_lock lock(reg.mutex_);
+    auto expired = reg.extract_expired(); // modifies registry under lock
+    lock.unlock();                        // release before expensive cleanup
+    for (auto&amp; s : expired)
+        s.close_socket();                 // no lock held — safe to block
+    // out is caller-owned, no synchronization needed
+    out.insert(out.end(),
+        std::make_move_iterator(expired.begin()),
+        std::make_move_iterator(expired.end()));
 }
 </code></pre>
 <h2 id="不一致的加锁顺序导致死锁"><a class="header" href="#不一致的加锁顺序导致死锁">不一致的加锁顺序导致死锁</a></h2>
 <p>当代码需要获取多把 mutex 时，加锁顺序不一致就是最经典的死锁根源。</p>
 <pre><code class="language-cpp">// BUG: deadlock if thread 1 calls transfer(a, b) while thread 2 calls transfer(b, a).
 struct account {
-	std::mutex mtx;
-	int balance = 0;
+    std::mutex mtx;
+    int balance = 0;
 };
 
 void transfer(account&amp; from, account&amp; to, int amount) {
-	std::lock_guard lock_from(from.mtx); // locks 'from' first
-	std::lock_guard lock_to(to.mtx);     // then 'to' — opposite order on another thread
-	from.balance -= amount;
-	to.balance += amount;
+    std::lock_guard lock_from(from.mtx); // locks 'from' first
+    std::lock_guard lock_to(to.mtx);     // then 'to' — opposite order on another thread
+    from.balance -= amount;
+    to.balance += amount;
 }
 </code></pre>
 <p>线程 1 锁住 <code>a.mtx</code>，等着拿 <code>b.mtx</code>；线程 2 锁住 <code>b.mtx</code>，等着拿 <code>a.mtx</code>——谁也走不了。<code>std::scoped_lock</code> 内部使用 <code>std::lock</code> 同时获取两把 mutex 来规避死锁：</p>
 <pre><code class="language-cpp">void transfer(account&amp; from, account&amp; to, int amount) {
-	std::scoped_lock lock(from.mtx, to.mtx); // deadlock-free acquisition
-	from.balance -= amount;
-	to.balance += amount;
+    std::scoped_lock lock(from.mtx, to.mtx); // deadlock-free acquisition
+    from.balance -= amount;
+    to.balance += amount;
 }
 </code></pre>
 <p>这不只是方便，而是正确性保障。任何需要多把 mutex 的设计，要么用 <code>std::scoped_lock</code> 一次性获取，要么就严格执行有文档记录的全局加锁顺序。靠口头约定的加锁规矩，很少能挺过一轮重构。</p>
@@ -2873,17 +2873,17 @@ void transfer(account&amp; from, account&amp; to, int amount) {
 <p>争用不仅关乎正确性，过度加锁还会把本可并行的工作强制串行化。</p>
 <pre><code class="language-cpp">// Over-synchronized: every stat update contends on one lock.
 class request_stats {
-	std::mutex mtx_;
-	uint64_t total_requests_ = 0;
-	uint64_t total_bytes_ = 0;
-	uint64_t error_count_ = 0;
+    std::mutex mtx_;
+    uint64_t total_requests_ = 0;
+    uint64_t total_bytes_ = 0;
+    uint64_t error_count_ = 0;
 public:
-	void record(uint64_t bytes, bool error) {
-		std::scoped_lock lock(mtx_);
-		++total_requests_;
-		total_bytes_ += bytes;
-		if (error) ++error_count_;
-	}
+    void record(uint64_t bytes, bool error) {
+        std::scoped_lock lock(mtx_);
+        ++total_requests_;
+        total_bytes_ += bytes;
+        if (error) ++error_count_;
+    }
 };
 </code></pre>
 <p>在一台每秒处理数百万请求的 64 核机器上，所有线程都在同一条 cache line 上排队。锁获取、cache line 反复弹跳和调度器唤醒成了主要开销。更好的设计取决于你能容忍什么：</p>
@@ -2903,30 +2903,30 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: one mutex protects unrelated invariants and long operations.
 class session_registry {
 public:
-	std::optional&lt;session_info&gt; find(session_id id) {
-		std::scoped_lock lock(mutex_);
-		auto it = sessions_.find(id);
-		if (it == sessions_.end()) {
-			return std::nullopt;
-		}
-		return it-&gt;second;
-	}
+    std::optional&lt;session_info&gt; find(session_id id) {
+        std::scoped_lock lock(mutex_);
+        auto it = sessions_.find(id);
+        if (it == sessions_.end()) {
+            return std::nullopt;
+        }
+        return it-&gt;second;
+    }
 
-	void expire_idle_sessions(std::chrono::steady_clock::time_point now) {
-		std::scoped_lock lock(mutex_);
-		for (auto it = sessions_.begin(); it != sessions_.end();) {
-			if (it-&gt;second.expires_at &lt;= now) {
-				close_socket(it-&gt;second.socket); // RISK: blocking work under the lock.
-				it = sessions_.erase(it);
-			} else {
-				++it;
-			}
-		}
-	}
+    void expire_idle_sessions(std::chrono::steady_clock::time_point now) {
+        std::scoped_lock lock(mutex_);
+        for (auto it = sessions_.begin(); it != sessions_.end();) {
+            if (it-&gt;second.expires_at &lt;= now) {
+                close_socket(it-&gt;second.socket); // RISK: blocking work under the lock.
+                it = sessions_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 
 private:
-	std::mutex mutex_;
-	std::unordered_map&lt;session_id, session_info&gt; sessions_;
+    std::mutex mutex_;
+    std::unordered_map&lt;session_id, session_info&gt; sessions_;
 };
 </code></pre>
 <p>这个对象在早期测试中可能毫无问题，因为局部看起来很简单。后来出问题，是因为不相关的工作被迫共享了同一个排队点。一次读操作被清理任务阻塞；清理任务在持有 mutex 的同时做 I/O；后续新功能还会不断往同一个临界区里塞 metrics、回调和日志——因为“锁已经在那了“。</p>
@@ -3070,33 +3070,33 @@ public:
 <p>要理解协程的设计取舍，先看看它们替代了什么。在协程出现之前，异步代码依赖 continuation-passing style（续体传递风格），即每一步都把回调串到下一步。一个简单的”获取、校验、存储”序列写出来是这样的：</p>
 <pre><code class="language-cpp">// Continuation-passing style — correct but unreadable at scale.
 void handle_request(request req, std::function&lt;void(response)&gt; done) {
-	fetch_profile(req.user_id, [req, done](std::expected&lt;profile, error&gt; prof) {
-		if (!prof) { done(error_response(prof.error())); return; }
-		validate_access(prof-&gt;role, req.resource,
-			[req, prof = *prof, done](std::expected&lt;bool, error&gt; ok) {
-				if (!ok || !*ok) { done(denied_response()); return; }
-				store_audit_log(req, prof,
-					[req, prof, done](std::expected&lt;void, error&gt; result) {
-						if (!result) { done(error_response(result.error())); return; }
-						done(success_response(prof));
-					});
-			});
-	});
+    fetch_profile(req.user_id, [req, done](std::expected&lt;profile, error&gt; prof) {
+        if (!prof) { done(error_response(prof.error())); return; }
+        validate_access(prof-&gt;role, req.resource,
+            [req, prof = *prof, done](std::expected&lt;bool, error&gt; ok) {
+                if (!ok || !*ok) { done(denied_response()); return; }
+                store_audit_log(req, prof,
+                    [req, prof, done](std::expected&lt;void, error&gt; result) {
+                        if (!result) { done(error_response(result.error())); return; }
+                        done(success_response(prof));
+                    });
+            });
+    });
 }
 </code></pre>
 <p>每一步都嵌套更深一层。错误处理在每一层重复。捕获变量的生命周期必须手动管理——按值捕获会带来大量拷贝，按引用捕获则可能悬空。如果再加上超时、取消或重试逻辑，嵌套只会进一步膨胀。这不是刻意构造的极端例子，而是协程出现之前生产代码中异步 C++ 的真实面貌。</p>
 <p>对应的协程版本：</p>
 <pre><code class="language-cpp">task&lt;response&gt; handle_request(request req) {
-	auto prof = co_await fetch_profile(req.user_id);
-	if (!prof) co_return error_response(prof.error());
+    auto prof = co_await fetch_profile(req.user_id);
+    if (!prof) co_return error_response(prof.error());
 
-	auto ok = co_await validate_access(prof-&gt;role, req.resource);
-	if (!ok || !*ok) co_return denied_response();
+    auto ok = co_await validate_access(prof-&gt;role, req.resource);
+    if (!ok || !*ok) co_return denied_response();
 
-	auto result = co_await store_audit_log(req, *prof);
-	if (!result) co_return error_response(result.error());
+    auto result = co_await store_audit_log(req, *prof);
+    if (!result) co_return error_response(result.error());
 
-	co_return success_response(*prof);
+    co_return success_response(*prof);
 }
 </code></pre>
 <p>代码可以顺序阅读，每一步只有一条错误路径，也没有嵌套。改进是实实在在的。但状态机并没有消失——它搬进了协程帧。本章剩余部分讨论的，就是这对所有权和生命周期意味着什么。</p>
@@ -3121,21 +3121,21 @@ void handle_request(request req, std::function&lt;void(response)&gt; done) {
 <h2 id="反模式借用的请求状态跨越挂起存活"><a class="header" href="#反模式借用的请求状态跨越挂起存活">反模式：借用的请求状态跨越挂起存活</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: borrowed data may dangle after suspension.
 task&lt;parsed_request&gt; parse_and_authorize(
-	std::string_view body,
-	const auth_context&amp; auth) {
+    std::string_view body,
+    const auth_context&amp; auth) {
 
-	auto token = co_await fetch_access_token(auth.user_id());
-	co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
+    auto token = co_await fetch_access_token(auth.user_id());
+    co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
 }
 </code></pre>
 <p>这段代码看上去很高效，因为省去了一次拷贝。但它只在调用方保证 <code>body</code> 在协程完成前始终有效时才是正确的。在服务端代码中，“协程完成“通常意味着网络 I/O、认证查找、重试和超时处理全部结束。这可不是一个轻松的承诺，而且往往是一个错误的承诺。</p>
 <p>更安全的默认做法是：凡是挂起后还要用的数据，都把所有权移交给协程。</p>
 <pre><code class="language-cpp">task&lt;parsed_request&gt; parse_and_authorize(
-	std::string body,
-	auth_context auth) {
+    std::string body,
+    auth_context auth) {
 
-	auto token = co_await fetch_access_token(auth.user_id());
-	co_return parse_request(body, token);
+    auto token = co_await fetch_access_token(auth.user_id());
+    co_return parse_request(body, token);
 }
 </code></pre>
 <p>拷贝或移动的开销清晰可见、便于评审。协程帧现在拥有了它所需的一切。如果分配开销确实构成问题，那就去测量，再围绕消息边界或存储复用来重新设计。不要悄悄地跨越时间借用数据。</p>
@@ -3144,10 +3144,10 @@ task&lt;parsed_request&gt; parse_and_authorize(
 <h3 id="指向调用方局部变量的悬空引用"><a class="header" href="#指向调用方局部变量的悬空引用">指向调用方局部变量的悬空引用</a></h3>
 <pre><code class="language-cpp">// BUG: coroutine captures a reference to a local that dies when the caller returns.
 task&lt;void&gt; start_processing(dispatcher&amp; d) {
-	std::vector&lt;record&gt; batch = build_batch();
-	co_await d.schedule([&amp;batch] {     // lambda captures batch by reference
-		process(batch);                // batch may be destroyed if start_processing
-	});                                // is suspended and its caller exits
+    std::vector&lt;record&gt; batch = build_batch();
+    co_await d.schedule([&amp;batch] {     // lambda captures batch by reference
+        process(batch);                // batch may be destroyed if start_processing
+    });                                // is suspended and its caller exits
 }
 </code></pre>
 <p>当 <code>start_processing</code> 在 <code>co_await</code> 处挂起时，协程帧会让 <code>batch</code> 继续存活——但前提是帧本身还活着。一旦任务被 detach 或父作用域退出，协程帧随之销毁，lambda 中的引用便会悬空。修复方法：按值捕获，或通过结构化所有权确保父作用域的生命周期长于被调度的工作。</p>
@@ -3156,20 +3156,20 @@ task&lt;void&gt; start_processing(dispatcher&amp; d) {
 task&lt;void&gt; log_message(std::string_view msg);
 
 void caller() {
-	log_message("request started"s + request_id()); // temporary std::string
-	// temporary is destroyed here, before the coroutine even begins if lazy-start
+    log_message("request started"s + request_id()); // temporary std::string
+    // temporary is destroyed here, before the coroutine even begins if lazy-start
 }
 </code></pre>
 <p>如果是 lazy-start 协程，这个临时 <code>std::string</code> 在分号处就销毁了，而协程甚至还没开始执行。即使是 eager-start 协程，如果帧把 <code>msg</code> 存为 <code>string_view</code>，第一次挂起之后它就指向了已释放的内存。解决方案是在协程签名中按值接收 <code>std::string</code>，让帧持有自己的副本。</p>
 <h3 id="跨越挂起的-this-指针"><a class="header" href="#跨越挂起的-this-指针">跨越挂起的 <code>this</code> 指针</a></h3>
 <pre><code class="language-cpp">// BUG: 'this' may dangle if the object is moved or destroyed while suspended.
 class connection {
-	std::string peer_addr_;
+    std::string peer_addr_;
 public:
-	task&lt;void&gt; run() {
-		auto data = co_await read_socket();    // suspended here
-		log("received from " + peer_addr_);    // 'this' may be invalid
-	}
+    task&lt;void&gt; run() {
+        auto data = co_await read_socket();    // suspended here
+        log("received from " + peer_addr_);    // 'this' may be invalid
+    }
 };
 </code></pre>
 <p>如果 <code>connection</code> 对象在 <code>run()</code> 挂起期间被移动到另一个容器或被销毁，恢复时 <code>this</code> 就失效了。成员协程只有在对象生命周期保证长于协程时才安全。实践中，这通常意味着协程应持有 <code>shared_ptr&lt;connection&gt;</code>，或者所有者作用域必须做结构化设计，防止对象在挂起期间被销毁。</p>
@@ -3269,44 +3269,44 @@ public:
 <h3 id="无主工作的资源泄漏"><a class="header" href="#无主工作的资源泄漏">无主工作的资源泄漏</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: detached task leaks a database connection on cancellation.
 void on_request(request req) {
-	std::jthread([req = std::move(req)] {
-		auto conn = db_pool.acquire();        // acquired, never returned on some paths
-		auto result = conn.execute(req.query);
-		send_response(req.client, result);
-	}).detach(); // no owner, no cancellation, no cleanup guarantee
+    std::jthread([req = std::move(req)] {
+        auto conn = db_pool.acquire();        // acquired, never returned on some paths
+        auto result = conn.execute(req.query);
+        send_response(req.client, result);
+    }).detach(); // no owner, no cancellation, no cleanup guarantee
 }
 </code></pre>
 <p>进程一旦开始关闭，detached thread 不会收到 stop request，数据库连接也不会归还连接池。把这种情况乘以滚动部署期间成千上万的在途请求：数据库会遭遇连接耗尽，旧进程卡在 <code>std::thread</code> 的析构函数里；更糟的情况是，进程在这些线程仍引用已销毁的全局对象时就退出了。</p>
 <h3 id="未被观察的异常会静默消失"><a class="header" href="#未被观察的异常会静默消失">未被观察的异常会静默消失</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: exception in detached task is never observed.
 void start_background_sync() {
-	auto handle = std::async(std::launch::async, [] {
-		auto data = fetch_remote_config(); // throws on network error
-		apply_config(data);
-	});
-	// handle is destroyed here — std::async's destructor blocks,
-	// but if this were a custom fire-and-forget task, the exception
-	// would be silently swallowed.
+    auto handle = std::async(std::launch::async, [] {
+        auto data = fetch_remote_config(); // throws on network error
+        apply_config(data);
+    });
+    // handle is destroyed here — std::async's destructor blocks,
+    // but if this were a custom fire-and-forget task, the exception
+    // would be silently swallowed.
 }
 </code></pre>
 <p><code>std::async</code> 的析构函数会阻塞等待（这本身就可能出乎意料）。但对于大多数支持 detach 的自定义任务类型，销毁 handle 而不观察结果，异常就会无声无息地消失。系统继续带着过期配置运行，直到数小时后出现一次莫名其妙的行为退化，失败才会被注意到。</p>
 <h3 id="孤儿工作导致关闭挂起"><a class="header" href="#孤儿工作导致关闭挂起">孤儿工作导致关闭挂起</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: shutdown cannot complete because background tasks were never tracked.
 class ingestion_service {
-	void ingest(message msg) {
-		// "just kick off enrichment in the background"
-		pool_.submit([msg = std::move(msg), this] {
-			auto enriched = enrich(msg);       // calls external service, may block
-			store_.write(enriched);
-		});
-	}
+    void ingest(message msg) {
+        // "just kick off enrichment in the background"
+        pool_.submit([msg = std::move(msg), this] {
+            auto enriched = enrich(msg);       // calls external service, may block
+            store_.write(enriched);
+        });
+    }
 
-	void shutdown() {
-		store_.close();    // closes storage
-		pool_.shutdown();  // waits for in-flight tasks
-		// BUG: in-flight tasks may call store_.write() after store_ is closed
-		// BUG: enrich() may block indefinitely — pool shutdown hangs
-	}
+    void shutdown() {
+        store_.close();    // closes storage
+        pool_.shutdown();  // waits for in-flight tasks
+        // BUG: in-flight tasks may call store_.write() after store_ is closed
+        // BUG: enrich() may block indefinitely — pool shutdown hangs
+    }
 };
 </code></pre>
 <p>线程池里确实有任务，但服务对这些任务需要什么资源、该如何取消，完全没有建模。关闭要么挂起（卡在一个阻塞的外部调用上），要么产生竞态（任务还在使用依赖，依赖就被先关掉了）。到了生产环境，一次本该干净的重启变成了进程 kill，进程 kill 又演变成数据丢失。</p>
@@ -3314,11 +3314,11 @@ class ingestion_service {
 <p>上述三个问题，结构化的回答都指向同一个原则：谁创建了工作，谁就负责它的完成。</p>
 <pre><code class="language-cpp">// Structured: parent scope owns child tasks, propagates cancellation, awaits completion.
 task&lt;void&gt; on_request(request req, std::stop_token stop) {
-	auto conn = co_await db_pool.acquire(stop);  // respects cancellation
-	auto result = co_await conn.execute(req.query, stop);
-	co_await send_response(req.client, result);
-	// conn returned to pool when coroutine frame is destroyed
-	// if stop is triggered, co_await points observe it and unwind cleanly
+    auto conn = co_await db_pool.acquire(stop);  // respects cancellation
+    auto result = co_await conn.execute(req.query, stop);
+    co_await send_response(req.client, result);
+    // conn returned to pool when coroutine frame is destroyed
+    // if stop is triggered, co_await points observe it and unwind cleanly
 }
 </code></pre>
 <p>父请求作用域可以在客户端断开或 deadline 到期时取消 token。协程的 awaitable 在每个挂起点检查 token，资源通过普通 RAII 释放，没有任何工作能比拥有者活得更久。与 fire-and-forget 的差别不在于风格，而在于系统能否干净地关闭。</p>
@@ -3348,15 +3348,15 @@ task&lt;void&gt; on_request(request req, std::stop_token stop) {
 <h2 id="反模式没有有界所有权的-fan-out"><a class="header" href="#反模式没有有界所有权的-fan-out">反模式：没有有界所有权的 fan-out</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: child work outlives the request and overload has no admission limit.
 task&lt;aggregate_reply&gt; handle_request(request req) {
-	auto a = fetch_profile(req.user_id);
-	auto b = fetch_inventory(req.item_id);
-	auto c = fetch_pricing(req.item_id);
+    auto a = fetch_profile(req.user_id);
+    auto b = fetch_inventory(req.item_id);
+    auto c = fetch_pricing(req.item_id);
 
-	co_return aggregate_reply{
-		co_await a,
-		co_await b,
-		co_await c,
-	};
+    co_return aggregate_reply{
+        co_await a,
+        co_await b,
+        co_await c,
+    };
 }
 </code></pre>
 <p>这段代码很整洁，但定义严重不足。</p>
@@ -3492,14 +3492,14 @@ extern "C" void signal_handler(int /*sig*/) {
 
 // Contiguous: hardware prefetcher has a good day.
 std::int64_t sum_vector(const std::vector&lt;int&gt;&amp; v) {
-	return std::accumulate(v.begin(), v.end(), std::int64_t{0});
+    return std::accumulate(v.begin(), v.end(), std::int64_t{0});
 }
 
 // Scattered: every node is a pointer chase.  Each dereference is
 // a potential cache miss if nodes were allocated at different times
 // and landed on different cache lines or pages.
 std::int64_t sum_list(const std::list&lt;int&gt;&amp; l) {
-	return std::accumulate(l.begin(), l.end(), std::int64_t{0});
+    return std::accumulate(l.begin(), l.end(), std::int64_t{0});
 }
 </code></pre>
 <p>在典型硬件上处理一百万个元素时，纯遍历场景下 vector 版本通常比 list 版本快 10-50 倍。list 固然有每节点开销（大多数实现中每个元素附带两个指针，外加 allocator 元数据），但主导成本不在空间上——真正的瓶颈在于：推进到下一个节点时需要加载一个指针，而该指针指向的地址对 prefetcher 来说完全不可预测。每一步都可能触发一次 last-level cache miss，代价 50-100 ns；反观 vector 扫描，由于硬件 prefetcher 能识别顺序访问模式，几乎每次都能命中 L1 或 L2 缓存。</p>
@@ -3523,56 +3523,56 @@ std::int64_t sum_list(const std::list&lt;int&gt;&amp; l) {
 // fields of a single tick (e.g., serializing one record, looking
 // up a specific event).
 struct Tick {
-	std::int64_t timestamp_ns;
-	std::int32_t instrument_id;
-	double bid;
-	double ask;
-	char exchange[8];       // cold: rarely used in hot aggregation
-	std::uint32_t seq_no;   // cold
-	std::uint16_t flags;    // cold
-	// sizeof(Tick) ~ 48 bytes with padding on most ABIs
+    std::int64_t timestamp_ns;
+    std::int32_t instrument_id;
+    double bid;
+    double ask;
+    char exchange[8];       // cold: rarely used in hot aggregation
+    std::uint32_t seq_no;   // cold
+    std::uint16_t flags;    // cold
+    // sizeof(Tick) ~ 48 bytes with padding on most ABIs
 };
 
 double mid_price_sum_aos(std::span&lt;const Tick&gt; ticks) {
-	double total = 0.0;
-	for (const auto&amp; t : ticks) {
-		// Each iteration loads a full 48-byte Tick, but only
-		// reads bid and ask (16 bytes).  The remaining 32 bytes
-		// pollute cache lines and reduce effective bandwidth.
-		total += (t.bid + t.ask) * 0.5;
-	}
-	return total;
+    double total = 0.0;
+    for (const auto&amp; t : ticks) {
+        // Each iteration loads a full 48-byte Tick, but only
+        // reads bid and ask (16 bytes).  The remaining 32 bytes
+        // pollute cache lines and reduce effective bandwidth.
+        total += (t.bid + t.ask) * 0.5;
+    }
+    return total;
 }
 </code></pre>
 <pre><code class="language-cpp">// Structure of Arrays (SoA): columnar layout.
 // Each field lives in its own contiguous array.
 struct TickColumns {
-	std::vector&lt;std::int64_t&gt; timestamp_ns;
-	std::vector&lt;std::int32_t&gt; instrument_id;
-	std::vector&lt;double&gt; bid;
-	std::vector&lt;double&gt; ask;
-	std::vector&lt;std::array&lt;char, 8&gt;&gt; exchange;
-	std::vector&lt;std::uint32_t&gt; seq_no;
-	std::vector&lt;std::uint16_t&gt; flags;
+    std::vector&lt;std::int64_t&gt; timestamp_ns;
+    std::vector&lt;std::int32_t&gt; instrument_id;
+    std::vector&lt;double&gt; bid;
+    std::vector&lt;double&gt; ask;
+    std::vector&lt;std::array&lt;char, 8&gt;&gt; exchange;
+    std::vector&lt;std::uint32_t&gt; seq_no;
+    std::vector&lt;std::uint16_t&gt; flags;
 
-	void append(std::int64_t ts, std::int32_t id, double b, double a) {
-		timestamp_ns.push_back(ts);
-		instrument_id.push_back(id);
-		bid.push_back(b);
-		ask.push_back(a);
-		// ...other columns omitted for brevity
-	}
+    void append(std::int64_t ts, std::int32_t id, double b, double a) {
+        timestamp_ns.push_back(ts);
+        instrument_id.push_back(id);
+        bid.push_back(b);
+        ask.push_back(a);
+        // ...other columns omitted for brevity
+    }
 };
 
 double mid_price_sum_soa(const TickColumns&amp; ticks) {
-	double total = 0.0;
-	// Only bid[] and ask[] are touched.  Each cache line is 100%
-	// useful payload.  The compiler can auto-vectorize this loop,
-	// and the prefetcher has two clean sequential streams.
-	for (std::size_t i = 0; i != ticks.bid.size(); ++i) {
-		total += (ticks.bid[i] + ticks.ask[i]) * 0.5;
-	}
-	return total;
+    double total = 0.0;
+    // Only bid[] and ask[] are touched.  Each cache line is 100%
+    // useful payload.  The compiler can auto-vectorize this loop,
+    // and the prefetcher has two clean sequential streams.
+    for (std::size_t i = 0; i != ticks.bid.size(); ++i) {
+        total += (ticks.bid[i] + ticks.ask[i]) * 0.5;
+    }
+    return total;
 }
 </code></pre>
 <p>处理一百万条 tick 时，在现代 x86 硬件上做列式聚合，SoA 版本通常快 2-4 倍。根本原因在于带宽利用率：AoS 循环每个元素加载约 48 字节却只用到 16 字节，每次缓存行读取有三分之二是浪费。SoA 循环只访问所需的两个 8 字节数组，而且两者都是完美的顺序访问。编译器也更容易为 SoA 版本生成 SIMD 指令，因为没有交错步长来妨碍向量化。</p>
@@ -3596,59 +3596,59 @@ double mid_price_sum_soa(const TickColumns&amp; ticks) {
 <pre><code class="language-cpp">// A naive priority queue built from scattered heap nodes.
 // Each node is individually allocated and linked by pointer.
 struct Job {
-	int priority;
-	std::string description;  // may allocate on heap
-	Job* next;
+    int priority;
+    std::string description;  // may allocate on heap
+    Job* next;
 };
 
 class NaivePriorityQueue {
-	Job* head_ = nullptr;
+    Job* head_ = nullptr;
 public:
-	void insert(int priority, std::string desc) {
-		auto* node = new Job{priority, std::move(desc), nullptr};
-		// Sorted insert: walk the list to find position.
-		// Each step dereferences a pointer to a random heap location.
-		Job** pos = &amp;head_;
-		while (*pos &amp;&amp; (*pos)-&gt;priority &lt;= priority)
-			pos = &amp;(*pos)-&gt;next;
-		node-&gt;next = *pos;
-		*pos = node;
-	}
+    void insert(int priority, std::string desc) {
+        auto* node = new Job{priority, std::move(desc), nullptr};
+        // Sorted insert: walk the list to find position.
+        // Each step dereferences a pointer to a random heap location.
+        Job** pos = &amp;head_;
+        while (*pos &amp;&amp; (*pos)-&gt;priority &lt;= priority)
+            pos = &amp;(*pos)-&gt;next;
+        node-&gt;next = *pos;
+        *pos = node;
+    }
 
-	// Find highest-priority job.  Cheap -- it is at the head.
-	// But any operation that scans (e.g., "remove by description",
-	// "count jobs above threshold") pointer-chases through
-	// potentially thousands of cold cache lines.
-	Job* top() const { return head_; }
+    // Find highest-priority job.  Cheap -- it is at the head.
+    // But any operation that scans (e.g., "remove by description",
+    // "count jobs above threshold") pointer-chases through
+    // potentially thousands of cold cache lines.
+    Job* top() const { return head_; }
 
-	~NaivePriorityQueue() {
-		while (head_) { auto* n = head_; head_ = head_-&gt;next; delete n; }
-	}
+    ~NaivePriorityQueue() {
+        while (head_) { auto* n = head_; head_ = head_-&gt;next; delete n; }
+    }
 };
 </code></pre>
 <p>再来看一个将相同数据连续存放的缓存友好版本：</p>
 <pre><code class="language-cpp">struct Job {
-	int priority;
-	std::string description;
+    int priority;
+    std::string description;
 };
 
 class FlatPriorityQueue {
-	std::vector&lt;Job&gt; jobs_;
+    std::vector&lt;Job&gt; jobs_;
 public:
-	void insert(int priority, std::string desc) {
-		jobs_.push_back({priority, std::move(desc)});
-		// Could maintain sorted order with std::lower_bound + insert,
-		// or just push_back and sort/partial_sort when needed.
-	}
+    void insert(int priority, std::string desc) {
+        jobs_.push_back({priority, std::move(desc)});
+        // Could maintain sorted order with std::lower_bound + insert,
+        // or just push_back and sort/partial_sort when needed.
+    }
 
-	// Rebuild top in O(n) but with contiguous memory access.
-	// For scan-heavy workloads this dominates pointer-chasing.
-	const Job&amp; top() const {
-		return *std::min_element(jobs_.begin(), jobs_.end(),
-			[](const auto&amp; a, const auto&amp; b) {
-				return a.priority &lt; b.priority;
-			});
-	}
+    // Rebuild top in O(n) but with contiguous memory access.
+    // For scan-heavy workloads this dominates pointer-chasing.
+    const Job&amp; top() const {
+        return *std::min_element(jobs_.begin(), jobs_.end(),
+            [](const auto&amp; a, const auto&amp; b) {
+                return a.priority &lt; b.priority;
+            });
+    }
 };
 </code></pre>
 <p>flat 版本调用 <code>top()</code> 时比较次数可能更多，但所有比较都是在连续内存上流式完成的。实践中，对于几千个元素以内的集合，flat scan 往往比链表版本的”O(1) 头访问 + O(n) 插入”更快，因为链表插入过程中每访问一个节点就可能触发一次缓存未命中。对于更大的集合，<code>std::priority_queue</code>（底层用 <code>std::vector</code> 维护一个连续堆）正是出于同样的原因而成为标准工具。</p>
@@ -3703,49 +3703,49 @@ public:
 // a vector, and a map entry.  Under load this path may perform
 // 5-10 heap allocations per event.
 struct Event {
-	std::string type;
-	std::string payload;
-	std::vector&lt;std::string&gt; tags;
-	std::unordered_map&lt;std::string, std::string&gt; metadata;
+    std::string type;
+    std::string payload;
+    std::vector&lt;std::string&gt; tags;
+    std::unordered_map&lt;std::string, std::string&gt; metadata;
 };
 
 void process_batch_heavy(std::span&lt;const RawEvent&gt; raw,
                          std::vector&lt;Event&gt;&amp; out) {
-	for (const auto&amp; r : raw) {
-		Event e;
-		e.type = parse_type(r);         // allocates
-		e.payload = parse_payload(r);   // allocates
-		e.tags = parse_tags(r);         // allocates vector + each string
-		e.metadata = parse_meta(r);     // allocates map buckets + nodes
-		out.push_back(std::move(e));    // may reallocate out's buffer
-	}
+    for (const auto&amp; r : raw) {
+        Event e;
+        e.type = parse_type(r);         // allocates
+        e.payload = parse_payload(r);   // allocates
+        e.tags = parse_tags(r);         // allocates vector + each string
+        e.metadata = parse_meta(r);     // allocates map buckets + nodes
+        out.push_back(std::move(e));    // may reallocate out's buffer
+    }
 }
 </code></pre>
 <pre><code class="language-cpp">// Allocation-light: pre-sized arena, string views into stable
 // input buffer, fixed-capacity inline storage.
 struct EventView {
-	std::string_view type;
-	std::string_view payload;
-	// Use a small fixed-capacity container for tags.
-	// boost::static_vector or a similar stack-allocated small vector.
-	std::array&lt;std::string_view, 8&gt; tags;
-	std::uint8_t tag_count = 0;
+    std::string_view type;
+    std::string_view payload;
+    // Use a small fixed-capacity container for tags.
+    // boost::static_vector or a similar stack-allocated small vector.
+    std::array&lt;std::string_view, 8&gt; tags;
+    std::uint8_t tag_count = 0;
 };
 
 void process_batch_light(std::string_view input_buffer,
                          std::span&lt;const RawEvent&gt; raw,
                          std::vector&lt;EventView&gt;&amp; out) {
-	out.clear();
-	out.reserve(raw.size());  // one allocation, amortized
-	for (const auto&amp; r : raw) {
-		EventView e;
-		e.type = parse_type_view(r, input_buffer);
-		e.payload = parse_payload_view(r, input_buffer);
-		e.tag_count = parse_tags_view(r, input_buffer, e.tags);
-		out.push_back(e);
-	}
-	// Zero heap allocations per event if input_buffer is stable
-	// and out has sufficient capacity.
+    out.clear();
+    out.reserve(raw.size());  // one allocation, amortized
+    for (const auto&amp; r : raw) {
+        EventView e;
+        e.type = parse_type_view(r, input_buffer);
+        e.payload = parse_payload_view(r, input_buffer);
+        e.tag_count = parse_tags_view(r, input_buffer, e.tags);
+        out.push_back(e);
+    }
+    // Zero heap allocations per event if input_buffer is stable
+    // and out has sufficient capacity.
 }
 </code></pre>
 <p>轻量版有一系列约束：输入 buffer 的生存期必须覆盖所有 view，tag 数量有上限，metadata 也要换种方式处理。这些约束就是免去分配所付出的代价。值不值得取决于具体负载，但把代价摆到明面上——这才是关键。</p>
@@ -3756,12 +3756,12 @@ void process_batch_light(std::string_view input_buffer,
 <p>同生共死的对象，最好也一起分配。这就是 arena 和 monotonic resource 背后的核心直觉：如果一批数据共享同一个生命周期边界，为逐个释放付费就是白花功夫。请求局部的 parse tree、临时 token buffer、图搜索的 scratch state、一次性编译元数据，都是经典适用场景。</p>
 <p>C++23 在这方面的标准词汇仍以 <code>std::pmr</code> 为主。它的价值不在风格，而在架构。memory resource 让你能表达“这一族对象属于同一个生命周期区域“，而无需把自定义 allocator 类型硬编码到每一个模板实例里。</p>
 <pre><code class="language-cpp">struct RequestScratch {
-	std::pmr::monotonic_buffer_resource arena;
-	std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
-	std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt; headers{&amp;arena};
+    std::pmr::monotonic_buffer_resource arena;
+    std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
+    std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt; headers{&amp;arena};
 
-	explicit RequestScratch(std::span&lt;std::byte&gt; buffer)
-		: arena(buffer.data(), buffer.size()) {}
+    explicit RequestScratch(std::span&lt;std::byte&gt; buffer)
+        : arena(buffer.data(), buffer.size()) {}
 };
 </code></pre>
 <p>这个设计表达了一件重要的事：这些字符串和容器不是各自独立的堆上居民，而是请求作用域内的临时工作区。这样既降低了分配开销，也让析构变成一次性的批量操作。</p>
@@ -3775,11 +3775,11 @@ void process_batch_light(std::string_view input_buffer,
 // map internals go through the global allocator.  Under contention
 // from many threads, this serializes on allocator locks.
 void handle_request_standard(std::span&lt;const std::byte&gt; input) {
-	std::vector&lt;std::string&gt; tokens;
-	std::unordered_map&lt;std::string, std::string&gt; headers;
-	parse(input, tokens, headers);  // many small allocations
-	route(tokens, headers);
-	// Destruction: each string freed individually, each map node freed.
+    std::vector&lt;std::string&gt; tokens;
+    std::unordered_map&lt;std::string, std::string&gt; headers;
+    parse(input, tokens, headers);  // many small allocations
+    route(tokens, headers);
+    // Destruction: each string freed individually, each map node freed.
 }
 
 // PMR with stack buffer: small requests never touch the heap.
@@ -3787,22 +3787,22 @@ void handle_request_standard(std::span&lt;const std::byte&gt; input) {
 // If the request is large enough to exhaust it, it falls back to
 // the upstream resource (default: new/delete).
 void handle_request_pmr(std::span&lt;const std::byte&gt; input) {
-	std::array&lt;std::byte, 4096&gt; stack_buf;
-	std::pmr::monotonic_buffer_resource arena{
-		stack_buf.data(), stack_buf.size(),
-		std::pmr::null_memory_resource()
-		// null_memory_resource: fail loudly if buffer is exceeded.
-		// Replace with std::pmr::new_delete_resource() to allow
-		// fallback to heap for oversized requests.
-	};
+    std::array&lt;std::byte, 4096&gt; stack_buf;
+    std::pmr::monotonic_buffer_resource arena{
+        stack_buf.data(), stack_buf.size(),
+        std::pmr::null_memory_resource()
+        // null_memory_resource: fail loudly if buffer is exceeded.
+        // Replace with std::pmr::new_delete_resource() to allow
+        // fallback to heap for oversized requests.
+    };
 
-	std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
-	std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt;
-		headers{&amp;arena};
-	parse_pmr(input, tokens, headers);
-	route_pmr(tokens, headers);
-	// Destruction: arena destructor releases everything in one shot.
-	// No per-string, per-node deallocation calls.
+    std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
+    std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt;
+        headers{&amp;arena};
+    parse_pmr(input, tokens, headers);
+    route_pmr(tokens, headers);
+    // Destruction: arena destructor releases everything in one shot.
+    // No per-string, per-node deallocation calls.
 }
 </code></pre>
 <p>只要请求能装进栈上 buffer，<code>pmr</code> 版本就能完全消除逐对象释放，也彻底绕开全局 allocator 争用。在高吞吐的小请求服务里，allocator 开销可以降低一个数量级。代价是：<code>std::pmr</code> 容器多带一个指向 memory resource 的指针（<code>sizeof</code> 略大），且 monotonic resource 不回收单次释放的空间——只会一直增长，直到 resource 本身被销毁。用在请求作用域的临时工作区上完全合适；用在会随时间反复增缩的长生命周期容器上就是错误选择。</p>
@@ -3821,28 +3821,28 @@ void handle_request_pmr(std::span&lt;const std::byte&gt; input) {
 void submit_work(std::shared_ptr&lt;Config&gt; cfg,
                  ThreadPool&amp; pool,
                  std::span&lt;const Request&gt; requests) {
-	for (const auto&amp; req : requests) {
-		// Copies cfg: atomic ref-count increment per task.
-		pool.enqueue([cfg, &amp;req] {
-			handle(req, *cfg);
-		});
-	}
-	// If 10,000 requests are enqueued, that is 10,000 atomic
-	// increments on submission and 10,000 atomic decrements
-	// on completion, all contending on the same cache line.
+    for (const auto&amp; req : requests) {
+        // Copies cfg: atomic ref-count increment per task.
+        pool.enqueue([cfg, &amp;req] {
+            handle(req, *cfg);
+        });
+    }
+    // If 10,000 requests are enqueued, that is 10,000 atomic
+    // increments on submission and 10,000 atomic decrements
+    // on completion, all contending on the same cache line.
 }
 </code></pre>
 <pre><code class="language-cpp">// Fix: cfg outlives all tasks, so pass a raw pointer or reference.
 void submit_work_fixed(const Config&amp; cfg,
                        ThreadPool&amp; pool,
                        std::span&lt;const Request&gt; requests) {
-	for (const auto&amp; req : requests) {
-		pool.enqueue([&amp;cfg, &amp;req] {
-			handle(req, cfg);
-		});
-	}
-	// Zero reference-counting overhead.  Caller guarantees
-	// cfg lives until all tasks complete.
+    for (const auto&amp; req : requests) {
+        pool.enqueue([&amp;cfg, &amp;req] {
+            handle(req, cfg);
+        });
+    }
+    // Zero reference-counting overhead.  Caller guarantees
+    // cfg lives until all tasks complete.
 }
 </code></pre>
 <p>规则不是”永远别用 <code>std::shared_ptr</code>”，而是：不要用共享所有权来逃避生命周期思考。对象有明确的所有者和借用者时，就用唯一所有者加引用或视图来表达。<code>std::shared_ptr</code> 应该留给那些确实需要共享、且生命周期无法静态确定的场景。另外，当 <code>const&amp;</code> 或裸引用就够用时，千万别按值传 <code>std::shared_ptr</code>——每次拷贝都是一次毫无收益的原子往返。</p>
@@ -3953,26 +3953,26 @@ void submit_work_fixed(const Config&amp; cfg,
 <pre><code class="language-cpp">// BROKEN: the compiler may eliminate the entire loop because
 // 'total' is never observed.
 static void BM_bad_dce(benchmark::State&amp; state) {
-	std::vector&lt;double&gt; data(1'000'000, 1.0);
-	for (auto _ : state) {
-		double total = 0.0;
-		for (double d : data)
-			total += d * d;
-		// total is dead.  Optimizer removes the loop.
-		// Benchmark reports ~0 ns/iteration.
-	}
+    std::vector&lt;double&gt; data(1'000'000, 1.0);
+    for (auto _ : state) {
+        double total = 0.0;
+        for (double d : data)
+            total += d * d;
+        // total is dead.  Optimizer removes the loop.
+        // Benchmark reports ~0 ns/iteration.
+    }
 }
 </code></pre>
 <pre><code class="language-cpp">// FIXED: benchmark::DoNotOptimize prevents the compiler from
 // proving the result is unused.
 static void BM_good_dce(benchmark::State&amp; state) {
-	std::vector&lt;double&gt; data(1'000'000, 1.0);
-	for (auto _ : state) {
-		double total = 0.0;
-		for (double d : data)
-			total += d * d;
-		benchmark::DoNotOptimize(total);
-	}
+    std::vector&lt;double&gt; data(1'000'000, 1.0);
+    for (auto _ : state) {
+        double total = 0.0;
+        for (double d : data)
+            total += d * d;
+        benchmark::DoNotOptimize(total);
+    }
 }
 </code></pre>
 <p><code>benchmark::DoNotOptimize</code> 并非万能。在大多数实现中，它本质上是对目标值做一次不透明读取（通常通过 inline asm 让编译器认为该变量”可能被观察”）。应当只在最终结果上使用，而不是对每个中间步骤都加——否则可能抑制生产代码同样能受益的正常优化。如果拿不准 DCE 是否影响了结果，用 <code>-S</code> 编译后检查汇编即可。</p>
@@ -3980,22 +3980,22 @@ static void BM_good_dce(benchmark::State&amp; state) {
 <pre><code class="language-cpp">// BROKEN: construction cost dominates. The benchmark is
 // measuring vector allocation and initialization, not lookup.
 static void BM_bad_lookup(benchmark::State&amp; state) {
-	for (auto _ : state) {
-		std::vector&lt;int&gt; v(1'000'000);
-		std::iota(v.begin(), v.end(), 0);
-		auto it = std::lower_bound(v.begin(), v.end(), 500'000);
-		benchmark::DoNotOptimize(it);
-	}
+    for (auto _ : state) {
+        std::vector&lt;int&gt; v(1'000'000);
+        std::iota(v.begin(), v.end(), 0);
+        auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+        benchmark::DoNotOptimize(it);
+    }
 }
 
 // FIXED: setup goes outside the timing loop.
 static void BM_good_lookup(benchmark::State&amp; state) {
-	std::vector&lt;int&gt; v(1'000'000);
-	std::iota(v.begin(), v.end(), 0);
-	for (auto _ : state) {
-		auto it = std::lower_bound(v.begin(), v.end(), 500'000);
-		benchmark::DoNotOptimize(it);
-	}
+    std::vector&lt;int&gt; v(1'000'000);
+    std::iota(v.begin(), v.end(), 0);
+    for (auto _ : state) {
+        auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+        benchmark::DoNotOptimize(it);
+    }
 }
 </code></pre>
 <h3 id="典型反面教材选错了比较基线"><a class="header" href="#典型反面教材选错了比较基线">典型反面教材：选错了比较基线</a></h3>
@@ -4005,13 +4005,13 @@ static void BM_good_lookup(benchmark::State&amp; state) {
 // in production is sorted vector with binary search, which may
 // be within 2x and uses half the memory.
 static void BM_linear_scan(benchmark::State&amp; state) {
-	std::vector&lt;std::pair&lt;int,int&gt;&gt; data(100'000);
-	// ... fill with random kv pairs, unsorted ...
-	for (auto _ : state) {
-		auto it = std::find_if(data.begin(), data.end(),
-			[](const auto&amp; p) { return p.first == 42; });
-		benchmark::DoNotOptimize(it);
-	}
+    std::vector&lt;std::pair&lt;int,int&gt;&gt; data(100'000);
+    // ... fill with random kv pairs, unsorted ...
+    for (auto _ : state) {
+        auto it = std::find_if(data.begin(), data.end(),
+            [](const auto&amp; p) { return p.first == 42; });
+        benchmark::DoNotOptimize(it);
+    }
 }
 </code></pre>
 <p>正确的基线应当是实际可能采用的替代方案，而不是最差的选项。每次做比较都要说清楚：在跟什么比？为什么选它作为对照？</p>
@@ -4020,15 +4020,15 @@ static void BM_linear_scan(benchmark::State&amp; state) {
 // iteration.  Production accesses the same structure after
 // processing unrelated data that evicts it from cache.
 static void BM_warm_cache(benchmark::State&amp; state) {
-	std::vector&lt;int&gt; v(1'000);  // ~4 KB, fits in L1
-	std::iota(v.begin(), v.end(), 0);
-	for (auto _ : state) {
-		int sum = 0;
-		for (int x : v) sum += x;
-		benchmark::DoNotOptimize(sum);
-	}
-	// Reports ~50 ns.  In production, with cache-cold data,
-	// the same operation takes 10-50x longer.
+    std::vector&lt;int&gt; v(1'000);  // ~4 KB, fits in L1
+    std::iota(v.begin(), v.end(), 0);
+    for (auto _ : state) {
+        int sum = 0;
+        for (int x : v) sum += x;
+        benchmark::DoNotOptimize(sum);
+    }
+    // Reports ~50 ns.  In production, with cache-cold data,
+    // the same operation takes 10-50x longer.
 }
 </code></pre>
 <p>如果生产环境中实际会遇到冷数据，就要么把工作集做大到超出缓存容量，要么在迭代之间显式刷新缓存行（依赖平台、比较脆弱，但有时为了拿到真实结果别无选择）。</p>
@@ -4038,14 +4038,14 @@ static void BM_warm_cache(benchmark::State&amp; state) {
 <li><strong>忘记 <code>benchmark::ClobberMemory()</code></strong>：<code>DoNotOptimize</code> 能阻止编译器消除某个值的 dead store，但不会让编译器认为内存内容已经改变。如果基准测试在原地修改数据结构，编译器可能将读取提到写入之前，甚至跨迭代重排。修改之后需要调用 <code>benchmark::ClobberMemory()</code> 来强制重新加载：</li>
 </ol>
 <pre><code class="language-cpp">static void BM_modify(benchmark::State&amp; state) {
-	std::vector&lt;int&gt; v(10'000, 0);
-	for (auto _ : state) {
-		for (auto&amp; x : v) x += 1;
-		benchmark::ClobberMemory();
-		// Without ClobberMemory, the compiler could theoretically
-		// observe that v is never read and eliminate the writes,
-		// or combine multiple iterations into one.
-	}
+    std::vector&lt;int&gt; v(10'000, 0);
+    for (auto _ : state) {
+        for (auto&amp; x : v) x += 1;
+        benchmark::ClobberMemory();
+        // Without ClobberMemory, the compiler could theoretically
+        // observe that v is never read and eliminate the writes,
+        // or combine multiple iterations into one.
+    }
 }
 </code></pre>
 <ol start="2">
@@ -4148,58 +4148,58 @@ static void BM_warm_cache(benchmark::State&amp; state) {
 <p>假设有一个服务需要原子地重写磁盘快照。真正的生产规则不是”先调 <code>write</code>，再调 <code>rename</code>，失败了再 <code>remove</code>”，而是”要么新快照变得可见，要么旧快照保持不变且临时文件被清理掉”。有用的测试应该直接验证这条规则。</p>
 <h3 id="有意保留为-partial一个让回滚可测试的接缝"><a class="header" href="#有意保留为-partial一个让回滚可测试的接缝">有意保留为 partial：一个让回滚可测试的接缝</a></h3>
 <pre><code class="language-cpp">struct file_system {
-	virtual ~file_system() = default;
+    virtual ~file_system() = default;
 
-	virtual auto write(std::filesystem::path const&amp; path,
-					   std::span&lt;char const&gt; bytes)
-		-&gt; std::expected&lt;void, std::error_code&gt; = 0;
+    virtual auto write(std::filesystem::path const&amp; path,
+                       std::span&lt;char const&gt; bytes)
+        -&gt; std::expected&lt;void, std::error_code&gt; = 0;
 
-	virtual auto rename(std::filesystem::path const&amp; from,
-						std::filesystem::path const&amp; to)
-		-&gt; std::expected&lt;void, std::error_code&gt; = 0;
+    virtual auto rename(std::filesystem::path const&amp; from,
+                        std::filesystem::path const&amp; to)
+        -&gt; std::expected&lt;void, std::error_code&gt; = 0;
 
-	virtual void remove(std::filesystem::path const&amp; path) noexcept = 0;
+    virtual void remove(std::filesystem::path const&amp; path) noexcept = 0;
 };
 
 enum class snapshot_error {
-	staging_write_failed,
-	commit_failed,
+    staging_write_failed,
+    commit_failed,
 };
 
 auto write_snapshot_atomically(file_system&amp; fs,
-							   std::filesystem::path const&amp; target,
-							   std::span&lt;char const&gt; bytes)
-	-&gt; std::expected&lt;void, snapshot_error&gt;
+                               std::filesystem::path const&amp; target,
+                               std::span&lt;char const&gt; bytes)
+    -&gt; std::expected&lt;void, snapshot_error&gt;
 {
-	auto staging = target;
-	staging += ".tmp";
+    auto staging = target;
+    staging += ".tmp";
 
-	if (auto r = fs.write(staging, bytes); !r) {
-		return std::unexpected(snapshot_error::staging_write_failed);
-	}
+    if (auto r = fs.write(staging, bytes); !r) {
+        return std::unexpected(snapshot_error::staging_write_failed);
+    }
 
-	if (auto r = fs.rename(staging, target); !r) {
-		fs.remove(staging);
-		return std::unexpected(snapshot_error::commit_failed);
-	}
+    if (auto r = fs.rename(staging, target); !r) {
+        fs.remove(staging);
+        return std::unexpected(snapshot_error::commit_failed);
+    }
 
-	return {};
+    return {};
 }
 </code></pre>
 <pre><code class="language-cpp">TEST(write_snapshot_atomically_cleans_up_staging_file_on_commit_failure)
 {
-	fake_file_system fs;
-	fs.fail_rename_with(make_error_code(std::errc::device_or_resource_busy));
+    fake_file_system fs;
+    fs.fail_rename_with(make_error_code(std::errc::device_or_resource_busy));
 
-	auto result = write_snapshot_atomically(
-		fs,
-		"cache/index.bin",
-		std::as_bytes(std::span{"new snapshot"sv.data(), "new snapshot"sv.size()}));
+    auto result = write_snapshot_atomically(
+        fs,
+        "cache/index.bin",
+        std::as_bytes(std::span{"new snapshot"sv.data(), "new snapshot"sv.size()}));
 
-	ASSERT_FALSE(result.has_value());
-	EXPECT_EQ(result.error(), snapshot_error::commit_failed);
-	EXPECT_FALSE(fs.exists("cache/index.bin.tmp"));
-	EXPECT_EQ(fs.read("cache/index.bin"), "old snapshot");
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), snapshot_error::commit_failed);
+    EXPECT_FALSE(fs.exists("cache/index.bin.tmp"));
+    EXPECT_EQ(fs.read("cache/index.bin"), "old snapshot");
 }
 </code></pre>
 <p>这个 seam 选得恰到好处，因为它正好落在业务边界上。测试没有把半个标准库都 mock 掉，而是只在外部副作用周围建了一个可替换接口，然后检查调用方真正关心的后置条件。</p>
@@ -4209,13 +4209,13 @@ auto write_snapshot_atomically(file_system&amp; fs,
 <pre><code class="language-cpp">// BAD: This test passes, but proves nothing about cleanup.
 TEST(write_snapshot_calls_remove_on_rename_failure)
 {
-	strict_mock_file_system fs;
-	EXPECT_CALL(fs, write(_, _)).WillOnce(Return(std::expected&lt;void, std::error_code&gt;{}));
-	EXPECT_CALL(fs, rename(_, _)).WillOnce(Return(
-		std::unexpected(make_error_code(std::errc::device_or_resource_busy))));
-	EXPECT_CALL(fs, remove("cache/index.bin.tmp")).Times(1);
+    strict_mock_file_system fs;
+    EXPECT_CALL(fs, write(_, _)).WillOnce(Return(std::expected&lt;void, std::error_code&gt;{}));
+    EXPECT_CALL(fs, rename(_, _)).WillOnce(Return(
+        std::unexpected(make_error_code(std::errc::device_or_resource_busy))));
+    EXPECT_CALL(fs, remove("cache/index.bin.tmp")).Times(1);
 
-	write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
+    write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
 }
 </code></pre>
 <p>这个测试验证了 <code>remove</code> 被调用了，但并没有验证临时文件真的消失了，也没有验证原文件保持完好。一旦有人把清理逻辑重构成 <code>std::filesystem::remove_all</code>，或者改了 staging 路径约定，这个测试就会挂掉——然而 <code>remove</code> 静默失败、临时文件残留这种真实 bug 反而能通过。前面基于 <code>fake_file_system</code> 的测试更强，因为它断言的是可观测的后置条件，而非调用序列。</p>
@@ -4223,38 +4223,38 @@ TEST(write_snapshot_calls_remove_on_rename_failure)
 <p>当错误路径跳过了构造，或者所有权被错误地 move 走，单靠 RAII 的作用域管理是不够的。有一种出乎意料地常见的模式：资源只在某条特定的失败路径上才会泄漏：</p>
 <pre><code class="language-cpp">class connection_pool {
 public:
-	auto acquire() -&gt; std::expected&lt;pooled_connection, pool_error&gt;;
-	void release(pooled_connection conn) noexcept;
+    auto acquire() -&gt; std::expected&lt;pooled_connection, pool_error&gt;;
+    void release(pooled_connection conn) noexcept;
 };
 
 // This function has a leak on the second acquire failure.
 auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
-	-&gt; std::expected&lt;receipt, transfer_error&gt;
+    -&gt; std::expected&lt;receipt, transfer_error&gt;
 {
-	auto src = pool.acquire();
-	if (!src) return std::unexpected(transfer_error::no_connection);
+    auto src = pool.acquire();
+    if (!src) return std::unexpected(transfer_error::no_connection);
 
-	auto dst = pool.acquire();
-	if (!dst) {
-		// BUG: forgot to release src back to the pool.
-		return std::unexpected(transfer_error::no_connection);
-	}
+    auto dst = pool.acquire();
+    if (!dst) {
+        // BUG: forgot to release src back to the pool.
+        return std::unexpected(transfer_error::no_connection);
+    }
 
-	// ... perform transfer, release both on success ...
-	pool.release(std::move(*src));
-	pool.release(std::move(*dst));
-	return receipt{};
+    // ... perform transfer, release both on success ...
+    pool.release(std::move(*src));
+    pool.release(std::move(*dst));
+    return receipt{};
 }
 </code></pre>
 <p>只走成功路径的测试看不到这个泄漏；只在失败时检查返回值的测试同样会漏掉。真正能抓住它的测试，断言的是连接池的状态：</p>
 <pre><code class="language-cpp">TEST(transfer_releases_source_connection_when_dest_acquire_fails)
 {
-	counting_connection_pool pool{.max_connections = 1};
+    counting_connection_pool pool{.max_connections = 1};
 
-	auto result = transfer(pool, make_request());
+    auto result = transfer(pool, make_request());
 
-	ASSERT_FALSE(result.has_value());
-	EXPECT_EQ(pool.available(), 1);  // Source connection must be returned.
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(pool.available(), 1);  // Source connection must be returned.
 }
 </code></pre>
 <p>规律就是：如果你持有稀缺资源，失败路径的测试就该断言资源已被归还，而不只是断言返回了一个错误。</p>
@@ -4262,19 +4262,19 @@ auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
 <p>即便代码路径没有标 <code>noexcept</code>，只要异常安全性很重要，就值得为它写测试。提供强异常保证的容器或缓存尤其如此：</p>
 <pre><code class="language-cpp">TEST(cache_insert_preserves_existing_entries_on_allocation_failure)
 {
-	lru_cache&lt;std::string, std::string&gt; cache(/*capacity=*/4);
-	cache.insert("key1", "value1");
-	cache.insert("key2", "value2");
+    lru_cache&lt;std::string, std::string&gt; cache(/*capacity=*/4);
+    cache.insert("key1", "value1");
+    cache.insert("key2", "value2");
 
-	failing_allocator::arm_failure_after(1);  // Fail during insert internals.
+    failing_allocator::arm_failure_after(1);  // Fail during insert internals.
 
-	auto result = cache.insert("key3", "value3");
-	EXPECT_FALSE(result.has_value());
+    auto result = cache.insert("key3", "value3");
+    EXPECT_FALSE(result.has_value());
 
-	// Strong guarantee: pre-existing entries are intact.
-	EXPECT_EQ(cache.get("key1"), "value1");
-	EXPECT_EQ(cache.get("key2"), "value2");
-	EXPECT_EQ(cache.size(), 2);
+    // Strong guarantee: pre-existing entries are intact.
+    EXPECT_EQ(cache.get("key1"), "value1");
+    EXPECT_EQ(cache.get("key2"), "value2");
+    EXPECT_EQ(cache.size(), 2);
 }
 </code></pre>
 <p>如果缓存只提供基本保证，测试仍然应当验证没有资源泄漏，且缓存处于有效状态（哪怕内容已变）。最坏的情况是压根没有测试——缓存在抛异常时悄悄破坏了内部结构，直到生产环境的内存分配压力下才被发现。</p>
@@ -4290,21 +4290,21 @@ auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
 // This test passes because the input string outlives the config.
 TEST(config_parser_reads_server_name)
 {
-	std::string input = R"({"server": "prod-01"})";
-	auto cfg = parse_config(input);
-	EXPECT_EQ(cfg.server_name(), "prod-01");  // PASSES -- but fragile.
+    std::string input = R"({"server": "prod-01"})";
+    auto cfg = parse_config(input);
+    EXPECT_EQ(cfg.server_name(), "prod-01");  // PASSES -- but fragile.
 }
 
 // This test exposes the dangling view.
 TEST(config_survives_input_destruction)
 {
-	auto cfg = []{
-		std::string input = R"({"server": "prod-01"})";
-		return parse_config(input);
-	}();
-	// input is destroyed. If server_name() holds a string_view into it,
-	// this is use-after-free. It may still "pass" without sanitizers.
-	EXPECT_EQ(cfg.server_name(), "prod-01");
+    auto cfg = []{
+        std::string input = R"({"server": "prod-01"})";
+        return parse_config(input);
+    }();
+    // input is destroyed. If server_name() holds a string_view into it,
+    // this is use-after-free. It may still "pass" without sanitizers.
+    EXPECT_EQ(cfg.server_name(), "prod-01");
 }
 </code></pre>
 <p>大多数团队只会写第一个测试，但真正能暴露 bug 的是第二个。再配合 AddressSanitizer（下一章介绍），就能把悄无声息的内存损坏变成确定性的测试失败。</p>
@@ -4444,18 +4444,18 @@ endif()
 <h3 id="不开-asan-时看起来能工作的-bug"><a class="header" href="#不开-asan-时看起来能工作的-bug">不开 ASan 时“看起来能工作”的 bug</a></h3>
 <p>这是跳过 sanitizer 构建的代码库里，最经典、也最浪费调试时间的案例：</p>
 <pre><code class="language-cpp">auto get_session_name(session_registry&amp; registry, session_id id)
-	-&gt; std::string_view
+    -&gt; std::string_view
 {
-	auto it = registry.find(id);
-	if (it == registry.end()) return {};
-	return it-&gt;second.name();  // Returns view into the session object.
+    auto it = registry.find(id);
+    if (it == registry.end()) return {};
+    return it-&gt;second.name();  // Returns view into the session object.
 }
 
 void log_and_remove_session(session_registry&amp; registry, session_id id)
 {
-	auto name = get_session_name(registry, id);
-	registry.erase(id);             // Session destroyed. name is now dangling.
-	audit_log("removed session: {}", name);  // Use-after-free.
+    auto name = get_session_name(registry, id);
+    registry.erase(id);             // Session destroyed. name is now dangling.
+    audit_log("removed session: {}", name);  // Use-after-free.
 }
 </code></pre>
 <p>没有 ASan 时，这段代码通常能通过测试，甚至在生产环境里正确运行好几个月。被释放的内存仍然保留着旧的字符串数据，直到被其他内容覆盖。测试通过了，代码评审也未必能发现问题——函数看起来很简单。等到真正出问题时，症状却是乱码日志或某个毫不相干的分配处崩溃，离实际 bug 的位置很远。</p>
@@ -4480,7 +4480,7 @@ previously allocated by thread T0 here:
 <p>报告精确指出了读取位置、释放位置和分配位置。对比一下另一种情况：三周后出现一条损坏的日志，谁也不会联想到是这条代码路径的问题。</p>
 <p>典型构建特征大致如下：</p>
 <pre><code class="language-bash">clang++ -std=c++23 -O1 -g -fno-omit-frame-pointer \
-	-fsanitize=address,undefined
+    -fsanitize=address,undefined
 </code></pre>
 <p>具体 flag 因工具链而异，但原则不变：保留足够的优化以维持真实的代码结构，保留调试信息，保留 frame pointer 以确保栈回溯可用。</p>
 <h3 id="undefinedbehaviorsanitizer"><a class="header" href="#undefinedbehaviorsanitizer">UndefinedBehaviorSanitizer</a></h3>
@@ -4488,9 +4488,9 @@ previously allocated by thread T0 here:
 <p>但也不要过度解读。UBSan 不是形式化证明系统，它只能报告当前执行实际走到的、且已启用检查能覆盖到的行为。</p>
 <p>举个具体例子：尺寸计算中的有符号溢出是安全漏洞的常见来源，而编译器完全有权基于“有符号溢出属于未定义行为“这一前提做优化。</p>
 <pre><code class="language-cpp">auto compute_buffer_size(std::int32_t width, std::int32_t height, std::int32_t channels)
-	-&gt; std::int32_t
+    -&gt; std::int32_t
 {
-	return width * height * channels;  // Signed overflow if product exceeds INT32_MAX.
+    return width * height * channels;  // Signed overflow if product exceeds INT32_MAX.
 }
 </code></pre>
 <p>当 <code>width=4096, height=4096, channels=4</code> 时，乘积为 67,108,864，安全。但当 <code>width=32768, height=32768, channels=4</code> 时，乘积为 4,294,967,296，超出了 32 位有符号整数的范围。没有 UBSan 时，编译器甚至可能把下游的边界检查整个优化掉——因为有符号溢出本身就是未定义行为。UBSan 则会在乘法处直接报错：</p>
@@ -4503,21 +4503,21 @@ represented in type 'int'
 <h3 id="测试永远抓不到的-data-race"><a class="header" href="#测试永远抓不到的-data-race">测试永远抓不到的 data race</a></h3>
 <p>没有 TSan 的话，data race 对测试来说是不可见的，因为它取决于线程调度。来看一个请求处理线程和后台报告线程共享的 metrics counter：</p>
 <pre><code class="language-cpp">struct service_stats {
-	std::int64_t requests_handled = 0;   // No synchronization.
-	std::int64_t bytes_processed = 0;
+    std::int64_t requests_handled = 0;   // No synchronization.
+    std::int64_t bytes_processed = 0;
 };
 
 // Thread 1: request handler
 void handle_request(service_stats&amp; stats, request const&amp; req) {
-	process(req);
-	stats.requests_handled++;    // Data race: unsynchronized write.
-	stats.bytes_processed += req.size();
+    process(req);
+    stats.requests_handled++;    // Data race: unsynchronized write.
+    stats.bytes_processed += req.size();
 }
 
 // Thread 2: periodic reporter
 void report_stats(service_stats const&amp; stats) {
-	log_metrics("requests", stats.requests_handled);   // Data race: unsynchronized read.
-	log_metrics("bytes", stats.bytes_processed);
+    log_metrics("requests", stats.requests_handled);   // Data race: unsynchronized read.
+    log_metrics("bytes", stats.bytes_processed);
 }
 </code></pre>
 <p>这段代码能通过你写的所有测试，在 x86 上甚至可以正确运行好几个月——因为 x86 的内存模型相对宽容。问题会在编译器重排写入、优化器把读取提升到寄存器、或代码被移植到 ARM 时才暴露出来。bug 今天就在那里，只不过症状被推迟了。</p>
@@ -4626,74 +4626,74 @@ void report_stats(service_stats const&amp; stats) {
 <h3 id="没有可观测性时调试是什么样子"><a class="header" href="#没有可观测性时调试是什么样子">没有可观测性时调试是什么样子</a></h3>
 <p>举个具体的例子。假设有一个处理文件上传的服务，某用户反映上传超时。以下是没有结构化可观测性时的处理函数：</p>
 <pre><code class="language-cpp">void handle_upload(const http_request&amp; req) {
-	std::cout &lt;&lt; "INFO: Processing upload" &lt;&lt; std::endl;
+    std::cout &lt;&lt; "INFO: Processing upload" &lt;&lt; std::endl;
 
-	std::cout &lt;&lt; "INFO: Starting validation" &lt;&lt; std::endl;
-	auto validation = validate(req);
-	if (!validation) {
-		std::cerr &lt;&lt; "ERROR: Validation failed: "
-		          &lt;&lt; validation.error().message() &lt;&lt; std::endl;
-		return;
-	}
+    std::cout &lt;&lt; "INFO: Starting validation" &lt;&lt; std::endl;
+    auto validation = validate(req);
+    if (!validation) {
+        std::cerr &lt;&lt; "ERROR: Validation failed: "
+                  &lt;&lt; validation.error().message() &lt;&lt; std::endl;
+        return;
+    }
 
-	std::cout &lt;&lt; "INFO: Storing file" &lt;&lt; std::endl;
-	auto store_result = store(req);
-	if (!store_result) {
-		std::cerr &lt;&lt; "ERROR: Store failed: "
-		          &lt;&lt; store_result.error().message() &lt;&lt; std::endl;
-		return;
-	}
+    std::cout &lt;&lt; "INFO: Storing file" &lt;&lt; std::endl;
+    auto store_result = store(req);
+    if (!store_result) {
+        std::cerr &lt;&lt; "ERROR: Store failed: "
+                  &lt;&lt; store_result.error().message() &lt;&lt; std::endl;
+        return;
+    }
 
-	notify(req);
-	std::cout &lt;&lt; "INFO: Upload complete" &lt;&lt; std::endl;
+    notify(req);
+    std::cout &lt;&lt; "INFO: Upload complete" &lt;&lt; std::endl;
 }
 </code></pre>
 <p>哪次上传失败了？是同一个用户还是不同用户？在等什么——磁盘 I/O、下游服务还是锁？store 调用花了多长时间？失败后有没有重试？这些问题从这个函数产生的日志中一个都答不上来。值班工程师只能按时间戳范围 grep 日志，靠猜测建立关联，然后请用户重现问题。</p>
 <p>再看同一个函数加上结构化日志、关联 ID 和维度指标之后的效果：</p>
 <pre><code class="language-cpp">void handle_upload(upload_context&amp; ctx) {
-	auto span = ctx.tracer().start_span("handle_upload", {
-		{"request_id", ctx.request_id()},
-		{"user_id",    ctx.user_id()},
-		{"file_size",  ctx.file_size()},
-		{"shard",      ctx.shard_id()},
-	});
+    auto span = ctx.tracer().start_span("handle_upload", {
+        {"request_id", ctx.request_id()},
+        {"user_id",    ctx.user_id()},
+        {"file_size",  ctx.file_size()},
+        {"shard",      ctx.shard_id()},
+    });
 
-	ctx.log(severity::info, "upload_started", {
-		{"request_id", ctx.request_id()},
-		{"file_name",  ctx.file_name()},
-		{"file_size",  std::to_string(ctx.file_size())},
-	});
+    ctx.log(severity::info, "upload_started", {
+        {"request_id", ctx.request_id()},
+        {"file_name",  ctx.file_name()},
+        {"file_size",  std::to_string(ctx.file_size())},
+    });
 
-	auto validation = validate(ctx);
-	if (!validation) {
-		ctx.log(severity::warning, "validation_failed", {
-			{"request_id", ctx.request_id()},
-			{"reason",     validation.error().category()},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "validation"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto validation = validate(ctx);
+    if (!validation) {
+        ctx.log(severity::warning, "validation_failed", {
+            {"request_id", ctx.request_id()},
+            {"reason",     validation.error().category()},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "validation"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	auto store_result = store(ctx);
-	if (!store_result) {
-		ctx.log(severity::error, "store_failed", {
-			{"request_id",  ctx.request_id()},
-			{"dependency",  "blob_store"},
-			{"error_class", store_result.error().category()},
-			{"latency_ms",  std::to_string(store_result.elapsed_ms())},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "store"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto store_result = store(ctx);
+    if (!store_result) {
+        ctx.log(severity::error, "store_failed", {
+            {"request_id",  ctx.request_id()},
+            {"dependency",  "blob_store"},
+            {"error_class", store_result.error().category()},
+            {"latency_ms",  std::to_string(store_result.elapsed_ms())},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "store"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
-		{{"shard", ctx.shard_id()}});
-	ctx.log(severity::info, "upload_complete", {
-		{"request_id", ctx.request_id()},
-		{"latency_ms", std::to_string(span.elapsed_ms())},
-	});
+    ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
+        {{"shard", ctx.shard_id()}});
+    ctx.log(severity::info, "upload_complete", {
+        {"request_id", ctx.request_id()},
+        {"latency_ms", std::to_string(span.elapsed_ms())},
+    });
 }
 </code></pre>
 <p>现在值班工程师按 <code>request_id</code> 过滤，立刻看到超时发生在 <code>store</code> 阶段、<code>dependency=blob_store</code>，再查看按 shard 分组的 <code>upload_duration_ms</code> 直方图，发现 shard-3 延迟在 09:40 飙升。blob store 仪表盘印证了该依赖当时确实在劣化。整个调查从数小时缩短到数分钟。</p>
@@ -4780,30 +4780,30 @@ ctx.log(severity::error, "dependency_connect_failed", {
 <p>异步原生服务中有一个常见问题：延迟其实花在了排队上，而不是执行上。如果追踪上下文没有跨执行器边界传播，这部分时间就是不可见的：</p>
 <pre><code class="language-cpp">// 没有追踪上下文传播。span 只覆盖执行阶段，不覆盖等待阶段。
 void enqueue_work(thread_pool&amp; pool, request req) {
-	pool.submit([req = std::move(req)] {
-		auto span = tracer::start_span("process_request");  // 工作运行时才开始计时。
-		process(req);
-	});
-	// submit() 到 lambda 实际执行之间的时间丢失了。
-	// 如果线程池饱和，请求在队列中等待 500ms，
-	// 但追踪显示 2ms 的执行时间。运维人员在追踪中
-	// 看到低延迟，而用户体验到高延迟。排队时间是
-	// 一个盲点。
+    pool.submit([req = std::move(req)] {
+        auto span = tracer::start_span("process_request");  // 工作运行时才开始计时。
+        process(req);
+    });
+    // submit() 到 lambda 实际执行之间的时间丢失了。
+    // 如果线程池饱和，请求在队列中等待 500ms，
+    // 但追踪显示 2ms 的执行时间。运维人员在追踪中
+    // 看到低延迟，而用户体验到高延迟。排队时间是
+    // 一个盲点。
 }
 </code></pre>
 <p>正确传播上下文后，完整图景一目了然：</p>
 <pre><code class="language-cpp">void enqueue_work(thread_pool&amp; pool, request req, trace_context ctx) {
-	auto enqueue_time = steady_clock::now();
-	pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
-		auto queue_span = ctx.start_span("queued", {
-			{"queue_ms", std::to_string(duration_cast&lt;milliseconds&gt;(
-				steady_clock::now() - enqueue_time).count())},
-		});
-		queue_span.end();
+    auto enqueue_time = steady_clock::now();
+    pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
+        auto queue_span = ctx.start_span("queued", {
+            {"queue_ms", std::to_string(duration_cast&lt;milliseconds&gt;(
+                steady_clock::now() - enqueue_time).count())},
+        });
+        queue_span.end();
 
-		auto exec_span = ctx.start_span("process_request");
-		process(req);
-	});
+        auto exec_span = ctx.start_span("process_request");
+        process(req);
+    });
 }
 </code></pre>
 <p>现在追踪中显示两个 span——排队和执行——都挂在父请求下面。一旦排队时间占了大头，在追踪瀑布图中一眼就能看出来。这恰恰是只靠指标（比如平均处理时间）会系统性掩盖的那类延迟。</p>
@@ -4838,20 +4838,20 @@ void enqueue_work(thread_pool&amp; pool, request req) {
 <pre><code class="language-cpp">enum class severity { debug, info, warning, error };
 
 struct diagnostic_field {
-	std::string_view key;
-	std::string_view value;
+    std::string_view key;
+    std::string_view value;
 };
 
 struct diagnostics_sink {
-	virtual ~diagnostics_sink() = default;
+    virtual ~diagnostics_sink() = default;
 
-	virtual void record_event(severity level,
-							  std::string_view event_name,
-							  std::span&lt;diagnostic_field const&gt; fields) noexcept = 0;
+    virtual void record_event(severity level,
+                              std::string_view event_name,
+                              std::span&lt;diagnostic_field const&gt; fields) noexcept = 0;
 
-	virtual void increment_counter(std::string_view name,
-								   std::int64_t delta,
-								   std::span&lt;diagnostic_field const&gt; dimensions) noexcept = 0;
+    virtual void increment_counter(std::string_view name,
+                                   std::int64_t delta,
+                                   std::span&lt;diagnostic_field const&gt; dimensions) noexcept = 0;
 };
 </code></pre>
 <p>这类接口让库保持本分。库可以上报解析失败、重试、缓存淘汰或重加载耗时，而不必把某个厂商 SDK 硬编码进每个使用它的二进制文件。怎么附加请求 ID、怎么导出指标、怎么接入追踪系统，都由宿主来决定。</p>

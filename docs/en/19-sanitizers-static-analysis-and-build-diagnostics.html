@@ -242,18 +242,18 @@ endif()
 <h3 id="the-bug-that-works-without-asan"><a class="header" href="#the-bug-that-works-without-asan">The bug that “works” without ASan</a></h3>
 <p>This is the canonical case that wastes days of debugging time in codebases that skip sanitizer builds:</p>
 <pre><code class="language-cpp">auto get_session_name(session_registry&amp; registry, session_id id)
-	-&gt; std::string_view
+    -&gt; std::string_view
 {
-	auto it = registry.find(id);
-	if (it == registry.end()) return {};
-	return it-&gt;second.name();  // Returns view into the session object.
+    auto it = registry.find(id);
+    if (it == registry.end()) return {};
+    return it-&gt;second.name();  // Returns view into the session object.
 }
 
 void log_and_remove_session(session_registry&amp; registry, session_id id)
 {
-	auto name = get_session_name(registry, id);
-	registry.erase(id);             // Session destroyed. name is now dangling.
-	audit_log("removed session: {}", name);  // Use-after-free.
+    auto name = get_session_name(registry, id);
+    registry.erase(id);             // Session destroyed. name is now dangling.
+    audit_log("removed session: {}", name);  // Use-after-free.
 }
 </code></pre>
 <p>Without ASan, this code will usually pass tests and even run correctly in production for months. The freed memory still contains the old string data until something else overwrites it. The test passes. Code review might not catch it – the function looks straightforward. When it does fail, the symptom is garbled log output or a crash in an unrelated allocation, nowhere near the actual bug.</p>
@@ -278,7 +278,7 @@ previously allocated by thread T0 here:
 <p>The report identifies the exact read, the exact free, and the exact allocation. Compare that with the alternative: a corrupted log entry three weeks from now that nobody connects to this code path.</p>
 <p>Typical build characteristics look like this:</p>
 <pre><code class="language-bash">clang++ -std=c++23 -O1 -g -fno-omit-frame-pointer \
-	-fsanitize=address,undefined
+    -fsanitize=address,undefined
 </code></pre>
 <p>The exact flags vary by toolchain, but the principles are stable: keep enough optimization to preserve realistic structure, keep debug info, and keep frame pointers so stacks are usable.</p>
 <h3 id="undefinedbehaviorsanitizer"><a class="header" href="#undefinedbehaviorsanitizer">UndefinedBehaviorSanitizer</a></h3>
@@ -286,9 +286,9 @@ previously allocated by thread T0 here:
 <p>Do not over-interpret it, though. UBSan is not a proof system. It only reports behavior that the exercised execution encountered and that the enabled checks can see.</p>
 <p>A concrete example: signed overflow in size calculations is a common source of security bugs that compilers are free to exploit.</p>
 <pre><code class="language-cpp">auto compute_buffer_size(std::int32_t width, std::int32_t height, std::int32_t channels)
-	-&gt; std::int32_t
+    -&gt; std::int32_t
 {
-	return width * height * channels;  // Signed overflow if product exceeds INT32_MAX.
+    return width * height * channels;  // Signed overflow if product exceeds INT32_MAX.
 }
 </code></pre>
 <p>For <code>width=4096, height=4096, channels=4</code>, the product is 67,108,864 – safe. For <code>width=32768, height=32768, channels=4</code>, the product is 4,294,967,296 which overflows a 32-bit signed integer. Without UBSan, the compiler may optimize downstream bounds checks away entirely because signed overflow is undefined. UBSan catches this at the multiplication:</p>
@@ -301,21 +301,21 @@ represented in type 'int'
 <h3 id="the-data-race-that-tests-never-catch"><a class="header" href="#the-data-race-that-tests-never-catch">The data race that tests never catch</a></h3>
 <p>Data races are invisible to testing without TSan because they depend on scheduling. Consider a metrics counter shared between a request handler and a background reporter:</p>
 <pre><code class="language-cpp">struct service_stats {
-	std::int64_t requests_handled = 0;   // No synchronization.
-	std::int64_t bytes_processed = 0;
+    std::int64_t requests_handled = 0;   // No synchronization.
+    std::int64_t bytes_processed = 0;
 };
 
 // Thread 1: request handler
 void handle_request(service_stats&amp; stats, request const&amp; req) {
-	process(req);
-	stats.requests_handled++;    // Data race: unsynchronized write.
-	stats.bytes_processed += req.size();
+    process(req);
+    stats.requests_handled++;    // Data race: unsynchronized write.
+    stats.bytes_processed += req.size();
 }
 
 // Thread 2: periodic reporter
 void report_stats(service_stats const&amp; stats) {
-	log_metrics("requests", stats.requests_handled);   // Data race: unsynchronized read.
-	log_metrics("bytes", stats.bytes_processed);
+    log_metrics("requests", stats.requests_handled);   // Data race: unsynchronized read.
+    log_metrics("bytes", stats.bytes_processed);
 }
 </code></pre>
 <p>This code will pass every test you write. It will run correctly for months on x86 where the memory model is relatively forgiving. It becomes a problem when the compiler reorders the writes, when the optimizer lifts the read into a register, or when someone ports to ARM. The bug is real today but the symptoms are deferred.</p>

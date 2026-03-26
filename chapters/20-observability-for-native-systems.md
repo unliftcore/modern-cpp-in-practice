@@ -31,26 +31,26 @@ To make the value concrete, consider a service that processes file uploads. A us
 
 ```cpp
 void handle_upload(const http_request& req) {
-	std::println("INFO: Processing upload");
+    std::println("INFO: Processing upload");
 
-	std::println("INFO: Starting validation");
-	auto validation = validate(req);
-	if (!validation) {
-		std::println(stderr, "ERROR: Validation failed: {}",
-		             validation.error().message());
-		return;
-	}
+    std::println("INFO: Starting validation");
+    auto validation = validate(req);
+    if (!validation) {
+        std::println(stderr, "ERROR: Validation failed: {}",
+                     validation.error().message());
+        return;
+    }
 
-	std::println("INFO: Storing file");
-	auto store_result = store(req);
-	if (!store_result) {
-		std::println(stderr, "ERROR: Store failed: {}",
-		             store_result.error().message());
-		return;
-	}
+    std::println("INFO: Storing file");
+    auto store_result = store(req);
+    if (!store_result) {
+        std::println(stderr, "ERROR: Store failed: {}",
+                     store_result.error().message());
+        return;
+    }
 
-	notify(req);
-	std::println("INFO: Upload complete");
+    notify(req);
+    std::println("INFO: Upload complete");
 }
 ```
 
@@ -60,49 +60,49 @@ Now the same function with structured logging, correlation IDs, and dimensional 
 
 ```cpp
 void handle_upload(upload_context& ctx) {
-	auto span = ctx.tracer().start_span("handle_upload", {
-		{"request_id", ctx.request_id()},
-		{"user_id",    ctx.user_id()},
-		{"file_size",  ctx.file_size()},
-		{"shard",      ctx.shard_id()},
-	});
+    auto span = ctx.tracer().start_span("handle_upload", {
+        {"request_id", ctx.request_id()},
+        {"user_id",    ctx.user_id()},
+        {"file_size",  ctx.file_size()},
+        {"shard",      ctx.shard_id()},
+    });
 
-	ctx.log(severity::info, "upload_started", {
-		{"request_id", ctx.request_id()},
-		{"file_name",  ctx.file_name()},
-		{"file_size",  std::to_string(ctx.file_size())},
-	});
+    ctx.log(severity::info, "upload_started", {
+        {"request_id", ctx.request_id()},
+        {"file_name",  ctx.file_name()},
+        {"file_size",  std::to_string(ctx.file_size())},
+    });
 
-	auto validation = validate(ctx);
-	if (!validation) {
-		ctx.log(severity::warning, "validation_failed", {
-			{"request_id", ctx.request_id()},
-			{"reason",     validation.error().category()},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "validation"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto validation = validate(ctx);
+    if (!validation) {
+        ctx.log(severity::warning, "validation_failed", {
+            {"request_id", ctx.request_id()},
+            {"reason",     validation.error().category()},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "validation"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	auto store_result = store(ctx);
-	if (!store_result) {
-		ctx.log(severity::error, "store_failed", {
-			{"request_id",  ctx.request_id()},
-			{"dependency",  "blob_store"},
-			{"error_class", store_result.error().category()},
-			{"latency_ms",  std::to_string(store_result.elapsed_ms())},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "store"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto store_result = store(ctx);
+    if (!store_result) {
+        ctx.log(severity::error, "store_failed", {
+            {"request_id",  ctx.request_id()},
+            {"dependency",  "blob_store"},
+            {"error_class", store_result.error().category()},
+            {"latency_ms",  std::to_string(store_result.elapsed_ms())},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "store"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
-		{{"shard", ctx.shard_id()}});
-	ctx.log(severity::info, "upload_complete", {
-		{"request_id", ctx.request_id()},
-		{"latency_ms", std::to_string(span.elapsed_ms())},
-	});
+    ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
+        {{"shard", ctx.shard_id()}});
+    ctx.log(severity::info, "upload_complete", {
+        {"request_id", ctx.request_id()},
+        {"latency_ms", std::to_string(span.elapsed_ms())},
+    });
 }
 ```
 
@@ -226,15 +226,15 @@ A common failure mode in async native services is latency that lives in queueing
 ```cpp
 // No trace context propagation. The span only covers execution, not waiting.
 void enqueue_work(thread_pool& pool, request req) {
-	pool.submit([req = std::move(req)] {
-		auto span = tracer::start_span("process_request");  // Starts when work RUNS.
-		process(req);
-	});
-	// Time between submit() and when the lambda actually executes is lost.
-	// If the pool is saturated, requests wait 500ms in the queue,
-	// but traces show 2ms of execution time. Operators see low latency
-	// in traces while users experience high latency. The queue time is a
-	// blind spot.
+    pool.submit([req = std::move(req)] {
+        auto span = tracer::start_span("process_request");  // Starts when work RUNS.
+        process(req);
+    });
+    // Time between submit() and when the lambda actually executes is lost.
+    // If the pool is saturated, requests wait 500ms in the queue,
+    // but traces show 2ms of execution time. Operators see low latency
+    // in traces while users experience high latency. The queue time is a
+    // blind spot.
 }
 ```
 
@@ -242,17 +242,17 @@ With proper context propagation, the full picture is visible:
 
 ```cpp
 void enqueue_work(thread_pool& pool, request req, trace_context ctx) {
-	auto enqueue_time = steady_clock::now();
-	pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
-		auto queue_span = ctx.start_span("queued", {
-			{"queue_ms", std::to_string(duration_cast<milliseconds>(
-				steady_clock::now() - enqueue_time).count())},
-		});
-		queue_span.end();
+    auto enqueue_time = steady_clock::now();
+    pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
+        auto queue_span = ctx.start_span("queued", {
+            {"queue_ms", std::to_string(duration_cast<milliseconds>(
+                steady_clock::now() - enqueue_time).count())},
+        });
+        queue_span.end();
 
-		auto exec_span = ctx.start_span("process_request");
-		process(req);
-	});
+        auto exec_span = ctx.start_span("process_request");
+        process(req);
+    });
 }
 ```
 
@@ -300,20 +300,20 @@ A reusable library should not assume a global logging framework, metrics backend
 enum class severity { debug, info, warning, error };
 
 struct diagnostic_field {
-	std::string_view key;
-	std::string_view value;
+    std::string_view key;
+    std::string_view value;
 };
 
 struct diagnostics_sink {
-	virtual ~diagnostics_sink() = default;
+    virtual ~diagnostics_sink() = default;
 
-	virtual void record_event(severity level,
-							  std::string_view event_name,
-							  std::span<diagnostic_field const> fields) noexcept = 0;
+    virtual void record_event(severity level,
+                              std::string_view event_name,
+                              std::span<diagnostic_field const> fields) noexcept = 0;
 
-	virtual void increment_counter(std::string_view name,
-								   std::int64_t delta,
-								   std::span<diagnostic_field const> dimensions) noexcept = 0;
+    virtual void increment_counter(std::string_view name,
+                                   std::int64_t delta,
+                                   std::span<diagnostic_field const> dimensions) noexcept = 0;
 };
 ```
 

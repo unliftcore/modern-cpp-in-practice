@@ -14,7 +14,7 @@ Take a parser boundary.
 
 ```cpp
 auto parse_frame(std::span<const std::byte> bytes)
-	-> std::expected<Frame, ParseError>;
+    -> std::expected<Frame, ParseError>;
 ```
 
 This single line communicates several things immediately.
@@ -57,21 +57,21 @@ When a borrowed parameter outlives its source, the result is undefined behavior 
 ```cpp
 class Logger {
 public:
-	void set_prefix(std::string_view prefix) {
-		prefix_ = prefix; // BUG: stores a view, not a copy
-	}
+    void set_prefix(std::string_view prefix) {
+        prefix_ = prefix; // BUG: stores a view, not a copy
+    }
 
-	void log(std::string_view message) {
-		fmt::print("[{}] {}\n", prefix_, message); // reads dangling view
-	}
+    void log(std::string_view message) {
+        fmt::print("[{}] {}\n", prefix_, message); // reads dangling view
+    }
 
 private:
-	std::string_view prefix_; // non-owning -- lifetime depends on caller
+    std::string_view prefix_; // non-owning -- lifetime depends on caller
 };
 
 void configure_logger(Logger& logger) {
-	std::string name = build_service_name();
-	logger.set_prefix(name); // name is destroyed at end of scope
+    std::string name = build_service_name();
+    logger.set_prefix(name); // name is destroyed at end of scope
 } // name destroyed here -- logger.prefix_ is now dangling
 ```
 
@@ -80,12 +80,12 @@ The fix is straightforward: if the member must outlive the call, it must own its
 ```cpp
 class Logger {
 public:
-	void set_prefix(std::string prefix) { // takes ownership by value
-		prefix_ = std::move(prefix);
-	}
-	// ...
+    void set_prefix(std::string prefix) { // takes ownership by value
+        prefix_ = std::move(prefix);
+    }
+    // ...
 private:
-	std::string prefix_; // owning -- no lifetime dependency on caller
+    std::string prefix_; // owning -- no lifetime dependency on caller
 };
 ```
 
@@ -100,11 +100,11 @@ Consider a request object that stores a tenant name.
 ```cpp
 class RequestContext {
 public:
-	explicit RequestContext(std::string tenant)
-		: tenant_(std::move(tenant)) {}
+    explicit RequestContext(std::string tenant)
+        : tenant_(std::move(tenant)) {}
 
 private:
-	std::string tenant_;
+    std::string tenant_;
 };
 ```
 
@@ -126,25 +126,25 @@ The cost of getting parameter passing wrong is not always dramatic, but it compo
 ```cpp
 class Registry {
 public:
-	void register_name(const std::string& name) {
-		names_.push_back(name); // always copies, even if caller passed a temporary
-	}
+    void register_name(const std::string& name) {
+        names_.push_back(name); // always copies, even if caller passed a temporary
+    }
 private:
-	std::vector<std::string> names_;
+    std::vector<std::string> names_;
 };
 
 // Caller:
 registry.register_name(build_name()); // builds a temporary string, copies it,
-									  // then destroys the temporary. The move
-									  // that pass-by-value would have enabled
-									  // is lost.
+                                      // then destroys the temporary. The move
+                                      // that pass-by-value would have enabled
+                                      // is lost.
 ```
 
 With pass-by-value-and-move, the temporary is moved directly into the container at zero copy cost:
 
 ```cpp
 void register_name(std::string name) {
-	names_.push_back(std::move(name)); // rvalue callers: 1 move. lvalue callers: 1 copy + 1 move.
+    names_.push_back(std::move(name)); // rvalue callers: 1 move. lvalue callers: 1 copy + 1 move.
 }
 ```
 
@@ -223,8 +223,8 @@ This kind of API survives in many codebases because it seems flexible.
 ```cpp
 // Anti-pattern: signature hides ownership, failure, and buffer contract.
 bool encode_record(const Record& record,
-			   std::vector<std::byte>& output,
-			   std::string* error_message = nullptr);
+               std::vector<std::byte>& output,
+               std::string* error_message = nullptr);
 ```
 
 This one function now carries several hidden rules.
@@ -240,11 +240,11 @@ A stronger API usually splits the semantics.
 
 ```cpp
 auto encode_record(const Record& record)
-	-> std::expected<std::vector<std::byte>, EncodeError>;
+    -> std::expected<std::vector<std::byte>, EncodeError>;
 
 auto append_encoded_record(const Record& record,
-				   ByteAppender& output)
-	-> std::expected<void, EncodeError>;
+                   ByteAppender& output)
+    -> std::expected<void, EncodeError>;
 ```
 
 Now the caller chooses between owned result production and append-style mutation, and the failure contract is explicit. The two different operations no longer pretend to be one generic "flexible" interface.
@@ -262,25 +262,25 @@ The difference is concrete:
 Widget* create_widget(const WidgetConfig& cfg);
 
 void setup() {
-	auto* w = create_widget(cfg);
-	// Does the caller own w? Does a global registry own it?
-	// Must the caller call delete? delete[]? A custom deallocator?
-	// Nothing in the signature answers these questions.
-	use(w);
-	// If the caller guesses wrong, the result is a leak or a double-free.
+    auto* w = create_widget(cfg);
+    // Does the caller own w? Does a global registry own it?
+    // Must the caller call delete? delete[]? A custom deallocator?
+    // Nothing in the signature answers these questions.
+    use(w);
+    // If the caller guesses wrong, the result is a leak or a double-free.
 }
 ```
 
 ```cpp
 // Clear: unique_ptr states exclusive caller ownership unambiguously.
 auto create_widget(const WidgetConfig& cfg)
-	-> std::expected<std::unique_ptr<Widget>, WidgetError>;
+    -> std::expected<std::unique_ptr<Widget>, WidgetError>;
 
 void setup() {
-	auto result = create_widget(cfg);
-	if (!result) { /* handle error */ }
-	auto widget = std::move(*result); // ownership transferred, no ambiguity
-	// widget is destroyed automatically when it leaves scope
+    auto result = create_widget(cfg);
+    if (!result) { /* handle error */ }
+    auto widget = std::move(*result); // ownership transferred, no ambiguity
+    // widget is destroyed automatically when it leaves scope
 }
 ```
 

@@ -202,44 +202,44 @@
 <h3 id="无主工作的资源泄漏"><a class="header" href="#无主工作的资源泄漏">无主工作的资源泄漏</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: detached task leaks a database connection on cancellation.
 void on_request(request req) {
-	std::jthread([req = std::move(req)] {
-		auto conn = db_pool.acquire();        // acquired, never returned on some paths
-		auto result = conn.execute(req.query);
-		send_response(req.client, result);
-	}).detach(); // no owner, no cancellation, no cleanup guarantee
+    std::jthread([req = std::move(req)] {
+        auto conn = db_pool.acquire();        // acquired, never returned on some paths
+        auto result = conn.execute(req.query);
+        send_response(req.client, result);
+    }).detach(); // no owner, no cancellation, no cleanup guarantee
 }
 </code></pre>
 <p>进程一旦开始关闭，detached thread 不会收到 stop request，数据库连接也不会归还连接池。把这种情况乘以滚动部署期间成千上万的在途请求：数据库会遭遇连接耗尽，旧进程卡在 <code>std::thread</code> 的析构函数里；更糟的情况是，进程在这些线程仍引用已销毁的全局对象时就退出了。</p>
 <h3 id="未被观察的异常会静默消失"><a class="header" href="#未被观察的异常会静默消失">未被观察的异常会静默消失</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: exception in detached task is never observed.
 void start_background_sync() {
-	auto handle = std::async(std::launch::async, [] {
-		auto data = fetch_remote_config(); // throws on network error
-		apply_config(data);
-	});
-	// handle is destroyed here — std::async's destructor blocks,
-	// but if this were a custom fire-and-forget task, the exception
-	// would be silently swallowed.
+    auto handle = std::async(std::launch::async, [] {
+        auto data = fetch_remote_config(); // throws on network error
+        apply_config(data);
+    });
+    // handle is destroyed here — std::async's destructor blocks,
+    // but if this were a custom fire-and-forget task, the exception
+    // would be silently swallowed.
 }
 </code></pre>
 <p><code>std::async</code> 的析构函数会阻塞等待（这本身就可能出乎意料）。但对于大多数支持 detach 的自定义任务类型，销毁 handle 而不观察结果，异常就会无声无息地消失。系统继续带着过期配置运行，直到数小时后出现一次莫名其妙的行为退化，失败才会被注意到。</p>
 <h3 id="孤儿工作导致关闭挂起"><a class="header" href="#孤儿工作导致关闭挂起">孤儿工作导致关闭挂起</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: shutdown cannot complete because background tasks were never tracked.
 class ingestion_service {
-	void ingest(message msg) {
-		// "just kick off enrichment in the background"
-		pool_.submit([msg = std::move(msg), this] {
-			auto enriched = enrich(msg);       // calls external service, may block
-			store_.write(enriched);
-		});
-	}
+    void ingest(message msg) {
+        // "just kick off enrichment in the background"
+        pool_.submit([msg = std::move(msg), this] {
+            auto enriched = enrich(msg);       // calls external service, may block
+            store_.write(enriched);
+        });
+    }
 
-	void shutdown() {
-		store_.close();    // closes storage
-		pool_.shutdown();  // waits for in-flight tasks
-		// BUG: in-flight tasks may call store_.write() after store_ is closed
-		// BUG: enrich() may block indefinitely — pool shutdown hangs
-	}
+    void shutdown() {
+        store_.close();    // closes storage
+        pool_.shutdown();  // waits for in-flight tasks
+        // BUG: in-flight tasks may call store_.write() after store_ is closed
+        // BUG: enrich() may block indefinitely — pool shutdown hangs
+    }
 };
 </code></pre>
 <p>线程池里确实有任务，但服务对这些任务需要什么资源、该如何取消，完全没有建模。关闭要么挂起（卡在一个阻塞的外部调用上），要么产生竞态（任务还在使用依赖，依赖就被先关掉了）。到了生产环境，一次本该干净的重启变成了进程 kill，进程 kill 又演变成数据丢失。</p>
@@ -247,11 +247,11 @@ class ingestion_service {
 <p>上述三个问题，结构化的回答都指向同一个原则：谁创建了工作，谁就负责它的完成。</p>
 <pre><code class="language-cpp">// Structured: parent scope owns child tasks, propagates cancellation, awaits completion.
 task&lt;void&gt; on_request(request req, std::stop_token stop) {
-	auto conn = co_await db_pool.acquire(stop);  // respects cancellation
-	auto result = co_await conn.execute(req.query, stop);
-	co_await send_response(req.client, result);
-	// conn returned to pool when coroutine frame is destroyed
-	// if stop is triggered, co_await points observe it and unwind cleanly
+    auto conn = co_await db_pool.acquire(stop);  // respects cancellation
+    auto result = co_await conn.execute(req.query, stop);
+    co_await send_response(req.client, result);
+    // conn returned to pool when coroutine frame is destroyed
+    // if stop is triggered, co_await points observe it and unwind cleanly
 }
 </code></pre>
 <p>父请求作用域可以在客户端断开或 deadline 到期时取消 token。协程的 awaitable 在每个挂起点检查 token，资源通过普通 RAII 释放，没有任何工作能比拥有者活得更久。与 fire-and-forget 的差别不在于风格，而在于系统能否干净地关闭。</p>
@@ -281,15 +281,15 @@ task&lt;void&gt; on_request(request req, std::stop_token stop) {
 <h2 id="反模式没有有界所有权的-fan-out"><a class="header" href="#反模式没有有界所有权的-fan-out">反模式：没有有界所有权的 fan-out</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: child work outlives the request and overload has no admission limit.
 task&lt;aggregate_reply&gt; handle_request(request req) {
-	auto a = fetch_profile(req.user_id);
-	auto b = fetch_inventory(req.item_id);
-	auto c = fetch_pricing(req.item_id);
+    auto a = fetch_profile(req.user_id);
+    auto b = fetch_inventory(req.item_id);
+    auto c = fetch_pricing(req.item_id);
 
-	co_return aggregate_reply{
-		co_await a,
-		co_await b,
-		co_await c,
-	};
+    co_return aggregate_reply{
+        co_await a,
+        co_await b,
+        co_await c,
+    };
 }
 </code></pre>
 <p>这段代码很整洁，但定义严重不足。</p>

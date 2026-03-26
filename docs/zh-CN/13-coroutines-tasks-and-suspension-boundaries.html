@@ -198,33 +198,33 @@
 <p>要理解协程的设计取舍，先看看它们替代了什么。在协程出现之前，异步代码依赖 continuation-passing style（续体传递风格），即每一步都把回调串到下一步。一个简单的”获取、校验、存储”序列写出来是这样的：</p>
 <pre><code class="language-cpp">// Continuation-passing style — correct but unreadable at scale.
 void handle_request(request req, std::function&lt;void(response)&gt; done) {
-	fetch_profile(req.user_id, [req, done](std::expected&lt;profile, error&gt; prof) {
-		if (!prof) { done(error_response(prof.error())); return; }
-		validate_access(prof-&gt;role, req.resource,
-			[req, prof = *prof, done](std::expected&lt;bool, error&gt; ok) {
-				if (!ok || !*ok) { done(denied_response()); return; }
-				store_audit_log(req, prof,
-					[req, prof, done](std::expected&lt;void, error&gt; result) {
-						if (!result) { done(error_response(result.error())); return; }
-						done(success_response(prof));
-					});
-			});
-	});
+    fetch_profile(req.user_id, [req, done](std::expected&lt;profile, error&gt; prof) {
+        if (!prof) { done(error_response(prof.error())); return; }
+        validate_access(prof-&gt;role, req.resource,
+            [req, prof = *prof, done](std::expected&lt;bool, error&gt; ok) {
+                if (!ok || !*ok) { done(denied_response()); return; }
+                store_audit_log(req, prof,
+                    [req, prof, done](std::expected&lt;void, error&gt; result) {
+                        if (!result) { done(error_response(result.error())); return; }
+                        done(success_response(prof));
+                    });
+            });
+    });
 }
 </code></pre>
 <p>每一步都嵌套更深一层。错误处理在每一层重复。捕获变量的生命周期必须手动管理——按值捕获会带来大量拷贝，按引用捕获则可能悬空。如果再加上超时、取消或重试逻辑，嵌套只会进一步膨胀。这不是刻意构造的极端例子，而是协程出现之前生产代码中异步 C++ 的真实面貌。</p>
 <p>对应的协程版本：</p>
 <pre><code class="language-cpp">task&lt;response&gt; handle_request(request req) {
-	auto prof = co_await fetch_profile(req.user_id);
-	if (!prof) co_return error_response(prof.error());
+    auto prof = co_await fetch_profile(req.user_id);
+    if (!prof) co_return error_response(prof.error());
 
-	auto ok = co_await validate_access(prof-&gt;role, req.resource);
-	if (!ok || !*ok) co_return denied_response();
+    auto ok = co_await validate_access(prof-&gt;role, req.resource);
+    if (!ok || !*ok) co_return denied_response();
 
-	auto result = co_await store_audit_log(req, *prof);
-	if (!result) co_return error_response(result.error());
+    auto result = co_await store_audit_log(req, *prof);
+    if (!result) co_return error_response(result.error());
 
-	co_return success_response(*prof);
+    co_return success_response(*prof);
 }
 </code></pre>
 <p>代码可以顺序阅读，每一步只有一条错误路径，也没有嵌套。改进是实实在在的。但状态机并没有消失——它搬进了协程帧。本章剩余部分讨论的，就是这对所有权和生命周期意味着什么。</p>
@@ -249,21 +249,21 @@ void handle_request(request req, std::function&lt;void(response)&gt; done) {
 <h2 id="反模式借用的请求状态跨越挂起存活"><a class="header" href="#反模式借用的请求状态跨越挂起存活">反模式：借用的请求状态跨越挂起存活</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: borrowed data may dangle after suspension.
 task&lt;parsed_request&gt; parse_and_authorize(
-	std::string_view body,
-	const auth_context&amp; auth) {
+    std::string_view body,
+    const auth_context&amp; auth) {
 
-	auto token = co_await fetch_access_token(auth.user_id());
-	co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
+    auto token = co_await fetch_access_token(auth.user_id());
+    co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
 }
 </code></pre>
 <p>这段代码看上去很高效，因为省去了一次拷贝。但它只在调用方保证 <code>body</code> 在协程完成前始终有效时才是正确的。在服务端代码中，“协程完成“通常意味着网络 I/O、认证查找、重试和超时处理全部结束。这可不是一个轻松的承诺，而且往往是一个错误的承诺。</p>
 <p>更安全的默认做法是：凡是挂起后还要用的数据，都把所有权移交给协程。</p>
 <pre><code class="language-cpp">task&lt;parsed_request&gt; parse_and_authorize(
-	std::string body,
-	auth_context auth) {
+    std::string body,
+    auth_context auth) {
 
-	auto token = co_await fetch_access_token(auth.user_id());
-	co_return parse_request(body, token);
+    auto token = co_await fetch_access_token(auth.user_id());
+    co_return parse_request(body, token);
 }
 </code></pre>
 <p>拷贝或移动的开销清晰可见、便于评审。协程帧现在拥有了它所需的一切。如果分配开销确实构成问题，那就去测量，再围绕消息边界或存储复用来重新设计。不要悄悄地跨越时间借用数据。</p>
@@ -272,10 +272,10 @@ task&lt;parsed_request&gt; parse_and_authorize(
 <h3 id="指向调用方局部变量的悬空引用"><a class="header" href="#指向调用方局部变量的悬空引用">指向调用方局部变量的悬空引用</a></h3>
 <pre><code class="language-cpp">// BUG: coroutine captures a reference to a local that dies when the caller returns.
 task&lt;void&gt; start_processing(dispatcher&amp; d) {
-	std::vector&lt;record&gt; batch = build_batch();
-	co_await d.schedule([&amp;batch] {     // lambda captures batch by reference
-		process(batch);                // batch may be destroyed if start_processing
-	});                                // is suspended and its caller exits
+    std::vector&lt;record&gt; batch = build_batch();
+    co_await d.schedule([&amp;batch] {     // lambda captures batch by reference
+        process(batch);                // batch may be destroyed if start_processing
+    });                                // is suspended and its caller exits
 }
 </code></pre>
 <p>当 <code>start_processing</code> 在 <code>co_await</code> 处挂起时，协程帧会让 <code>batch</code> 继续存活——但前提是帧本身还活着。一旦任务被 detach 或父作用域退出，协程帧随之销毁，lambda 中的引用便会悬空。修复方法：按值捕获，或通过结构化所有权确保父作用域的生命周期长于被调度的工作。</p>
@@ -284,20 +284,20 @@ task&lt;void&gt; start_processing(dispatcher&amp; d) {
 task&lt;void&gt; log_message(std::string_view msg);
 
 void caller() {
-	log_message("request started"s + request_id()); // temporary std::string
-	// temporary is destroyed here, before the coroutine even begins if lazy-start
+    log_message("request started"s + request_id()); // temporary std::string
+    // temporary is destroyed here, before the coroutine even begins if lazy-start
 }
 </code></pre>
 <p>如果是 lazy-start 协程，这个临时 <code>std::string</code> 在分号处就销毁了，而协程甚至还没开始执行。即使是 eager-start 协程，如果帧把 <code>msg</code> 存为 <code>string_view</code>，第一次挂起之后它就指向了已释放的内存。解决方案是在协程签名中按值接收 <code>std::string</code>，让帧持有自己的副本。</p>
 <h3 id="跨越挂起的-this-指针"><a class="header" href="#跨越挂起的-this-指针">跨越挂起的 <code>this</code> 指针</a></h3>
 <pre><code class="language-cpp">// BUG: 'this' may dangle if the object is moved or destroyed while suspended.
 class connection {
-	std::string peer_addr_;
+    std::string peer_addr_;
 public:
-	task&lt;void&gt; run() {
-		auto data = co_await read_socket();    // suspended here
-		log("received from " + peer_addr_);    // 'this' may be invalid
-	}
+    task&lt;void&gt; run() {
+        auto data = co_await read_socket();    // suspended here
+        log("received from " + peer_addr_);    // 'this' may be invalid
+    }
 };
 </code></pre>
 <p>如果 <code>connection</code> 对象在 <code>run()</code> 挂起期间被移动到另一个容器或被销毁，恢复时 <code>this</code> 就失效了。成员协程只有在对象生命周期保证长于协程时才安全。实践中，这通常意味着协程应持有 <code>shared_ptr&lt;connection&gt;</code>，或者所有者作用域必须做结构化设计，防止对象在挂起期间被销毁。</p>

@@ -32,17 +32,17 @@ The range version separates the concerns structurally:
 
 ```cpp
 auto export_rows = records
-	| std::views::filter([](const LogRecord& r) {
-		  return r.severity >= Severity::warning && !r.redacted;
-	  })
-	| std::views::transform([](const LogRecord& r) {
-		  return ExportRow{
-			  .timestamp = r.timestamp,
-			  .service = r.service,
-			  .message = r.message,
-		  };
-	  })
-	| std::ranges::to<std::vector>();
+    | std::views::filter([](const LogRecord& r) {
+          return r.severity >= Severity::warning && !r.redacted;
+      })
+    | std::views::transform([](const LogRecord& r) {
+          return ExportRow{
+              .timestamp = r.timestamp,
+              .service = r.service,
+              .message = r.message,
+          };
+      })
+    | std::ranges::to<std::vector>();
 ```
 
 This is good range code because the pipeline is the business logic. There is no tricky mutation, no lifetime ambiguity in the source, and a clear materialization point at the end. The intermediate storage never existed conceptually, so not allocating it improves both clarity and cost.
@@ -89,10 +89,10 @@ Consider an anti-pattern that shows up in request processing code:
 
 ```cpp
 auto tenant_ids() {
-	return load_tenants()
-		| std::views::transform([](const Tenant& t) {
-			  return std::string_view{t.id};
-		  }); // BUG: returned view depends on destroyed temporary container
+    return load_tenants()
+        | std::views::transform([](const Tenant& t) {
+              return std::string_view{t.id};
+          }); // BUG: returned view depends on destroyed temporary container
 }
 ```
 

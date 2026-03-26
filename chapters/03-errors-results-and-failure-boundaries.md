@@ -34,11 +34,11 @@ enum ConfigErrorCode { kOk = 0, kFileNotFound = 1, kParseError = 2, kInvalidValu
 ConfigErrorCode load_service_config(const std::string& path, ServiceConfig* out);
 
 void startup() {
-	ServiceConfig cfg;
-	load_service_config("/etc/app/config.yaml", &cfg); // BUG: return code silently ignored
+    ServiceConfig cfg;
+    load_service_config("/etc/app/config.yaml", &cfg); // BUG: return code silently ignored
 
-	// cfg may be uninitialized garbage -- the program continues anyway.
-	listen(cfg.port); // binds to nonsense port or zero
+    // cfg may be uninitialized garbage -- the program continues anyway.
+    listen(cfg.port); // binds to nonsense port or zero
 }
 ```
 
@@ -93,19 +93,19 @@ Consider a configuration loader:
 
 ```cpp
 enum class ConfigErrorCode {
-	file_not_found,
-	parse_error,
-	invalid_value,
+    file_not_found,
+    parse_error,
+    invalid_value,
 };
 
 struct ConfigError {
-	ConfigErrorCode code;
-	std::string message;
-	std::string source;
+    ConfigErrorCode code;
+    std::string message;
+    std::string source;
 };
 
 auto load_service_config(std::filesystem::path path)
-	-> std::expected<ServiceConfig, ConfigError>;
+    -> std::expected<ServiceConfig, ConfigError>;
 ```
 
 This contract tells the reader something important. Failure is part of normal control flow at this boundary. The caller must decide whether to abort startup, fall back to a default environment, or report a clear diagnostic. That is different from a deep internal helper whose only sensible failure policy is to unwind to the boundary that can actually choose.
@@ -115,18 +115,18 @@ Compare the `expected`-based loader with a traditional output-parameter-plus-boo
 ```cpp
 // Old style: bool return, output parameter, no structured error.
 bool load_service_config(const std::filesystem::path& path,
-						 ServiceConfig* out,
-						 std::string* error_msg = nullptr);
+                         ServiceConfig* out,
+                         std::string* error_msg = nullptr);
 
 void startup() {
-	ServiceConfig cfg;
-	std::string err;
-	if (!load_service_config("/etc/app/config.yaml", &cfg, &err)) {
-		// What kind of failure? File missing? Parse error? Permission denied?
-		// err is a free-form string -- no programmatic branching possible.
-		LOG_ERROR("config load failed: {}", err);
-		std::exit(1); // only option: cannot distinguish retriable from fatal
-	}
+    ServiceConfig cfg;
+    std::string err;
+    if (!load_service_config("/etc/app/config.yaml", &cfg, &err)) {
+        // What kind of failure? File missing? Parse error? Permission denied?
+        // err is a free-form string -- no programmatic branching possible.
+        LOG_ERROR("config load failed: {}", err);
+        std::exit(1); // only option: cannot distinguish retriable from fatal
+    }
 }
 ```
 
@@ -141,19 +141,19 @@ One of the most common production failures is logging plus partial status plus o
 ```cpp
 // Anti-pattern: side effects and transport are mixed.
 bool refresh_profile(Cache& cache, DbClient& db, UserId user_id) {
-	try {
-		auto row = db.fetch_profile(user_id);
-		if (!row) {
-			LOG_ERROR("profile not found for {}", user_id);
-			return false;
-		}
+    try {
+        auto row = db.fetch_profile(user_id);
+        if (!row) {
+            LOG_ERROR("profile not found for {}", user_id);
+            return false;
+        }
 
-		cache.put(user_id, to_profile(*row));
-		return true;
-	} catch (const DbTimeout& e) {
-		LOG_WARNING("db timeout: {}", e.what());
-		throw; // RISK: some failures logged here, some rethrown, signature hides both
-	}
+        cache.put(user_id, to_profile(*row));
+        return true;
+    } catch (const DbTimeout& e) {
+        LOG_WARNING("db timeout: {}", e.what());
+        throw; // RISK: some failures logged here, some rethrown, signature hides both
+    }
 }
 ```
 
@@ -168,11 +168,11 @@ A subtler variant of the side-effect problem is code that converts failures into
 ```cpp
 // Anti-pattern: failure becomes a silent default.
 int get_retry_limit(const Config& cfg) {
-	auto val = cfg.get_int("retry_limit");
-	if (!val) {
-		return 3; // silent fallback -- no log, no metric, no trace
-	}
-	return *val;
+    auto val = cfg.get_int("retry_limit");
+    if (!val) {
+        return 3; // silent fallback -- no log, no metric, no trace
+    }
+    return *val;
 }
 ```
 
@@ -182,13 +182,13 @@ The better approach makes the default explicit and the fallback observable:
 
 ```cpp
 auto get_retry_limit(const Config& cfg) -> std::uint32_t {
-	constexpr std::uint32_t default_limit = 3;
-	auto val = cfg.get_uint("retry_limit");
-	if (!val) {
-		LOG_INFO("retry_limit not configured, using default={}", default_limit);
-		return default_limit;
-	}
-	return *val;
+    constexpr std::uint32_t default_limit = 3;
+    auto val = cfg.get_uint("retry_limit");
+    if (!val) {
+        LOG_INFO("retry_limit not configured, using default={}", default_limit);
+        return default_limit;
+    }
+    return *val;
 }
 ```
 
@@ -204,21 +204,21 @@ That means translation should happen close to the unstable dependency, not in bu
 
 ```cpp
 auto AccountRepository::load(AccountId id)
-	-> std::expected<AccountSnapshot, AccountLoadError>
+    -> std::expected<AccountSnapshot, AccountLoadError>
 {
-	try {
-		auto row = client_.fetch_account(id);
-		if (!row) {
-			return std::unexpected(AccountLoadError::not_found(id));
-		}
-		return to_snapshot(*row);
-	} catch (const DbTimeout& e) {
-		return std::unexpected(AccountLoadError::temporarily_unavailable(
-			id, e.what()));
-	} catch (const DbProtocolError& e) {
-		return std::unexpected(AccountLoadError::backend_fault(
-			id, e.what()));
-	}
+    try {
+        auto row = client_.fetch_account(id);
+        if (!row) {
+            return std::unexpected(AccountLoadError::not_found(id));
+        }
+        return to_snapshot(*row);
+    } catch (const DbTimeout& e) {
+        return std::unexpected(AccountLoadError::temporarily_unavailable(
+            id, e.what()));
+    } catch (const DbProtocolError& e) {
+        return std::unexpected(AccountLoadError::backend_fault(
+            id, e.what()));
+    }
 }
 ```
 

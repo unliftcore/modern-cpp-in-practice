@@ -31,22 +31,22 @@
 // a vector, and a map entry.  Under load this path may perform
 // 5-10 heap allocations per event.
 struct Event {
-	std::string type;
-	std::string payload;
-	std::vector<std::string> tags;
-	std::unordered_map<std::string, std::string> metadata;
+    std::string type;
+    std::string payload;
+    std::vector<std::string> tags;
+    std::unordered_map<std::string, std::string> metadata;
 };
 
 void process_batch_heavy(std::span<const RawEvent> raw,
                          std::vector<Event>& out) {
-	for (const auto& r : raw) {
-		Event e;
-		e.type = parse_type(r);         // allocates
-		e.payload = parse_payload(r);   // allocates
-		e.tags = parse_tags(r);         // allocates vector + each string
-		e.metadata = parse_meta(r);     // allocates map buckets + nodes
-		out.push_back(std::move(e));    // may reallocate out's buffer
-	}
+    for (const auto& r : raw) {
+        Event e;
+        e.type = parse_type(r);         // allocates
+        e.payload = parse_payload(r);   // allocates
+        e.tags = parse_tags(r);         // allocates vector + each string
+        e.metadata = parse_meta(r);     // allocates map buckets + nodes
+        out.push_back(std::move(e));    // may reallocate out's buffer
+    }
 }
 ```
 
@@ -54,28 +54,28 @@ void process_batch_heavy(std::span<const RawEvent> raw,
 // Allocation-light: pre-sized arena, string views into stable
 // input buffer, fixed-capacity inline storage.
 struct EventView {
-	std::string_view type;
-	std::string_view payload;
-	// Use a small fixed-capacity container for tags.
-	// boost::static_vector or a similar stack-allocated small vector.
-	std::array<std::string_view, 8> tags;
-	std::uint8_t tag_count = 0;
+    std::string_view type;
+    std::string_view payload;
+    // Use a small fixed-capacity container for tags.
+    // boost::static_vector or a similar stack-allocated small vector.
+    std::array<std::string_view, 8> tags;
+    std::uint8_t tag_count = 0;
 };
 
 void process_batch_light(std::string_view input_buffer,
                          std::span<const RawEvent> raw,
                          std::vector<EventView>& out) {
-	out.clear();
-	out.reserve(raw.size());  // one allocation, amortized
-	for (const auto& r : raw) {
-		EventView e;
-		e.type = parse_type_view(r, input_buffer);
-		e.payload = parse_payload_view(r, input_buffer);
-		e.tag_count = parse_tags_view(r, input_buffer, e.tags);
-		out.push_back(e);
-	}
-	// Zero heap allocations per event if input_buffer is stable
-	// and out has sufficient capacity.
+    out.clear();
+    out.reserve(raw.size());  // one allocation, amortized
+    for (const auto& r : raw) {
+        EventView e;
+        e.type = parse_type_view(r, input_buffer);
+        e.payload = parse_payload_view(r, input_buffer);
+        e.tag_count = parse_tags_view(r, input_buffer, e.tags);
+        out.push_back(e);
+    }
+    // Zero heap allocations per event if input_buffer is stable
+    // and out has sufficient capacity.
 }
 ```
 
@@ -95,12 +95,12 @@ C++23 在这方面的标准词汇仍以 `std::pmr` 为主。它的价值不在�
 
 ```cpp
 struct RequestScratch {
-	std::pmr::monotonic_buffer_resource arena;
-	std::pmr::vector<std::pmr::string> tokens{&arena};
-	std::pmr::unordered_map<std::pmr::string, std::pmr::string> headers{&arena};
+    std::pmr::monotonic_buffer_resource arena;
+    std::pmr::vector<std::pmr::string> tokens{&arena};
+    std::pmr::unordered_map<std::pmr::string, std::pmr::string> headers{&arena};
 
-	explicit RequestScratch(std::span<std::byte> buffer)
-		: arena(buffer.data(), buffer.size()) {}
+    explicit RequestScratch(std::span<std::byte> buffer)
+        : arena(buffer.data(), buffer.size()) {}
 };
 ```
 
@@ -118,11 +118,11 @@ struct RequestScratch {
 // map internals go through the global allocator.  Under contention
 // from many threads, this serializes on allocator locks.
 void handle_request_standard(std::span<const std::byte> input) {
-	std::vector<std::string> tokens;
-	std::unordered_map<std::string, std::string> headers;
-	parse(input, tokens, headers);  // many small allocations
-	route(tokens, headers);
-	// Destruction: each string freed individually, each map node freed.
+    std::vector<std::string> tokens;
+    std::unordered_map<std::string, std::string> headers;
+    parse(input, tokens, headers);  // many small allocations
+    route(tokens, headers);
+    // Destruction: each string freed individually, each map node freed.
 }
 
 // PMR with stack buffer: small requests never touch the heap.
@@ -130,22 +130,22 @@ void handle_request_standard(std::span<const std::byte> input) {
 // If the request is large enough to exhaust it, it falls back to
 // the upstream resource (default: new/delete).
 void handle_request_pmr(std::span<const std::byte> input) {
-	std::array<std::byte, 4096> stack_buf;
-	std::pmr::monotonic_buffer_resource arena{
-		stack_buf.data(), stack_buf.size(),
-		std::pmr::null_memory_resource()
-		// null_memory_resource: fail loudly if buffer is exceeded.
-		// Replace with std::pmr::new_delete_resource() to allow
-		// fallback to heap for oversized requests.
-	};
+    std::array<std::byte, 4096> stack_buf;
+    std::pmr::monotonic_buffer_resource arena{
+        stack_buf.data(), stack_buf.size(),
+        std::pmr::null_memory_resource()
+        // null_memory_resource: fail loudly if buffer is exceeded.
+        // Replace with std::pmr::new_delete_resource() to allow
+        // fallback to heap for oversized requests.
+    };
 
-	std::pmr::vector<std::pmr::string> tokens{&arena};
-	std::pmr::unordered_map<std::pmr::string, std::pmr::string>
-		headers{&arena};
-	parse_pmr(input, tokens, headers);
-	route_pmr(tokens, headers);
-	// Destruction: arena destructor releases everything in one shot.
-	// No per-string, per-node deallocation calls.
+    std::pmr::vector<std::pmr::string> tokens{&arena};
+    std::pmr::unordered_map<std::pmr::string, std::pmr::string>
+        headers{&arena};
+    parse_pmr(input, tokens, headers);
+    route_pmr(tokens, headers);
+    // Destruction: arena destructor releases everything in one shot.
+    // No per-string, per-node deallocation calls.
 }
 ```
 
@@ -176,15 +176,15 @@ void handle_request_pmr(std::span<const std::byte> input) {
 void submit_work(std::shared_ptr<Config> cfg,
                  ThreadPool& pool,
                  std::span<const Request> requests) {
-	for (const auto& req : requests) {
-		// Copies cfg: atomic ref-count increment per task.
-		pool.enqueue([cfg, &req] {
-			handle(req, *cfg);
-		});
-	}
-	// If 10,000 requests are enqueued, that is 10,000 atomic
-	// increments on submission and 10,000 atomic decrements
-	// on completion, all contending on the same cache line.
+    for (const auto& req : requests) {
+        // Copies cfg: atomic ref-count increment per task.
+        pool.enqueue([cfg, &req] {
+            handle(req, *cfg);
+        });
+    }
+    // If 10,000 requests are enqueued, that is 10,000 atomic
+    // increments on submission and 10,000 atomic decrements
+    // on completion, all contending on the same cache line.
 }
 ```
 
@@ -193,13 +193,13 @@ void submit_work(std::shared_ptr<Config> cfg,
 void submit_work_fixed(const Config& cfg,
                        ThreadPool& pool,
                        std::span<const Request> requests) {
-	for (const auto& req : requests) {
-		pool.enqueue([&cfg, &req] {
-			handle(req, cfg);
-		});
-	}
-	// Zero reference-counting overhead.  Caller guarantees
-	// cfg lives until all tasks complete.
+    for (const auto& req : requests) {
+        pool.enqueue([&cfg, &req] {
+            handle(req, cfg);
+        });
+    }
+    // Zero reference-counting overhead.  Caller guarantees
+    // cfg lives until all tasks complete.
 }
 ```
 

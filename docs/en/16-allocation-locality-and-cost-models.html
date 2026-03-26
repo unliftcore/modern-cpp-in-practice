@@ -202,49 +202,49 @@
 // a vector, and a map entry.  Under load this path may perform
 // 5-10 heap allocations per event.
 struct Event {
-	std::string type;
-	std::string payload;
-	std::vector&lt;std::string&gt; tags;
-	std::unordered_map&lt;std::string, std::string&gt; metadata;
+    std::string type;
+    std::string payload;
+    std::vector&lt;std::string&gt; tags;
+    std::unordered_map&lt;std::string, std::string&gt; metadata;
 };
 
 void process_batch_heavy(std::span&lt;const RawEvent&gt; raw,
                          std::vector&lt;Event&gt;&amp; out) {
-	for (const auto&amp; r : raw) {
-		Event e;
-		e.type = parse_type(r);         // allocates
-		e.payload = parse_payload(r);   // allocates
-		e.tags = parse_tags(r);         // allocates vector + each string
-		e.metadata = parse_meta(r);     // allocates map buckets + nodes
-		out.push_back(std::move(e));    // may reallocate out's buffer
-	}
+    for (const auto&amp; r : raw) {
+        Event e;
+        e.type = parse_type(r);         // allocates
+        e.payload = parse_payload(r);   // allocates
+        e.tags = parse_tags(r);         // allocates vector + each string
+        e.metadata = parse_meta(r);     // allocates map buckets + nodes
+        out.push_back(std::move(e));    // may reallocate out's buffer
+    }
 }
 </code></pre>
 <pre><code class="language-cpp">// Allocation-light: pre-sized arena, string views into stable
 // input buffer, fixed-capacity inline storage.
 struct EventView {
-	std::string_view type;
-	std::string_view payload;
-	// Use a small fixed-capacity container for tags.
-	// boost::static_vector or a similar stack-allocated small vector.
-	std::array&lt;std::string_view, 8&gt; tags;
-	std::uint8_t tag_count = 0;
+    std::string_view type;
+    std::string_view payload;
+    // Use a small fixed-capacity container for tags.
+    // boost::static_vector or a similar stack-allocated small vector.
+    std::array&lt;std::string_view, 8&gt; tags;
+    std::uint8_t tag_count = 0;
 };
 
 void process_batch_light(std::string_view input_buffer,
                          std::span&lt;const RawEvent&gt; raw,
                          std::vector&lt;EventView&gt;&amp; out) {
-	out.clear();
-	out.reserve(raw.size());  // one allocation, amortized
-	for (const auto&amp; r : raw) {
-		EventView e;
-		e.type = parse_type_view(r, input_buffer);
-		e.payload = parse_payload_view(r, input_buffer);
-		e.tag_count = parse_tags_view(r, input_buffer, e.tags);
-		out.push_back(e);
-	}
-	// Zero heap allocations per event if input_buffer is stable
-	// and out has sufficient capacity.
+    out.clear();
+    out.reserve(raw.size());  // one allocation, amortized
+    for (const auto&amp; r : raw) {
+        EventView e;
+        e.type = parse_type_view(r, input_buffer);
+        e.payload = parse_payload_view(r, input_buffer);
+        e.tag_count = parse_tags_view(r, input_buffer, e.tags);
+        out.push_back(e);
+    }
+    // Zero heap allocations per event if input_buffer is stable
+    // and out has sufficient capacity.
 }
 </code></pre>
 <p>The light version imposes constraints: the input buffer must outlive the views, tags are bounded, and metadata is handled differently. Those constraints are the cost of avoiding allocations. Whether that cost is acceptable depends on the workload, but making it visible is the point.</p>
@@ -255,12 +255,12 @@ void process_batch_light(std::string_view input_buffer,
 <p>Objects that die together should often be allocated together. This is the core intuition behind arenas and monotonic resources: if a batch of data shares a lifetime boundary, paying for individual deallocation is wasted work. Request-local parse trees, temporary token buffers, graph search scratch state, and one-shot compilation metadata are classic examples.</p>
 <p>C++23 still relies on <code>std::pmr</code> for the standard vocabulary here. The value is not stylistic. It is architectural. Memory resources let you express that a family of objects belongs to a shared lifetime region without hard-wiring a custom allocator type through every template instantiation.</p>
 <pre><code class="language-cpp">struct RequestScratch {
-	std::pmr::monotonic_buffer_resource arena;
-	std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
-	std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt; headers{&amp;arena};
+    std::pmr::monotonic_buffer_resource arena;
+    std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
+    std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt; headers{&amp;arena};
 
-	explicit RequestScratch(std::span&lt;std::byte&gt; buffer)
-		: arena(buffer.data(), buffer.size()) {}
+    explicit RequestScratch(std::span&lt;std::byte&gt; buffer)
+        : arena(buffer.data(), buffer.size()) {}
 };
 </code></pre>
 <p>This design says something important: the strings and containers are not independent heap citizens. They are request-scoped scratch. That reduces allocation overhead and makes teardown a bulk operation.</p>
@@ -274,11 +274,11 @@ void process_batch_light(std::string_view input_buffer,
 // map internals go through the global allocator.  Under contention
 // from many threads, this serializes on allocator locks.
 void handle_request_standard(std::span&lt;const std::byte&gt; input) {
-	std::vector&lt;std::string&gt; tokens;
-	std::unordered_map&lt;std::string, std::string&gt; headers;
-	parse(input, tokens, headers);  // many small allocations
-	route(tokens, headers);
-	// Destruction: each string freed individually, each map node freed.
+    std::vector&lt;std::string&gt; tokens;
+    std::unordered_map&lt;std::string, std::string&gt; headers;
+    parse(input, tokens, headers);  // many small allocations
+    route(tokens, headers);
+    // Destruction: each string freed individually, each map node freed.
 }
 
 // PMR with stack buffer: small requests never touch the heap.
@@ -286,22 +286,22 @@ void handle_request_standard(std::span&lt;const std::byte&gt; input) {
 // If the request is large enough to exhaust it, it falls back to
 // the upstream resource (default: new/delete).
 void handle_request_pmr(std::span&lt;const std::byte&gt; input) {
-	std::array&lt;std::byte, 4096&gt; stack_buf;
-	std::pmr::monotonic_buffer_resource arena{
-		stack_buf.data(), stack_buf.size(),
-		std::pmr::null_memory_resource()
-		// null_memory_resource: fail loudly if buffer is exceeded.
-		// Replace with std::pmr::new_delete_resource() to allow
-		// fallback to heap for oversized requests.
-	};
+    std::array&lt;std::byte, 4096&gt; stack_buf;
+    std::pmr::monotonic_buffer_resource arena{
+        stack_buf.data(), stack_buf.size(),
+        std::pmr::null_memory_resource()
+        // null_memory_resource: fail loudly if buffer is exceeded.
+        // Replace with std::pmr::new_delete_resource() to allow
+        // fallback to heap for oversized requests.
+    };
 
-	std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
-	std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt;
-		headers{&amp;arena};
-	parse_pmr(input, tokens, headers);
-	route_pmr(tokens, headers);
-	// Destruction: arena destructor releases everything in one shot.
-	// No per-string, per-node deallocation calls.
+    std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
+    std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt;
+        headers{&amp;arena};
+    parse_pmr(input, tokens, headers);
+    route_pmr(tokens, headers);
+    // Destruction: arena destructor releases everything in one shot.
+    // No per-string, per-node deallocation calls.
 }
 </code></pre>
 <p>The pmr version eliminates all per-object deallocation calls and avoids global allocator contention entirely for requests that fit within the stack buffer. On a high-throughput server handling small requests, this can reduce allocator overhead by an order of magnitude. The tradeoff is that <code>std::pmr</code> containers carry an extra pointer to the memory resource (increasing <code>sizeof</code> slightly) and that the monotonic resource does not reclaim memory from individual deallocations – it only grows until the resource itself is destroyed. This is fine for request-scoped scratch; it is wrong for long-lived containers that grow and shrink over time.</p>
@@ -320,28 +320,28 @@ void handle_request_pmr(std::span&lt;const std::byte&gt; input) {
 void submit_work(std::shared_ptr&lt;Config&gt; cfg,
                  ThreadPool&amp; pool,
                  std::span&lt;const Request&gt; requests) {
-	for (const auto&amp; req : requests) {
-		// Copies cfg: atomic ref-count increment per task.
-		pool.enqueue([cfg, &amp;req] {
-			handle(req, *cfg);
-		});
-	}
-	// If 10,000 requests are enqueued, that is 10,000 atomic
-	// increments on submission and 10,000 atomic decrements
-	// on completion, all contending on the same cache line.
+    for (const auto&amp; req : requests) {
+        // Copies cfg: atomic ref-count increment per task.
+        pool.enqueue([cfg, &amp;req] {
+            handle(req, *cfg);
+        });
+    }
+    // If 10,000 requests are enqueued, that is 10,000 atomic
+    // increments on submission and 10,000 atomic decrements
+    // on completion, all contending on the same cache line.
 }
 </code></pre>
 <pre><code class="language-cpp">// Fix: cfg outlives all tasks, so pass a raw pointer or reference.
 void submit_work_fixed(const Config&amp; cfg,
                        ThreadPool&amp; pool,
                        std::span&lt;const Request&gt; requests) {
-	for (const auto&amp; req : requests) {
-		pool.enqueue([&amp;cfg, &amp;req] {
-			handle(req, cfg);
-		});
-	}
-	// Zero reference-counting overhead.  Caller guarantees
-	// cfg lives until all tasks complete.
+    for (const auto&amp; req : requests) {
+        pool.enqueue([&amp;cfg, &amp;req] {
+            handle(req, cfg);
+        });
+    }
+    // Zero reference-counting overhead.  Caller guarantees
+    // cfg lives until all tasks complete.
 }
 </code></pre>
 <p>The rule is not “never use <code>std::shared_ptr</code>.” It is: do not use shared ownership to avoid thinking about lifetime. When an object has a clear owner and borrowers, express that with a unique owner and references or views. Reserve <code>std::shared_ptr</code> for genuinely shared, non-deterministic lifetimes. And never pass <code>std::shared_ptr</code> by value when a <code>const&amp;</code> or raw reference suffices – each copy is an atomic round-trip you are paying for nothing.</p>

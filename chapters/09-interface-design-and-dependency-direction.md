@@ -52,17 +52,17 @@ When implementation detail names the contract, the dependency arrow is already w
 ```cpp
 // Anti-pattern: domain code now depends on storage representation.
 struct AccountRow {
-	std::string id;
-	std::int64_t cents_available;
-	bool is_frozen;
-	std::string fraud_flag;
+    std::string id;
+    std::int64_t cents_available;
+    bool is_frozen;
+    std::string fraud_flag;
 };
 
 class AccountsTable {
 public:
-	virtual std::expected<AccountRow, DbError>
-	fetch_by_id(std::string_view id) = 0;
-	virtual ~AccountsTable() = default;
+    virtual std::expected<AccountRow, DbError>
+    fetch_by_id(std::string_view id) = 0;
+    virtual ~AccountsTable() = default;
 };
 
 std::expected<PaymentDecision, PaymentError>
@@ -75,16 +75,16 @@ A better port is named by the workflow and returns the minimum stable facts the 
 
 ```cpp
 struct CreditState {
-	Money available;
-	bool frozen;
-	RiskLevel risk;
+    Money available;
+    bool frozen;
+    RiskLevel risk;
 };
 
 class CreditPolicyPort {
 public:
-	virtual std::expected<CreditState, PaymentError>
-	load_credit_state(AccountId account) = 0;
-	virtual ~CreditPolicyPort() = default;
+    virtual std::expected<CreditState, PaymentError>
+    load_credit_state(AccountId account) = 0;
+    virtual ~CreditPolicyPort() = default;
 };
 
 std::expected<PaymentDecision, PaymentError>
@@ -102,23 +102,23 @@ A bloated interface does not just violate aesthetics. It creates coupling gravit
 // metrics, and configuration concerns in one surface.
 class UserService {
 public:
-	virtual std::expected<UserProfile, ServiceError>
-	get_profile(UserId id) = 0;
+    virtual std::expected<UserProfile, ServiceError>
+    get_profile(UserId id) = 0;
 
-	virtual void update_profile(UserId id, const ProfilePatch& patch) = 0;
+    virtual void update_profile(UserId id, const ProfilePatch& patch) = 0;
 
-	virtual void ban_user(UserId id, std::string_view reason) = 0;
+    virtual void ban_user(UserId id, std::string_view reason) = 0;
 
-	virtual std::vector<AuditEntry>
-	get_audit_log(UserId id, TimeRange range) = 0;
+    virtual std::vector<AuditEntry>
+    get_audit_log(UserId id, TimeRange range) = 0;
 
-	virtual void flush_cache() = 0;
+    virtual void flush_cache() = 0;
 
-	virtual MetricsSnapshot get_metrics() const = 0;
+    virtual MetricsSnapshot get_metrics() const = 0;
 
-	virtual void set_rate_limit(RateLimitConfig config) = 0;
+    virtual void set_rate_limit(RateLimitConfig config) = 0;
 
-	virtual ~UserService() = default;
+    virtual ~UserService() = default;
 };
 ```
 
@@ -129,17 +129,17 @@ The fix is to split along responsibility boundaries:
 ```cpp
 class UserProfileQuery {
 public:
-	virtual std::expected<UserProfile, ServiceError>
-	get_profile(UserId id) = 0;
-	virtual ~UserProfileQuery() = default;
+    virtual std::expected<UserProfile, ServiceError>
+    get_profile(UserId id) = 0;
+    virtual ~UserProfileQuery() = default;
 };
 
 class ModerationActions {
 public:
-	virtual void ban_user(UserId id, std::string_view reason) = 0;
-	virtual std::vector<AuditEntry>
-	get_audit_log(UserId id, TimeRange range) = 0;
-	virtual ~ModerationActions() = default;
+    virtual void ban_user(UserId id, std::string_view reason) = 0;
+    virtual std::vector<AuditEntry>
+    get_audit_log(UserId id, TimeRange range) = 0;
+    virtual ~ModerationActions() = default;
 };
 ```
 
@@ -155,8 +155,8 @@ Even a small interface can damage a system if it exposes the wrong types.
 
 class RetryConfigProvider {
 public:
-	virtual nlohmann::json load_retry_config() = 0;
-	virtual ~RetryConfigProvider() = default;
+    virtual nlohmann::json load_retry_config() = 0;
+    virtual ~RetryConfigProvider() = default;
 };
 ```
 
@@ -166,16 +166,16 @@ The fix is to return domain-meaningful types:
 
 ```cpp
 struct RetryConfig {
-	std::chrono::milliseconds initial_backoff;
-	std::chrono::milliseconds max_backoff;
-	std::uint32_t max_attempts;
+    std::chrono::milliseconds initial_backoff;
+    std::chrono::milliseconds max_backoff;
+    std::uint32_t max_attempts;
 };
 
 class RetryConfigProvider {
 public:
-	virtual std::expected<RetryConfig, ConfigError>
-	load_retry_config() = 0;
-	virtual ~RetryConfigProvider() = default;
+    virtual std::expected<RetryConfig, ConfigError>
+    load_retry_config() = 0;
+    virtual ~RetryConfigProvider() = default;
 };
 ```
 
@@ -190,13 +190,13 @@ Interfaces pitched at the wrong level of abstraction force callers to do work th
 // even though this is supposed to abstract away storage.
 class DataStore {
 public:
-	virtual std::expected<RowSet, DbError>
-	execute_query(std::string_view sql) = 0;
+    virtual std::expected<RowSet, DbError>
+    execute_query(std::string_view sql) = 0;
 
-	virtual std::expected<std::size_t, DbError>
-	execute_update(std::string_view sql) = 0;
+    virtual std::expected<std::size_t, DbError>
+    execute_update(std::string_view sql) = 0;
 
-	virtual ~DataStore() = default;
+    virtual ~DataStore() = default;
 };
 ```
 
@@ -209,8 +209,8 @@ Conversely, an interface can be too high-level and prevent legitimate use:
 // or control what gets loaded.
 class OrderRepository {
 public:
-	virtual std::vector<Order> get_all_orders() = 0;
-	virtual ~OrderRepository() = default;
+    virtual std::vector<Order> get_all_orders() = 0;
+    virtual ~OrderRepository() = default;
 };
 ```
 

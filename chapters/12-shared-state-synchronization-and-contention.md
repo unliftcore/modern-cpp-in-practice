@@ -57,15 +57,15 @@ Before discussing which primitives to use, it is worth seeing what happens when 
 ```cpp
 // BUG: data race — two threads read and write counter without synchronization.
 struct metrics {
-	int request_count = 0;
-	int error_count = 0;
+    int request_count = 0;
+    int error_count = 0;
 };
 
 metrics g_metrics;
 
 void record_request(bool success) {
-	++g_metrics.request_count;            // unsynchronized read-modify-write
-	if (!success) ++g_metrics.error_count; // same
+    ++g_metrics.request_count;            // unsynchronized read-modify-write
+    if (!success) ++g_metrics.error_count; // same
 }
 ```
 
@@ -76,8 +76,8 @@ A subtler variant involves multi-field invariants:
 ```cpp
 // BUG: readers can observe state_ == READY while payload_ is half-written.
 struct shared_result {
-	std::string payload_;
-	enum { EMPTY, READY } state_ = EMPTY;
+    std::string payload_;
+    enum { EMPTY, READY } state_ = EMPTY;
 };
 
 // Writer thread:
@@ -86,7 +86,7 @@ result.state_ = READY;              // may be reordered before payload_ write
 
 // Reader thread:
 if (result.state_ == READY)
-	process(result.payload_);        // may see partially constructed string
+    process(result.payload_);        // may see partially constructed string
 ```
 
 Even if `state_` were atomic, the write to `payload_` could be reordered past it without an appropriate memory order. The lesson: data races are not just about single variables. They are about the visibility ordering of related mutations.
@@ -101,9 +101,9 @@ std::mutex mtx;
 std::vector<int> data;
 
 void push(int value) {
-	mtx.lock();
-	data.push_back(value); // may throw (allocation failure)
-	mtx.unlock();          // never reached if push_back throws — deadlock on next access
+    mtx.lock();
+    data.push_back(value); // may throw (allocation failure)
+    mtx.unlock();          // never reached if push_back throws — deadlock on next access
 }
 ```
 
@@ -113,8 +113,8 @@ The fix is mechanical: use RAII guards.
 
 ```cpp
 void push(int value) {
-	std::scoped_lock lock(mtx);
-	data.push_back(value); // if this throws, ~scoped_lock releases the mutex
+    std::scoped_lock lock(mtx);
+    data.push_back(value); // if this throws, ~scoped_lock releases the mutex
 }
 ```
 
@@ -123,15 +123,15 @@ void push(int value) {
 ```cpp
 // unique_lock: needed when the lock must be released before scope exit.
 void transfer_expired(registry& reg, std::vector<session>& out) {
-	std::unique_lock lock(reg.mutex_);
-	auto expired = reg.extract_expired(); // modifies registry under lock
-	lock.unlock();                        // release before expensive cleanup
-	for (auto& s : expired)
-		s.close_socket();                 // no lock held — safe to block
-	// out is caller-owned, no synchronization needed
-	out.insert(out.end(),
-		std::make_move_iterator(expired.begin()),
-		std::make_move_iterator(expired.end()));
+    std::unique_lock lock(reg.mutex_);
+    auto expired = reg.extract_expired(); // modifies registry under lock
+    lock.unlock();                        // release before expensive cleanup
+    for (auto& s : expired)
+        s.close_socket();                 // no lock held — safe to block
+    // out is caller-owned, no synchronization needed
+    out.insert(out.end(),
+        std::make_move_iterator(expired.begin()),
+        std::make_move_iterator(expired.end()));
 }
 ```
 
@@ -142,15 +142,15 @@ When code acquires multiple mutexes, inconsistent ordering is the classic deadlo
 ```cpp
 // BUG: deadlock if thread 1 calls transfer(a, b) while thread 2 calls transfer(b, a).
 struct account {
-	std::mutex mtx;
-	int balance = 0;
+    std::mutex mtx;
+    int balance = 0;
 };
 
 void transfer(account& from, account& to, int amount) {
-	std::lock_guard lock_from(from.mtx); // locks 'from' first
-	std::lock_guard lock_to(to.mtx);     // then 'to' — opposite order on another thread
-	from.balance -= amount;
-	to.balance += amount;
+    std::lock_guard lock_from(from.mtx); // locks 'from' first
+    std::lock_guard lock_to(to.mtx);     // then 'to' — opposite order on another thread
+    from.balance -= amount;
+    to.balance += amount;
 }
 ```
 
@@ -158,9 +158,9 @@ Thread 1 locks `a.mtx` and waits for `b.mtx`. Thread 2 locks `b.mtx` and waits f
 
 ```cpp
 void transfer(account& from, account& to, int amount) {
-	std::scoped_lock lock(from.mtx, to.mtx); // deadlock-free acquisition
-	from.balance -= amount;
-	to.balance += amount;
+    std::scoped_lock lock(from.mtx, to.mtx); // deadlock-free acquisition
+    from.balance -= amount;
+    to.balance += amount;
 }
 ```
 
@@ -173,17 +173,17 @@ Contention is not just about correctness. Excessive locking serializes work that
 ```cpp
 // Over-synchronized: every stat update contends on one lock.
 class request_stats {
-	std::mutex mtx_;
-	uint64_t total_requests_ = 0;
-	uint64_t total_bytes_ = 0;
-	uint64_t error_count_ = 0;
+    std::mutex mtx_;
+    uint64_t total_requests_ = 0;
+    uint64_t total_bytes_ = 0;
+    uint64_t error_count_ = 0;
 public:
-	void record(uint64_t bytes, bool error) {
-		std::scoped_lock lock(mtx_);
-		++total_requests_;
-		total_bytes_ += bytes;
-		if (error) ++error_count_;
-	}
+    void record(uint64_t bytes, bool error) {
+        std::scoped_lock lock(mtx_);
+        ++total_requests_;
+        total_bytes_ += bytes;
+        if (error) ++error_count_;
+    }
 };
 ```
 
@@ -213,30 +213,30 @@ The most common failure shape is not "no synchronization." It is "one reasonable
 // Anti-pattern: one mutex protects unrelated invariants and long operations.
 class session_registry {
 public:
-	std::optional<session_info> find(session_id id) {
-		std::scoped_lock lock(mutex_);
-		auto it = sessions_.find(id);
-		if (it == sessions_.end()) {
-			return std::nullopt;
-		}
-		return it->second;
-	}
+    std::optional<session_info> find(session_id id) {
+        std::scoped_lock lock(mutex_);
+        auto it = sessions_.find(id);
+        if (it == sessions_.end()) {
+            return std::nullopt;
+        }
+        return it->second;
+    }
 
-	void expire_idle_sessions(std::chrono::steady_clock::time_point now) {
-		std::scoped_lock lock(mutex_);
-		for (auto it = sessions_.begin(); it != sessions_.end();) {
-			if (it->second.expires_at <= now) {
-				close_socket(it->second.socket); // RISK: blocking work under the lock.
-				it = sessions_.erase(it);
-			} else {
-				++it;
-			}
-		}
-	}
+    void expire_idle_sessions(std::chrono::steady_clock::time_point now) {
+        std::scoped_lock lock(mutex_);
+        for (auto it = sessions_.begin(); it != sessions_.end();) {
+            if (it->second.expires_at <= now) {
+                close_socket(it->second.socket); // RISK: blocking work under the lock.
+                it = sessions_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 
 private:
-	std::mutex mutex_;
-	std::unordered_map<session_id, session_info> sessions_;
+    std::mutex mutex_;
+    std::unordered_map<session_id, session_info> sessions_;
 };
 ```
 

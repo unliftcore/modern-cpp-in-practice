@@ -33,11 +33,11 @@ Before contrasting with structured concurrency, it is worth seeing exactly how u
 ```cpp
 // Anti-pattern: detached task leaks a database connection on cancellation.
 void on_request(request req) {
-	std::jthread([req = std::move(req)] {
-		auto conn = db_pool.acquire();        // acquired, never returned on some paths
-		auto result = conn.execute(req.query);
-		send_response(req.client, result);
-	}).detach(); // no owner, no cancellation, no cleanup guarantee
+    std::jthread([req = std::move(req)] {
+        auto conn = db_pool.acquire();        // acquired, never returned on some paths
+        auto result = conn.execute(req.query);
+        send_response(req.client, result);
+    }).detach(); // no owner, no cancellation, no cleanup guarantee
 }
 ```
 
@@ -48,13 +48,13 @@ If the process begins shutting down, detached threads do not receive stop reques
 ```cpp
 // Anti-pattern: exception in detached task is never observed.
 void start_background_sync() {
-	auto handle = std::async(std::launch::async, [] {
-		auto data = fetch_remote_config(); // throws on network error
-		apply_config(data);
-	});
-	// handle is destroyed here — std::async's destructor blocks,
-	// but if this were a custom fire-and-forget task, the exception
-	// would be silently swallowed.
+    auto handle = std::async(std::launch::async, [] {
+        auto data = fetch_remote_config(); // throws on network error
+        apply_config(data);
+    });
+    // handle is destroyed here — std::async's destructor blocks,
+    // but if this were a custom fire-and-forget task, the exception
+    // would be silently swallowed.
 }
 ```
 
@@ -65,20 +65,20 @@ With `std::async`, the destructor blocks (which may be its own surprise). But wi
 ```cpp
 // Anti-pattern: shutdown cannot complete because background tasks were never tracked.
 class ingestion_service {
-	void ingest(message msg) {
-		// "just kick off enrichment in the background"
-		pool_.submit([msg = std::move(msg), this] {
-			auto enriched = enrich(msg);       // calls external service, may block
-			store_.write(enriched);
-		});
-	}
+    void ingest(message msg) {
+        // "just kick off enrichment in the background"
+        pool_.submit([msg = std::move(msg), this] {
+            auto enriched = enrich(msg);       // calls external service, may block
+            store_.write(enriched);
+        });
+    }
 
-	void shutdown() {
-		store_.close();    // closes storage
-		pool_.shutdown();  // waits for in-flight tasks
-		// BUG: in-flight tasks may call store_.write() after store_ is closed
-		// BUG: enrich() may block indefinitely — pool shutdown hangs
-	}
+    void shutdown() {
+        store_.close();    // closes storage
+        pool_.shutdown();  // waits for in-flight tasks
+        // BUG: in-flight tasks may call store_.write() after store_ is closed
+        // BUG: enrich() may block indefinitely — pool shutdown hangs
+    }
 };
 ```
 
@@ -91,11 +91,11 @@ The structured answer to all three problems is the same principle: the scope tha
 ```cpp
 // Structured: parent scope owns child tasks, propagates cancellation, awaits completion.
 task<void> on_request(request req, std::stop_token stop) {
-	auto conn = co_await db_pool.acquire(stop);  // respects cancellation
-	auto result = co_await conn.execute(req.query, stop);
-	co_await send_response(req.client, result);
-	// conn returned to pool when coroutine frame is destroyed
-	// if stop is triggered, co_await points observe it and unwind cleanly
+    auto conn = co_await db_pool.acquire(stop);  // respects cancellation
+    auto result = co_await conn.execute(req.query, stop);
+    co_await send_response(req.client, result);
+    // conn returned to pool when coroutine frame is destroyed
+    // if stop is triggered, co_await points observe it and unwind cleanly
 }
 ```
 
@@ -139,15 +139,15 @@ Cancellation also needs direction. Parent-to-child propagation should be the def
 ```cpp
 // Anti-pattern: child work outlives the request and overload has no admission limit.
 task<aggregate_reply> handle_request(request req) {
-	auto a = fetch_profile(req.user_id);
-	auto b = fetch_inventory(req.item_id);
-	auto c = fetch_pricing(req.item_id);
+    auto a = fetch_profile(req.user_id);
+    auto b = fetch_inventory(req.item_id);
+    auto c = fetch_pricing(req.item_id);
 
-	co_return aggregate_reply{
-		co_await a,
-		co_await b,
-		co_await c,
-	};
+    co_return aggregate_reply{
+        co_await a,
+        co_await b,
+        co_await c,
+    };
 }
 ```
 

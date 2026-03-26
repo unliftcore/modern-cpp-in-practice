@@ -202,44 +202,44 @@
 <h3 id="resource-leaks-from-ownerless-work"><a class="header" href="#resource-leaks-from-ownerless-work">Resource leaks from ownerless work</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: detached task leaks a database connection on cancellation.
 void on_request(request req) {
-	std::jthread([req = std::move(req)] {
-		auto conn = db_pool.acquire();        // acquired, never returned on some paths
-		auto result = conn.execute(req.query);
-		send_response(req.client, result);
-	}).detach(); // no owner, no cancellation, no cleanup guarantee
+    std::jthread([req = std::move(req)] {
+        auto conn = db_pool.acquire();        // acquired, never returned on some paths
+        auto result = conn.execute(req.query);
+        send_response(req.client, result);
+    }).detach(); // no owner, no cancellation, no cleanup guarantee
 }
 </code></pre>
 <p>If the process begins shutting down, detached threads do not receive stop requests. The database connection is not returned to the pool. Multiply this by thousands of in-flight requests during a rolling deployment: the database sees connection exhaustion, and the old process hangs in <code>std::thread</code> destructor calls or, worse, exits while threads still reference destroyed globals.</p>
 <h3 id="unobserved-exceptions-vanish-silently"><a class="header" href="#unobserved-exceptions-vanish-silently">Unobserved exceptions vanish silently</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: exception in detached task is never observed.
 void start_background_sync() {
-	auto handle = std::async(std::launch::async, [] {
-		auto data = fetch_remote_config(); // throws on network error
-		apply_config(data);
-	});
-	// handle is destroyed here — std::async's destructor blocks,
-	// but if this were a custom fire-and-forget task, the exception
-	// would be silently swallowed.
+    auto handle = std::async(std::launch::async, [] {
+        auto data = fetch_remote_config(); // throws on network error
+        apply_config(data);
+    });
+    // handle is destroyed here — std::async's destructor blocks,
+    // but if this were a custom fire-and-forget task, the exception
+    // would be silently swallowed.
 }
 </code></pre>
 <p>With <code>std::async</code>, the destructor blocks (which may be its own surprise). But with most custom task types that support detach, destroying the handle without observing the result means exceptions evaporate. The system continues with stale configuration, and the failure appears only as a mysterious behavioral regression hours later.</p>
 <h3 id="shutdown-hangs-from-orphaned-work"><a class="header" href="#shutdown-hangs-from-orphaned-work">Shutdown hangs from orphaned work</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: shutdown cannot complete because background tasks were never tracked.
 class ingestion_service {
-	void ingest(message msg) {
-		// "just kick off enrichment in the background"
-		pool_.submit([msg = std::move(msg), this] {
-			auto enriched = enrich(msg);       // calls external service, may block
-			store_.write(enriched);
-		});
-	}
+    void ingest(message msg) {
+        // "just kick off enrichment in the background"
+        pool_.submit([msg = std::move(msg), this] {
+            auto enriched = enrich(msg);       // calls external service, may block
+            store_.write(enriched);
+        });
+    }
 
-	void shutdown() {
-		store_.close();    // closes storage
-		pool_.shutdown();  // waits for in-flight tasks
-		// BUG: in-flight tasks may call store_.write() after store_ is closed
-		// BUG: enrich() may block indefinitely — pool shutdown hangs
-	}
+    void shutdown() {
+        store_.close();    // closes storage
+        pool_.shutdown();  // waits for in-flight tasks
+        // BUG: in-flight tasks may call store_.write() after store_ is closed
+        // BUG: enrich() may block indefinitely — pool shutdown hangs
+    }
 };
 </code></pre>
 <p>The pool has tasks, but the service has no model of what those tasks need or how to cancel them. Shutdown either hangs (waiting for a blocked external call) or races (closing dependencies while tasks still use them). In production, this turns a clean restart into a process kill, which turns into data loss.</p>
@@ -247,11 +247,11 @@ class ingestion_service {
 <p>The structured answer to all three problems is the same principle: the scope that creates work owns its completion.</p>
 <pre><code class="language-cpp">// Structured: parent scope owns child tasks, propagates cancellation, awaits completion.
 task&lt;void&gt; on_request(request req, std::stop_token stop) {
-	auto conn = co_await db_pool.acquire(stop);  // respects cancellation
-	auto result = co_await conn.execute(req.query, stop);
-	co_await send_response(req.client, result);
-	// conn returned to pool when coroutine frame is destroyed
-	// if stop is triggered, co_await points observe it and unwind cleanly
+    auto conn = co_await db_pool.acquire(stop);  // respects cancellation
+    auto result = co_await conn.execute(req.query, stop);
+    co_await send_response(req.client, result);
+    // conn returned to pool when coroutine frame is destroyed
+    // if stop is triggered, co_await points observe it and unwind cleanly
 }
 </code></pre>
 <p>The parent request scope can cancel the token on client disconnect or deadline. The coroutine’s awaitables check the token at each suspension point. Resources are released through normal RAII. No work outlives its owner. The contrast with fire-and-forget is not style; it is the difference between a system that can shut down and one that cannot.</p>
@@ -281,15 +281,15 @@ task&lt;void&gt; on_request(request req, std::stop_token stop) {
 <h2 id="anti-pattern-fan-out-without-bounded-ownership"><a class="header" href="#anti-pattern-fan-out-without-bounded-ownership">Anti-pattern: Fan-Out Without Bounded Ownership</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: child work outlives the request and overload has no admission limit.
 task&lt;aggregate_reply&gt; handle_request(request req) {
-	auto a = fetch_profile(req.user_id);
-	auto b = fetch_inventory(req.item_id);
-	auto c = fetch_pricing(req.item_id);
+    auto a = fetch_profile(req.user_id);
+    auto b = fetch_inventory(req.item_id);
+    auto c = fetch_pricing(req.item_id);
 
-	co_return aggregate_reply{
-		co_await a,
-		co_await b,
-		co_await c,
-	};
+    co_return aggregate_reply{
+        co_await a,
+        co_await b,
+        co_await c,
+    };
 }
 </code></pre>
 <p>This code is tidy and underspecified.</p>

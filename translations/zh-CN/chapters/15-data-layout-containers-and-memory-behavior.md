@@ -35,14 +35,14 @@ C++ 中的许多性能问题，表面上看是算法选择之争，实则是数�
 
 // Contiguous: hardware prefetcher has a good day.
 std::int64_t sum_vector(const std::vector<int>& v) {
-	return std::accumulate(v.begin(), v.end(), std::int64_t{0});
+    return std::accumulate(v.begin(), v.end(), std::int64_t{0});
 }
 
 // Scattered: every node is a pointer chase.  Each dereference is
 // a potential cache miss if nodes were allocated at different times
 // and landed on different cache lines or pages.
 std::int64_t sum_list(const std::list<int>& l) {
-	return std::accumulate(l.begin(), l.end(), std::int64_t{0});
+    return std::accumulate(l.begin(), l.end(), std::int64_t{0});
 }
 ```
 
@@ -84,25 +84,25 @@ C++23 新增了 `std::flat_map` 和 `std::flat_set`（分别在 `<flat_map>` 和
 // fields of a single tick (e.g., serializing one record, looking
 // up a specific event).
 struct Tick {
-	std::int64_t timestamp_ns;
-	std::int32_t instrument_id;
-	double bid;
-	double ask;
-	char exchange[8];       // cold: rarely used in hot aggregation
-	std::uint32_t seq_no;   // cold
-	std::uint16_t flags;    // cold
-	// sizeof(Tick) ~ 48 bytes with padding on most ABIs
+    std::int64_t timestamp_ns;
+    std::int32_t instrument_id;
+    double bid;
+    double ask;
+    char exchange[8];       // cold: rarely used in hot aggregation
+    std::uint32_t seq_no;   // cold
+    std::uint16_t flags;    // cold
+    // sizeof(Tick) ~ 48 bytes with padding on most ABIs
 };
 
 double mid_price_sum_aos(std::span<const Tick> ticks) {
-	double total = 0.0;
-	for (const auto& t : ticks) {
-		// Each iteration loads a full 48-byte Tick, but only
-		// reads bid and ask (16 bytes).  The remaining 32 bytes
-		// pollute cache lines and reduce effective bandwidth.
-		total += (t.bid + t.ask) * 0.5;
-	}
-	return total;
+    double total = 0.0;
+    for (const auto& t : ticks) {
+        // Each iteration loads a full 48-byte Tick, but only
+        // reads bid and ask (16 bytes).  The remaining 32 bytes
+        // pollute cache lines and reduce effective bandwidth.
+        total += (t.bid + t.ask) * 0.5;
+    }
+    return total;
 }
 ```
 
@@ -110,32 +110,32 @@ double mid_price_sum_aos(std::span<const Tick> ticks) {
 // Structure of Arrays (SoA): columnar layout.
 // Each field lives in its own contiguous array.
 struct TickColumns {
-	std::vector<std::int64_t> timestamp_ns;
-	std::vector<std::int32_t> instrument_id;
-	std::vector<double> bid;
-	std::vector<double> ask;
-	std::vector<std::array<char, 8>> exchange;
-	std::vector<std::uint32_t> seq_no;
-	std::vector<std::uint16_t> flags;
+    std::vector<std::int64_t> timestamp_ns;
+    std::vector<std::int32_t> instrument_id;
+    std::vector<double> bid;
+    std::vector<double> ask;
+    std::vector<std::array<char, 8>> exchange;
+    std::vector<std::uint32_t> seq_no;
+    std::vector<std::uint16_t> flags;
 
-	void append(std::int64_t ts, std::int32_t id, double b, double a) {
-		timestamp_ns.push_back(ts);
-		instrument_id.push_back(id);
-		bid.push_back(b);
-		ask.push_back(a);
-		// ...other columns omitted for brevity
-	}
+    void append(std::int64_t ts, std::int32_t id, double b, double a) {
+        timestamp_ns.push_back(ts);
+        instrument_id.push_back(id);
+        bid.push_back(b);
+        ask.push_back(a);
+        // ...other columns omitted for brevity
+    }
 };
 
 double mid_price_sum_soa(const TickColumns& ticks) {
-	double total = 0.0;
-	// Only bid[] and ask[] are touched.  Each cache line is 100%
-	// useful payload.  The compiler can auto-vectorize this loop,
-	// and the prefetcher has two clean sequential streams.
-	for (std::size_t i = 0; i != ticks.bid.size(); ++i) {
-		total += (ticks.bid[i] + ticks.ask[i]) * 0.5;
-	}
-	return total;
+    double total = 0.0;
+    // Only bid[] and ask[] are touched.  Each cache line is 100%
+    // useful payload.  The compiler can auto-vectorize this loop,
+    // and the prefetcher has two clean sequential streams.
+    for (std::size_t i = 0; i != ticks.bid.size(); ++i) {
+        total += (ticks.bid[i] + ticks.ask[i]) * 0.5;
+    }
+    return total;
 }
 ```
 
@@ -179,34 +179,34 @@ ranges 让非拥有访问的表达更整洁，但也更容易被误用。一条 
 // A naive priority queue built from scattered heap nodes.
 // Each node is individually allocated and linked by pointer.
 struct Job {
-	int priority;
-	std::string description;  // may allocate on heap
-	Job* next;
+    int priority;
+    std::string description;  // may allocate on heap
+    Job* next;
 };
 
 class NaivePriorityQueue {
-	Job* head_ = nullptr;
+    Job* head_ = nullptr;
 public:
-	void insert(int priority, std::string desc) {
-		auto* node = new Job{priority, std::move(desc), nullptr};
-		// Sorted insert: walk the list to find position.
-		// Each step dereferences a pointer to a random heap location.
-		Job** pos = &head_;
-		while (*pos && (*pos)->priority <= priority)
-			pos = &(*pos)->next;
-		node->next = *pos;
-		*pos = node;
-	}
+    void insert(int priority, std::string desc) {
+        auto* node = new Job{priority, std::move(desc), nullptr};
+        // Sorted insert: walk the list to find position.
+        // Each step dereferences a pointer to a random heap location.
+        Job** pos = &head_;
+        while (*pos && (*pos)->priority <= priority)
+            pos = &(*pos)->next;
+        node->next = *pos;
+        *pos = node;
+    }
 
-	// Find highest-priority job.  Cheap -- it is at the head.
-	// But any operation that scans (e.g., "remove by description",
-	// "count jobs above threshold") pointer-chases through
-	// potentially thousands of cold cache lines.
-	Job* top() const { return head_; }
+    // Find highest-priority job.  Cheap -- it is at the head.
+    // But any operation that scans (e.g., "remove by description",
+    // "count jobs above threshold") pointer-chases through
+    // potentially thousands of cold cache lines.
+    Job* top() const { return head_; }
 
-	~NaivePriorityQueue() {
-		while (head_) { auto* n = head_; head_ = head_->next; delete n; }
-	}
+    ~NaivePriorityQueue() {
+        while (head_) { auto* n = head_; head_ = head_->next; delete n; }
+    }
 };
 ```
 
@@ -214,27 +214,27 @@ public:
 
 ```cpp
 struct Job {
-	int priority;
-	std::string description;
+    int priority;
+    std::string description;
 };
 
 class FlatPriorityQueue {
-	std::vector<Job> jobs_;
+    std::vector<Job> jobs_;
 public:
-	void insert(int priority, std::string desc) {
-		jobs_.push_back({priority, std::move(desc)});
-		// Could maintain sorted order with std::lower_bound + insert,
-		// or just push_back and sort/partial_sort when needed.
-	}
+    void insert(int priority, std::string desc) {
+        jobs_.push_back({priority, std::move(desc)});
+        // Could maintain sorted order with std::lower_bound + insert,
+        // or just push_back and sort/partial_sort when needed.
+    }
 
-	// Rebuild top in O(n) but with contiguous memory access.
-	// For scan-heavy workloads this dominates pointer-chasing.
-	const Job& top() const {
-		return *std::min_element(jobs_.begin(), jobs_.end(),
-			[](const auto& a, const auto& b) {
-				return a.priority < b.priority;
-			});
-	}
+    // Rebuild top in O(n) but with contiguous memory access.
+    // For scan-heavy workloads this dominates pointer-chasing.
+    const Job& top() const {
+        return *std::min_element(jobs_.begin(), jobs_.end(),
+            [](const auto& a, const auto& b) {
+                return a.priority < b.priority;
+            });
+    }
 };
 ```
 

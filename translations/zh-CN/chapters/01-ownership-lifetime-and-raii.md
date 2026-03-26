@@ -34,69 +34,69 @@ RAII 的本质是：把资源绑定到一个对象的生命周期上，由该对
 
 ```cpp
 socket_t create_server_socket(std::uint16_t port) {
-	socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
-	if (server == invalid_socket) {
-		throw NetworkError{"socket failed"};
-	}
+    socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (server == invalid_socket) {
+        throw NetworkError{"socket failed"};
+    }
 
-	int opt = 1;
-	if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-		::close_socket(server);
-		throw NetworkError{"setsockopt failed"};
-	}
+    int opt = 1;
+    if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        ::close_socket(server);
+        throw NetworkError{"setsockopt failed"};
+    }
 
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons(port);
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port);
 
-	if (::bind(server, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
-		::close_socket(server);
-		throw NetworkError{"bind failed"};
-	}
+    if (::bind(server, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+        ::close_socket(server);
+        throw NetworkError{"bind failed"};
+    }
 
-	if (::listen(server, 16) < 0) {
-		::close_socket(server);
-		throw NetworkError{"listen failed"};
-	}
+    if (::listen(server, 16) < 0) {
+        ::close_socket(server);
+        throw NetworkError{"listen failed"};
+    }
 
-	return server; // RISK: caller now owns the raw descriptor by convention
+    return server; // RISK: caller now owns the raw descriptor by convention
 }
 
 void serve_once(std::uint16_t port) {
-	socket_t server = create_server_socket(port);
-	socket_t client = invalid_socket;
+    socket_t server = create_server_socket(port);
+    socket_t client = invalid_socket;
 
-	try {
-		sockaddr_in client_addr{};
-		socket_length addr_len = sizeof(client_addr);
-		client = ::accept(server,
-		                  reinterpret_cast<sockaddr*>(&client_addr),
-		                  &addr_len);
-		if (client == invalid_socket) {
-			::close_socket(server); // BUG: server will be closed twice (here + in catch)
-			throw NetworkError{"accept failed"};
-		}
+    try {
+        sockaddr_in client_addr{};
+        socket_length addr_len = sizeof(client_addr);
+        client = ::accept(server,
+                          reinterpret_cast<sockaddr*>(&client_addr),
+                          &addr_len);
+        if (client == invalid_socket) {
+            ::close_socket(server); // BUG: server will be closed twice (here + in catch)
+            throw NetworkError{"accept failed"};
+        }
 
-		std::array<char, 8192> buffer{};
-		auto n = read_from_socket(client, buffer.data(), buffer.size());
-		if (n <= 0) {
-			::close_socket(client);
-			::close_socket(server);
-			return;
-		}
+        std::array<char, 8192> buffer{};
+        auto n = read_from_socket(client, buffer.data(), buffer.size());
+        if (n <= 0) {
+            ::close_socket(client);
+            ::close_socket(server);
+            return;
+        }
 
-		process_request(client, std::string_view{buffer.data(), static_cast<std::size_t>(n)}); // RISK: any throw must preserve cleanup correctness
+        process_request(client, std::string_view{buffer.data(), static_cast<std::size_t>(n)}); // RISK: any throw must preserve cleanup correctness
 
-		::close_socket(client);
-		::close_socket(server);
-	} catch (...) {
-		if (client != invalid_socket) {
-			::close_socket(client);
-		}
-		::close_socket(server);
-		throw;
-	}
+        ::close_socket(client);
+        ::close_socket(server);
+    } catch (...) {
+        if (client != invalid_socket) {
+            ::close_socket(client);
+        }
+        ::close_socket(server);
+        throw;
+    }
 }
 ```
 

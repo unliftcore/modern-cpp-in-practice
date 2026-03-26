@@ -212,17 +212,17 @@
 <p>When implementation detail names the contract, the dependency arrow is already wrong.</p>
 <pre><code class="language-cpp">// Anti-pattern: domain code now depends on storage representation.
 struct AccountRow {
-	std::string id;
-	std::int64_t cents_available;
-	bool is_frozen;
-	std::string fraud_flag;
+    std::string id;
+    std::int64_t cents_available;
+    bool is_frozen;
+    std::string fraud_flag;
 };
 
 class AccountsTable {
 public:
-	virtual std::expected&lt;AccountRow, DbError&gt;
-	fetch_by_id(std::string_view id) = 0;
-	virtual ~AccountsTable() = default;
+    virtual std::expected&lt;AccountRow, DbError&gt;
+    fetch_by_id(std::string_view id) = 0;
+    virtual ~AccountsTable() = default;
 };
 
 std::expected&lt;PaymentDecision, PaymentError&gt;
@@ -231,16 +231,16 @@ authorize_payment(AccountsTable&amp; table, const PaymentRequest&amp; request);
 <p>This looks testable because it uses an abstract base class. It is still the wrong seam. The payment workflow should not know that available credit is stored as cents next to a fraud flag string loaded from a table row. The abstraction preserved the dependency but did not improve its direction.</p>
 <p>A better port is named by the workflow and returns the minimum stable facts the workflow needs.</p>
 <pre><code class="language-cpp">struct CreditState {
-	Money available;
-	bool frozen;
-	RiskLevel risk;
+    Money available;
+    bool frozen;
+    RiskLevel risk;
 };
 
 class CreditPolicyPort {
 public:
-	virtual std::expected&lt;CreditState, PaymentError&gt;
-	load_credit_state(AccountId account) = 0;
-	virtual ~CreditPolicyPort() = default;
+    virtual std::expected&lt;CreditState, PaymentError&gt;
+    load_credit_state(AccountId account) = 0;
+    virtual ~CreditPolicyPort() = default;
 };
 
 std::expected&lt;PaymentDecision, PaymentError&gt;
@@ -253,40 +253,40 @@ authorize_payment(CreditPolicyPort&amp; credit, const PaymentRequest&amp; reques
 // metrics, and configuration concerns in one surface.
 class UserService {
 public:
-	virtual std::expected&lt;UserProfile, ServiceError&gt;
-	get_profile(UserId id) = 0;
+    virtual std::expected&lt;UserProfile, ServiceError&gt;
+    get_profile(UserId id) = 0;
 
-	virtual void update_profile(UserId id, const ProfilePatch&amp; patch) = 0;
+    virtual void update_profile(UserId id, const ProfilePatch&amp; patch) = 0;
 
-	virtual void ban_user(UserId id, std::string_view reason) = 0;
+    virtual void ban_user(UserId id, std::string_view reason) = 0;
 
-	virtual std::vector&lt;AuditEntry&gt;
-	get_audit_log(UserId id, TimeRange range) = 0;
+    virtual std::vector&lt;AuditEntry&gt;
+    get_audit_log(UserId id, TimeRange range) = 0;
 
-	virtual void flush_cache() = 0;
+    virtual void flush_cache() = 0;
 
-	virtual MetricsSnapshot get_metrics() const = 0;
+    virtual MetricsSnapshot get_metrics() const = 0;
 
-	virtual void set_rate_limit(RateLimitConfig config) = 0;
+    virtual void set_rate_limit(RateLimitConfig config) = 0;
 
-	virtual ~UserService() = default;
+    virtual ~UserService() = default;
 };
 </code></pre>
 <p>This interface has at least four unrelated axes of change: user data access, moderation policy, operational observability, and runtime configuration. A caller who only needs to read a profile now transitively depends on audit, caching, metrics, and rate-limiting types. Test doubles must implement seven methods to fake one. Adding a new moderation action forces recompilation of read-only consumers. The interface is not flexible. It is a dependency sink that makes every change expensive and every test fragile.</p>
 <p>The fix is to split along responsibility boundaries:</p>
 <pre><code class="language-cpp">class UserProfileQuery {
 public:
-	virtual std::expected&lt;UserProfile, ServiceError&gt;
-	get_profile(UserId id) = 0;
-	virtual ~UserProfileQuery() = default;
+    virtual std::expected&lt;UserProfile, ServiceError&gt;
+    get_profile(UserId id) = 0;
+    virtual ~UserProfileQuery() = default;
 };
 
 class ModerationActions {
 public:
-	virtual void ban_user(UserId id, std::string_view reason) = 0;
-	virtual std::vector&lt;AuditEntry&gt;
-	get_audit_log(UserId id, TimeRange range) = 0;
-	virtual ~ModerationActions() = default;
+    virtual void ban_user(UserId id, std::string_view reason) = 0;
+    virtual std::vector&lt;AuditEntry&gt;
+    get_audit_log(UserId id, TimeRange range) = 0;
+    virtual ~ModerationActions() = default;
 };
 </code></pre>
 <p>Now read-only consumers depend only on <code>UserProfileQuery</code>, moderation tools depend on <code>ModerationActions</code>, and operational concerns live in yet another interface. Each can evolve independently. Test doubles are trivial.</p>
@@ -297,23 +297,23 @@ public:
 
 class RetryConfigProvider {
 public:
-	virtual nlohmann::json load_retry_config() = 0;
-	virtual ~RetryConfigProvider() = default;
+    virtual nlohmann::json load_retry_config() = 0;
+    virtual ~RetryConfigProvider() = default;
 };
 </code></pre>
 <p>Every translation unit that includes this header now depends on the JSON library, whether or not it cares about JSON. Changing to TOML, YAML, or a binary config format becomes a breaking change across the entire codebase. The JSON library’s compile time, macro definitions, and transitive includes spread into unrelated components. Worse, callers must navigate a JSON tree to extract retry parameters—initial backoff, max backoff, max attempts—scattering implicit schema knowledge throughout the codebase.</p>
 <p>The fix is to return domain-meaningful types:</p>
 <pre><code class="language-cpp">struct RetryConfig {
-	std::chrono::milliseconds initial_backoff;
-	std::chrono::milliseconds max_backoff;
-	std::uint32_t max_attempts;
+    std::chrono::milliseconds initial_backoff;
+    std::chrono::milliseconds max_backoff;
+    std::uint32_t max_attempts;
 };
 
 class RetryConfigProvider {
 public:
-	virtual std::expected&lt;RetryConfig, ConfigError&gt;
-	load_retry_config() = 0;
-	virtual ~RetryConfigProvider() = default;
+    virtual std::expected&lt;RetryConfig, ConfigError&gt;
+    load_retry_config() = 0;
+    virtual ~RetryConfigProvider() = default;
 };
 </code></pre>
 <p>Now the JSON dependency stays inside the adapter implementation. Consumers work with typed, validated values. The interface communicates domain meaning, not serialization format.</p>
@@ -323,13 +323,13 @@ public:
 // even though this is supposed to abstract away storage.
 class DataStore {
 public:
-	virtual std::expected&lt;RowSet, DbError&gt;
-	execute_query(std::string_view sql) = 0;
+    virtual std::expected&lt;RowSet, DbError&gt;
+    execute_query(std::string_view sql) = 0;
 
-	virtual std::expected&lt;std::size_t, DbError&gt;
-	execute_update(std::string_view sql) = 0;
+    virtual std::expected&lt;std::size_t, DbError&gt;
+    execute_update(std::string_view sql) = 0;
 
-	virtual ~DataStore() = default;
+    virtual ~DataStore() = default;
 };
 </code></pre>
 <p>This interface claims to abstract storage, but it exposes SQL as a string protocol. Callers must know the schema, construct correct SQL, and parse <code>RowSet</code> results. The abstraction prevents neither SQL injection nor schema coupling. It is a pass-through that adds indirection without reducing dependency.</p>
@@ -338,8 +338,8 @@ public:
 // or control what gets loaded.
 class OrderRepository {
 public:
-	virtual std::vector&lt;Order&gt; get_all_orders() = 0;
-	virtual ~OrderRepository() = default;
+    virtual std::vector&lt;Order&gt; get_all_orders() = 0;
+    virtual ~OrderRepository() = default;
 };
 </code></pre>
 <p>The right abstraction level matches the operations the caller actually performs, using domain vocabulary and offering enough control to be efficient.</p>

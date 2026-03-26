@@ -295,20 +295,20 @@ import webapi.task;
 <p><strong>新增私有成员导致类大小变化。</strong> 使用方基于库 v1 编译，按当时的 <code>sizeof(Widget)</code> 分配对象。v2 新增了一个私有成员后，库的方法就会写越使用方分配的空间。结果不是链接报错，而是静默的内存踩踏。</p>
 <pre><code class="language-cpp">// v1: shipped in libwidget.so
 class EXPORT Widget {
-	int x_;
-	int y_;
+    int x_;
+    int y_;
 public:
-	void move(int dx, int dy);  // accesses x_, y_
+    void move(int dx, int dy);  // accesses x_, y_
 };
 // sizeof(Widget) == 8 for the consumer
 
 // v2: added a z-index member
 class EXPORT Widget {
-	int x_;
-	int y_;
-	int z_;  // sizeof(Widget) is now 12
+    int x_;
+    int y_;
+    int z_;  // sizeof(Widget) is now 12
 public:
-	void move(int dx, int dy);  // same signature, same symbol
+    void move(int dx, int dy);  // same signature, same symbol
 };
 // Consumer still allocates 8 bytes. Library writes 12. Corruption.
 </code></pre>
@@ -335,8 +335,8 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: fragile ABI surface for a shared library.
 class EXPORT Session {
 public:
-	virtual std::string send(const std::string&amp; request) = 0;
-	virtual ~Session() = default;
+    virtual std::string send(const std::string&amp; request) = 0;
+    virtual ~Session() = default;
 };
 
 std::unique_ptr&lt;Session&gt; create_session();
@@ -347,21 +347,21 @@ std::unique_ptr&lt;Session&gt; create_session();
 <pre><code class="language-cpp">struct session_v1;
 
 struct request_buffer {
-	const std::byte* data;
-	std::size_t size;
+    const std::byte* data;
+    std::size_t size;
 };
 
 struct response_buffer {
-	const std::byte* data;
-	std::size_t size;
+    const std::byte* data;
+    std::size_t size;
 };
 
 struct session_api_v1 {
-	std::uint32_t struct_size;
-	session_v1* (*create)() noexcept;
-	void (*destroy)(session_v1*) noexcept;
-	status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
-	void (*release_response)(response_buffer*) noexcept;
+    std::uint32_t struct_size;
+    session_v1* (*create)() noexcept;
+    void (*destroy)(session_v1*) noexcept;
+    status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
+    void (*release_response)(response_buffer*) noexcept;
 };
 </code></pre>
 <p>写法上不那么漂亮，但诚实得多。这种边界把内存分配归属、版本化接口面和错误传递方式全都摆到了明面上。墙的另一边，内部实现照样可以用 <code>std::expected</code>、<code>std::pmr</code>、协程、模块，以及任何 C++23 技术。</p>
@@ -394,16 +394,16 @@ struct session_api_v1 {
 <pre><code class="language-cpp">// Anti-pattern: cross-boundary allocation mismatch.
 // Library (built with MSVC debug runtime, uses debug heap):
 EXPORT char* get_name() {
-	char* buf = new char[64];
-	std::strcpy(buf, "session-001");
-	return buf;
+    char* buf = new char[64];
+    std::strcpy(buf, "session-001");
+    return buf;
 }
 
 // Consumer (built with MSVC release runtime, uses release heap):
 void use_library() {
-	char* name = get_name();
-	// ...
-	delete[] name;  // CRASH: freeing debug-heap memory on release heap
+    char* name = get_name();
+    // ...
+    delete[] name;  // CRASH: freeing debug-heap memory on release heap
 }
 </code></pre>
 <p>解决办法是绝不让分配和释放跨越边界。谁分配谁释放——库负责分配，就必须同时提供释放函数；或者改用调用方预先提供的 buffer。</p>

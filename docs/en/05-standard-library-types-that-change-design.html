@@ -189,14 +189,14 @@
 <p><code>std::string_view</code> and <code>std::span</code> are the most important everyday design types in modern C++ because they separate access from ownership. That sounds small. It is not. Once a codebase adopts borrowing types consistently, function signatures stop implying allocations they do not need and stop pretending to own data they merely inspect.</p>
 <p>Consider a telemetry ingestion layer that parses line-based text records and binary attribute blobs:</p>
 <pre><code class="language-cpp">struct MetricRecord {
-	std::string name;
-	std::int64_t value;
-	std::vector&lt;std::byte&gt; attributes;
+    std::string name;
+    std::int64_t value;
+    std::vector&lt;std::byte&gt; attributes;
 };
 
 auto parse_metric_line(std::string_view line,
-					   std::span&lt;const std::byte&gt; attribute_bytes)
-	-&gt; std::expected&lt;MetricRecord, ParseError&gt;;
+                       std::span&lt;const std::byte&gt; attribute_bytes)
+    -&gt; std::expected&lt;MetricRecord, ParseError&gt;;
 </code></pre>
 <p>This signature says several important things immediately.</p>
 <ul>
@@ -223,12 +223,12 @@ auto parse_metric_line(const std::string&amp; line,
 <p>The failure mode is storing the borrow when the lifetime guarantee was local.</p>
 <pre><code class="language-cpp">class RequestContext {
 public:
-	void set_tenant(std::string_view tenant) {
-		tenant_ = tenant; // BUG: borrowed view may outlive caller storage
-	}
+    void set_tenant(std::string_view tenant) {
+        tenant_ = tenant; // BUG: borrowed view may outlive caller storage
+    }
 
 private:
-	std::string_view tenant_;
+    std::string_view tenant_;
 };
 </code></pre>
 <p>This is not a reason to avoid <code>std::string_view</code>. It is a reason to use it only for parameters, local algorithm plumbing, and return types whose lifetime contract is obvious and reviewable. If the object needs to keep the data, store <code>std::string</code>. If a subsystem needs stable binary ownership, store a container or dedicated buffer type.</p>

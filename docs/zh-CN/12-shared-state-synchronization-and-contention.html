@@ -214,23 +214,23 @@
 <p>在讨论该用哪种原语之前，先看看完全没有同步保护会怎样。下面的代码存在数据竞争，在 C++ 中属于未定义行为。</p>
 <pre><code class="language-cpp">// BUG: data race — two threads read and write counter without synchronization.
 struct metrics {
-	int request_count = 0;
-	int error_count = 0;
+    int request_count = 0;
+    int error_count = 0;
 };
 
 metrics g_metrics;
 
 void record_request(bool success) {
-	++g_metrics.request_count;            // unsynchronized read-modify-write
-	if (!success) ++g_metrics.error_count; // same
+    ++g_metrics.request_count;            // unsynchronized read-modify-write
+    if (!success) ++g_metrics.error_count; // same
 }
 </code></pre>
 <p>这不只是正确性风险——按照标准，这就是未定义行为。编译器和硬件完全可以对这些操作进行重排、撕裂或省略。实际表现上，计数器可能丢失更新、报告不可能的值，甚至在不支持原子字存储的架构上破坏相邻内存。Sanitizer 能立刻检测到这类问题，但 sanitizer 不一定在生产环境中开启。</p>
 <p>一个更隐蔽的变体涉及多字段不变量：</p>
 <pre><code class="language-cpp">// BUG: readers can observe state_ == READY while payload_ is half-written.
 struct shared_result {
-	std::string payload_;
-	enum { EMPTY, READY } state_ = EMPTY;
+    std::string payload_;
+    enum { EMPTY, READY } state_ = EMPTY;
 };
 
 // Writer thread:
@@ -239,7 +239,7 @@ result.state_ = READY;              // may be reordered before payload_ write
 
 // Reader thread:
 if (result.state_ == READY)
-	process(result.payload_);        // may see partially constructed string
+    process(result.payload_);        // may see partially constructed string
 </code></pre>
 <p>即使 <code>state_</code> 是原子的，如果内存序不对，<code>payload_</code> 的写入仍可能被重排到 <code>state_</code> 之后。这里的教训是：数据竞争不只是单个变量的问题，更是相关修改之间可见性顺序的问题。</p>
 <h2 id="裸-mutex-操作的误用与-raii-guard"><a class="header" href="#裸-mutex-操作的误用与-raii-guard">裸 mutex 操作的误用与 RAII guard</a></h2>
@@ -249,52 +249,52 @@ std::mutex mtx;
 std::vector&lt;int&gt; data;
 
 void push(int value) {
-	mtx.lock();
-	data.push_back(value); // may throw (allocation failure)
-	mtx.unlock();          // never reached if push_back throws — deadlock on next access
+    mtx.lock();
+    data.push_back(value); // may throw (allocation failure)
+    mtx.unlock();          // never reached if push_back throws — deadlock on next access
 }
 </code></pre>
 <p>一旦 <code>push_back</code> 抛出异常，<code>unlock()</code> 就被跳过了。之后所有试图获取 <code>mtx</code> 的线程都将永久阻塞。这绝非假想场景——内存压力下的分配失败，或者一个会抛异常的拷贝构造函数，都足以触发它。</p>
 <p>修复方式很机械：使用 RAII guard。</p>
 <pre><code class="language-cpp">void push(int value) {
-	std::scoped_lock lock(mtx);
-	data.push_back(value); // if this throws, ~scoped_lock releases the mutex
+    std::scoped_lock lock(mtx);
+    data.push_back(value); // if this throws, ~scoped_lock releases the mutex
 }
 </code></pre>
 <p><code>std::scoped_lock</code> 可以处理单个或多个 mutex，并自带死锁规避。<code>std::unique_lock</code> 在此基础上增加了延迟加锁、转移所有权和配合 condition variable 的能力。除非确实需要这些额外灵活性，否则优先选择 <code>scoped_lock</code>。</p>
 <pre><code class="language-cpp">// unique_lock: needed when the lock must be released before scope exit.
 void transfer_expired(registry&amp; reg, std::vector&lt;session&gt;&amp; out) {
-	std::unique_lock lock(reg.mutex_);
-	auto expired = reg.extract_expired(); // modifies registry under lock
-	lock.unlock();                        // release before expensive cleanup
-	for (auto&amp; s : expired)
-		s.close_socket();                 // no lock held — safe to block
-	// out is caller-owned, no synchronization needed
-	out.insert(out.end(),
-		std::make_move_iterator(expired.begin()),
-		std::make_move_iterator(expired.end()));
+    std::unique_lock lock(reg.mutex_);
+    auto expired = reg.extract_expired(); // modifies registry under lock
+    lock.unlock();                        // release before expensive cleanup
+    for (auto&amp; s : expired)
+        s.close_socket();                 // no lock held — safe to block
+    // out is caller-owned, no synchronization needed
+    out.insert(out.end(),
+        std::make_move_iterator(expired.begin()),
+        std::make_move_iterator(expired.end()));
 }
 </code></pre>
 <h2 id="不一致的加锁顺序导致死锁"><a class="header" href="#不一致的加锁顺序导致死锁">不一致的加锁顺序导致死锁</a></h2>
 <p>当代码需要获取多把 mutex 时，加锁顺序不一致就是最经典的死锁根源。</p>
 <pre><code class="language-cpp">// BUG: deadlock if thread 1 calls transfer(a, b) while thread 2 calls transfer(b, a).
 struct account {
-	std::mutex mtx;
-	int balance = 0;
+    std::mutex mtx;
+    int balance = 0;
 };
 
 void transfer(account&amp; from, account&amp; to, int amount) {
-	std::lock_guard lock_from(from.mtx); // locks 'from' first
-	std::lock_guard lock_to(to.mtx);     // then 'to' — opposite order on another thread
-	from.balance -= amount;
-	to.balance += amount;
+    std::lock_guard lock_from(from.mtx); // locks 'from' first
+    std::lock_guard lock_to(to.mtx);     // then 'to' — opposite order on another thread
+    from.balance -= amount;
+    to.balance += amount;
 }
 </code></pre>
 <p>线程 1 锁住 <code>a.mtx</code>，等着拿 <code>b.mtx</code>；线程 2 锁住 <code>b.mtx</code>，等着拿 <code>a.mtx</code>——谁也走不了。<code>std::scoped_lock</code> 内部使用 <code>std::lock</code> 同时获取两把 mutex 来规避死锁：</p>
 <pre><code class="language-cpp">void transfer(account&amp; from, account&amp; to, int amount) {
-	std::scoped_lock lock(from.mtx, to.mtx); // deadlock-free acquisition
-	from.balance -= amount;
-	to.balance += amount;
+    std::scoped_lock lock(from.mtx, to.mtx); // deadlock-free acquisition
+    from.balance -= amount;
+    to.balance += amount;
 }
 </code></pre>
 <p>这不只是方便，而是正确性保障。任何需要多把 mutex 的设计，要么用 <code>std::scoped_lock</code> 一次性获取，要么就严格执行有文档记录的全局加锁顺序。靠口头约定的加锁规矩，很少能挺过一轮重构。</p>
@@ -302,17 +302,17 @@ void transfer(account&amp; from, account&amp; to, int amount) {
 <p>争用不仅关乎正确性，过度加锁还会把本可并行的工作强制串行化。</p>
 <pre><code class="language-cpp">// Over-synchronized: every stat update contends on one lock.
 class request_stats {
-	std::mutex mtx_;
-	uint64_t total_requests_ = 0;
-	uint64_t total_bytes_ = 0;
-	uint64_t error_count_ = 0;
+    std::mutex mtx_;
+    uint64_t total_requests_ = 0;
+    uint64_t total_bytes_ = 0;
+    uint64_t error_count_ = 0;
 public:
-	void record(uint64_t bytes, bool error) {
-		std::scoped_lock lock(mtx_);
-		++total_requests_;
-		total_bytes_ += bytes;
-		if (error) ++error_count_;
-	}
+    void record(uint64_t bytes, bool error) {
+        std::scoped_lock lock(mtx_);
+        ++total_requests_;
+        total_bytes_ += bytes;
+        if (error) ++error_count_;
+    }
 };
 </code></pre>
 <p>在一台每秒处理数百万请求的 64 核机器上，所有线程都在同一条 cache line 上排队。锁获取、cache line 反复弹跳和调度器唤醒成了主要开销。更好的设计取决于你能容忍什么：</p>
@@ -332,30 +332,30 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: one mutex protects unrelated invariants and long operations.
 class session_registry {
 public:
-	std::optional&lt;session_info&gt; find(session_id id) {
-		std::scoped_lock lock(mutex_);
-		auto it = sessions_.find(id);
-		if (it == sessions_.end()) {
-			return std::nullopt;
-		}
-		return it-&gt;second;
-	}
+    std::optional&lt;session_info&gt; find(session_id id) {
+        std::scoped_lock lock(mutex_);
+        auto it = sessions_.find(id);
+        if (it == sessions_.end()) {
+            return std::nullopt;
+        }
+        return it-&gt;second;
+    }
 
-	void expire_idle_sessions(std::chrono::steady_clock::time_point now) {
-		std::scoped_lock lock(mutex_);
-		for (auto it = sessions_.begin(); it != sessions_.end();) {
-			if (it-&gt;second.expires_at &lt;= now) {
-				close_socket(it-&gt;second.socket); // RISK: blocking work under the lock.
-				it = sessions_.erase(it);
-			} else {
-				++it;
-			}
-		}
-	}
+    void expire_idle_sessions(std::chrono::steady_clock::time_point now) {
+        std::scoped_lock lock(mutex_);
+        for (auto it = sessions_.begin(); it != sessions_.end();) {
+            if (it-&gt;second.expires_at &lt;= now) {
+                close_socket(it-&gt;second.socket); // RISK: blocking work under the lock.
+                it = sessions_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 
 private:
-	std::mutex mutex_;
-	std::unordered_map&lt;session_id, session_info&gt; sessions_;
+    std::mutex mutex_;
+    std::unordered_map&lt;session_id, session_info&gt; sessions_;
 };
 </code></pre>
 <p>这个对象在早期测试中可能毫无问题，因为局部看起来很简单。后来出问题，是因为不相关的工作被迫共享了同一个排队点。一次读操作被清理任务阻塞；清理任务在持有 mutex 的同时做 I/O；后续新功能还会不断往同一个临界区里塞 metrics、回调和日志——因为“锁已经在那了“。</p>

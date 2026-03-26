@@ -34,69 +34,69 @@ Before illustrating the RAII pattern, it is worth seeing the manual approach in 
 
 ```cpp
 socket_t create_server_socket(std::uint16_t port) {
-	socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
-	if (server == invalid_socket) {
-		throw NetworkError{"socket failed"};
-	}
+    socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (server == invalid_socket) {
+        throw NetworkError{"socket failed"};
+    }
 
-	int opt = 1;
-	if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-		::close_socket(server);
-		throw NetworkError{"setsockopt failed"};
-	}
+    int opt = 1;
+    if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        ::close_socket(server);
+        throw NetworkError{"setsockopt failed"};
+    }
 
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons(port);
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port);
 
-	if (::bind(server, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
-		::close_socket(server);
-		throw NetworkError{"bind failed"};
-	}
+    if (::bind(server, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+        ::close_socket(server);
+        throw NetworkError{"bind failed"};
+    }
 
-	if (::listen(server, 16) < 0) {
-		::close_socket(server);
-		throw NetworkError{"listen failed"};
-	}
+    if (::listen(server, 16) < 0) {
+        ::close_socket(server);
+        throw NetworkError{"listen failed"};
+    }
 
-	return server; // RISK: caller now owns the raw descriptor by convention
+    return server; // RISK: caller now owns the raw descriptor by convention
 }
 
 void serve_once(std::uint16_t port) {
-	socket_t server = create_server_socket(port);
-	socket_t client = invalid_socket;
+    socket_t server = create_server_socket(port);
+    socket_t client = invalid_socket;
 
-	try {
-		sockaddr_in client_addr{};
-		socket_length addr_len = sizeof(client_addr);
-		client = ::accept(server,
-		                  reinterpret_cast<sockaddr*>(&client_addr),
-		                  &addr_len);
-		if (client == invalid_socket) {
-			::close_socket(server); // BUG: server will be closed twice (here + in catch)
-			throw NetworkError{"accept failed"};
-		}
+    try {
+        sockaddr_in client_addr{};
+        socket_length addr_len = sizeof(client_addr);
+        client = ::accept(server,
+                          reinterpret_cast<sockaddr*>(&client_addr),
+                          &addr_len);
+        if (client == invalid_socket) {
+            ::close_socket(server); // BUG: server will be closed twice (here + in catch)
+            throw NetworkError{"accept failed"};
+        }
 
-		std::array<char, 8192> buffer{};
-		auto n = read_from_socket(client, buffer.data(), buffer.size());
-		if (n <= 0) {
-			::close_socket(client);
-			::close_socket(server);
-			return;
-		}
+        std::array<char, 8192> buffer{};
+        auto n = read_from_socket(client, buffer.data(), buffer.size());
+        if (n <= 0) {
+            ::close_socket(client);
+            ::close_socket(server);
+            return;
+        }
 
-		process_request(client, std::string_view{buffer.data(), static_cast<std::size_t>(n)}); // RISK: any throw must preserve cleanup correctness
+        process_request(client, std::string_view{buffer.data(), static_cast<std::size_t>(n)}); // RISK: any throw must preserve cleanup correctness
 
-		::close_socket(client);
-		::close_socket(server);
-	} catch (...) {
-		if (client != invalid_socket) {
-			::close_socket(client);
-		}
-		::close_socket(server);
-		throw;
-	}
+        ::close_socket(client);
+        ::close_socket(server);
+    } catch (...) {
+        if (client != invalid_socket) {
+            ::close_socket(client);
+        }
+        ::close_socket(server);
+        throw;
+    }
 }
 ```
 
@@ -216,19 +216,19 @@ The alternative to RAII is usually not explicit manual cleanup done perfectly. I
 ```cpp
 // Anti-pattern: ownership and cleanup are split across control flow.
 void publish_snapshot(Publisher& publisher, std::string_view path) {
-	auto* file = ::open_config(path.data());
-	if (file == nullptr) {
-		throw ConfigError{"open failed"};
-	}
+    auto* file = ::open_config(path.data());
+    if (file == nullptr) {
+        throw ConfigError{"open failed"};
+    }
 
-	auto payload = read_payload(file);
-	if (!payload) {
-		::close_config(file); // BUG: one exit path remembered cleanup
-		throw ConfigError{"parse failed"};
-	}
+    auto payload = read_payload(file);
+    if (!payload) {
+        ::close_config(file); // BUG: one exit path remembered cleanup
+        throw ConfigError{"parse failed"};
+    }
 
-	publisher.send(*payload); // BUG: if this throws, file leaks
-	::close_config(file);
+    publisher.send(*payload); // BUG: if this throws, file leaks
+    ::close_config(file);
 }
 ```
 
@@ -238,19 +238,19 @@ The RAII version eliminates every manual release and every conditional cleanup p
 
 ```cpp
 void publish_snapshot(Publisher& publisher, std::string_view path) {
-	auto file = ConfigFile::open(path); // RAII: destructor calls ::close_config
-	if (!file) {
-		throw ConfigError{"open failed"};
-	}
+    auto file = ConfigFile::open(path); // RAII: destructor calls ::close_config
+    if (!file) {
+        throw ConfigError{"open failed"};
+    }
 
-	auto payload = read_payload(*file);
-	if (!payload) {
-		throw ConfigError{"parse failed"};
-		// file releases automatically -- no manual cleanup needed
-	}
+    auto payload = read_payload(*file);
+    if (!payload) {
+        throw ConfigError{"parse failed"};
+        // file releases automatically -- no manual cleanup needed
+    }
 
-	publisher.send(*payload);
-	// file releases automatically at scope exit, whether normal or exceptional
+    publisher.send(*payload);
+    // file releases automatically at scope exit, whether normal or exceptional
 }
 ```
 
@@ -273,14 +273,14 @@ A common symptom is shutdown non-determinism. When the last `shared_ptr` to a re
 ```cpp
 // Risky: destruction timing depends on which callback finishes last.
 void start_fanout(std::shared_ptr<Connection> conn) {
-	for (auto& shard : shards_) {
-		shard.post([conn] {           // each lambda extends lifetime
-			conn->send(shard_ping()); // last lambda to finish destroys conn
-		});
-	}
-	// conn may already be destroyed here, or may live much longer --
-	// depends on thread scheduling. Destructor side effects (logging,
-	// metric flush, socket close) now happen at an uncontrolled point.
+    for (auto& shard : shards_) {
+        shard.post([conn] {           // each lambda extends lifetime
+            conn->send(shard_ping()); // last lambda to finish destroys conn
+        });
+    }
+    // conn may already be destroyed here, or may live much longer --
+    // depends on thread scheduling. Destructor side effects (logging,
+    // metric flush, socket close) now happen at an uncontrolled point.
 }
 ```
 
@@ -324,34 +324,34 @@ The manual approach is fragile:
 // Anti-pattern: manual multi-resource construction with cleanup flags.
 class Pipeline {
 public:
-	Pipeline(const Config& cfg) {
-		db_ = ::open_db(cfg.db_path().c_str());
-		if (!db_) throw InitError{"db open failed"};
+    Pipeline(const Config& cfg) {
+        db_ = ::open_db(cfg.db_path().c_str());
+        if (!db_) throw InitError{"db open failed"};
 
-		cache_ = ::create_cache(cfg.cache_size());
-		if (!cache_) {
-			::close_db(db_); // must remember to clean up db_
-			throw InitError{"cache alloc failed"};
-		}
+        cache_ = ::create_cache(cfg.cache_size());
+        if (!cache_) {
+            ::close_db(db_); // must remember to clean up db_
+            throw InitError{"cache alloc failed"};
+        }
 
-		listener_ = ::bind_listener(cfg.port());
-		if (listener_ == invalid_socket) {
-			::destroy_cache(cache_); // must remember both prior resources
-			::close_db(db_);
-			throw InitError{"bind failed"};
-		}
-	}
+        listener_ = ::bind_listener(cfg.port());
+        if (listener_ == invalid_socket) {
+            ::destroy_cache(cache_); // must remember both prior resources
+            ::close_db(db_);
+            throw InitError{"bind failed"};
+        }
+    }
 
-	~Pipeline() {
-		::close_listener(listener_);
-		::destroy_cache(cache_);
-		::close_db(db_);
-	}
+    ~Pipeline() {
+        ::close_listener(listener_);
+        ::destroy_cache(cache_);
+        ::close_db(db_);
+    }
 
 private:
-	db_handle_t db_ = nullptr;
-	cache_handle_t cache_ = nullptr;
-	socket_t listener_ = invalid_socket;
+    db_handle_t db_ = nullptr;
+    cache_handle_t cache_ = nullptr;
+    socket_t listener_ = invalid_socket;
 };
 ```
 
@@ -362,15 +362,15 @@ The RAII version uses member wrappers and relies on the language rule that alrea
 ```cpp
 class Pipeline {
 public:
-	Pipeline(const Config& cfg)
-		: db_(DbHandle::open(cfg.db_path()))       // destroyed automatically if
-		, cache_(Cache::create(cfg.cache_size()))   // a later member throws
-		, listener_(Listener::bind(cfg.port())) {}
+    Pipeline(const Config& cfg)
+        : db_(DbHandle::open(cfg.db_path()))       // destroyed automatically if
+        , cache_(Cache::create(cfg.cache_size()))   // a later member throws
+        , listener_(Listener::bind(cfg.port())) {}
 
 private:
-	DbHandle db_;
-	Cache cache_;
-	Listener listener_;
+    DbHandle db_;
+    Cache cache_;
+    Listener listener_;
 };
 ```
 

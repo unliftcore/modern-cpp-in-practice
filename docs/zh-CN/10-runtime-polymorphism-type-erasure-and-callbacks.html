@@ -214,14 +214,14 @@
 <pre><code class="language-cpp">// Anti-pattern: a growing base class that every derived type must satisfy.
 class Widget {
 public:
-	virtual void draw(Canvas&amp; c) = 0;
-	virtual void handle_input(const InputEvent&amp; e) = 0;
-	virtual Size preferred_size() const = 0;
-	virtual void set_theme(const Theme&amp; t) = 0;
-	virtual void serialize(Archive&amp; ar) = 0;    // added in v2
-	virtual void animate(Duration dt) = 0;       // added in v3
-	virtual AccessibilityInfo accessibility() = 0; // added in v4
-	virtual ~Widget() = default;
+    virtual void draw(Canvas&amp; c) = 0;
+    virtual void handle_input(const InputEvent&amp; e) = 0;
+    virtual Size preferred_size() const = 0;
+    virtual void set_theme(const Theme&amp; t) = 0;
+    virtual void serialize(Archive&amp; ar) = 0;    // added in v2
+    virtual void animate(Duration dt) = 0;       // added in v3
+    virtual AccessibilityInfo accessibility() = 0; // added in v4
+    virtual ~Widget() = default;
 };
 </code></pre>
 <p>每新增一个虚方法，所有派生类要么实现它，要么继承一个可能根本不对的默认实现。只需要绘制能力的类也得应付输入、序列化、动画和无障碍。测试一个最简单的叶子 widget，却不得不构造 <code>Canvas</code>、<code>InputEvent</code>、<code>Theme</code>、<code>Archive</code> 和 <code>AccessibilityInfo</code> 等一堆对象。基类成了变更放大器——往 <code>Widget</code> 加一个方法，整个代码库的派生类都要重新编译，甚至逐个修改。</p>
@@ -230,28 +230,28 @@ public:
 <p>接口层级中的多重继承会引入菱形问题，而 <code>virtual</code> 继承只能部分缓解它。</p>
 <pre><code class="language-cpp">class Readable {
 public:
-	virtual std::expected&lt;std::size_t, IoError&gt;
-	read(std::span&lt;std::byte&gt; buffer) = 0;
-	virtual void close() = 0;  // close the read side
-	virtual ~Readable() = default;
+    virtual std::expected&lt;std::size_t, IoError&gt;
+    read(std::span&lt;std::byte&gt; buffer) = 0;
+    virtual void close() = 0;  // close the read side
+    virtual ~Readable() = default;
 };
 
 class Writable {
 public:
-	virtual std::expected&lt;std::size_t, IoError&gt;
-	write(std::span&lt;const std::byte&gt; data) = 0;
-	virtual void close() = 0;  // close the write side
-	virtual ~Writable() = default;
+    virtual std::expected&lt;std::size_t, IoError&gt;
+    write(std::span&lt;const std::byte&gt; data) = 0;
+    virtual void close() = 0;  // close the write side
+    virtual ~Writable() = default;
 };
 
 // Diamond: what does close() mean here? Read side? Write side? Both?
 class ReadWriteStream : public virtual Readable, public virtual Writable {
 public:
-	// Single close() must now serve two different semantic contracts.
-	// Callers holding a Readable* expect close() to close the read side.
-	// Callers holding a Writable* expect close() to close the write side.
-	// There is no way to satisfy both through one override.
-	void close() override { /* ??? */ }
+    // Single close() must now serve two different semantic contracts.
+    // Callers holding a Readable* expect close() to close the read side.
+    // Callers holding a Writable* expect close() to close the write side.
+    // There is no way to satisfy both through one override.
+    void close() override { /* ??? */ }
 };
 </code></pre>
 <p>虚继承解决了内存布局的重复问题，却解决不了语义上的冲突。代码能编译过，但运行行为取决于调用方手里拿的是哪个基类指针。这种歧义是结构性的，实现得再小心也无济于事。</p>
@@ -263,17 +263,17 @@ using DrawAction = std::move_only_function&lt;void(Canvas&amp;)&gt;;
 using InputHandler = std::move_only_function&lt;bool(const InputEvent&amp;)&gt;;
 
 struct WidgetBehavior {
-	DrawAction draw;
-	InputHandler handle_input;
+    DrawAction draw;
+    InputHandler handle_input;
 };
 
 // A simple widget only provides what it needs.
 // No obligation to implement serialize, animate, or accessibility.
 WidgetBehavior make_label(std::string text) {
-	return {
-		.draw = [t = std::move(text)](Canvas&amp; c) { c.draw_text(t); },
-		.handle_input = [](const InputEvent&amp;) { return false; }
-	};
+    return {
+        .draw = [t = std::move(text)](Canvas&amp; c) { c.draw_text(t); },
+        .handle_input = [](const InputEvent&amp;) { return false; }
+    };
 }
 </code></pre>
 <p>这里不存在会不断膨胀的基类。新增动画支持不会逼着 label widget 改动，测试 <code>draw</code> 也不需要构造 <code>InputEvent</code>。各关注点可以独立组合。代价是失去了类层级所带来的、具名对象协议的清晰度——如果协议确实稳定且丰富，这一点可能很关键。这种取舍需要逐案权衡。</p>
@@ -308,14 +308,14 @@ chain(R&amp;&amp; middlewares, http::Handler base) {
 <p><code>std::function</code> 要求其 target 可拷贝。这个限制看起来人畜无害，直到真实的回调状态登场。</p>
 <pre><code class="language-cpp">// This will not compile. std::function requires CopyConstructible.
 auto handler = std::function&lt;void()&gt;{
-	[conn = std::make_unique&lt;DbConnection&gt;()](){ conn-&gt;heartbeat(); }
+    [conn = std::make_unique&lt;DbConnection&gt;()](){ conn-&gt;heartbeat(); }
 };
 </code></pre>
 <p>团队常见的做法是把 <code>unique_ptr</code> 换成 <code>shared_ptr</code> 来绕过编译错误，结果给原本天然属于单一所有者的代码凭空引入了引用计数和共享可变性。编译倒是通过了，所有权模型却被破坏了。</p>
 <pre><code class="language-cpp">// Workaround: shared_ptr "fixes" compilation but lies about ownership.
 auto conn = std::make_shared&lt;DbConnection&gt;();
 auto handler = std::function&lt;void()&gt;{
-	[conn]() { conn-&gt;heartbeat(); }
+    [conn]() { conn-&gt;heartbeat(); }
 };
 // Now conn is shared. Who shuts it down? When? The ownership story is gone.
 </code></pre>
@@ -340,9 +340,9 @@ auto handler = std::function&lt;void()&gt;{
 <p>只会触发一次的完成路径，从一开始就应该建模为 move-only。这样类型本身就反映了“只用一次“的事实，也能防止有状态的 handler 被意外共享。</p>
 <pre><code class="language-cpp">class TimerQueue {
 public:
-	using Task = std::move_only_function&lt;void() noexcept&gt;;
+    using Task = std::move_only_function&lt;void() noexcept&gt;;
 
-	void schedule_after(std::chrono::milliseconds delay, Task task);
+    void schedule_after(std::chrono::milliseconds delay, Task task);
 };
 </code></pre>
 <p>这个签名传递了丰富的信息：队列接管所有权，可能延后运行，且要求任务不得跨调度器边界抛异常。这比笼统的 <code>std::function&lt;void()&gt;</code> 参数精确得多。</p>
@@ -351,14 +351,14 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: ambiguous retention and capture lifetime.
 class EventSource {
 public:
-	void on_message(std::function&lt;void(std::string_view)&gt; handler);
+    void on_message(std::function&lt;void(std::string_view)&gt; handler);
 };
 
 void wire(EventSource&amp; source, Session&amp; session) {
-	source.on_message([&amp;session](std::string_view payload) {
-		session.record(payload);
-	});
-	// RISK: if EventSource stores the handler past Session lifetime, this dangles.
+    source.on_message([&amp;session](std::string_view payload) {
+        session.record(payload);
+    });
+    // RISK: if EventSource stores the handler past Session lifetime, this dangles.
 }
 </code></pre>
 <p>问题不仅是引用捕获本身，而在于 API 根本没交代 handler 的去向：是只在一次操作中借用，还是存到注销为止？会不会被并发调用，或者在析构期间调用？抽象追求了泛化，却没给出可用的契约。</p>

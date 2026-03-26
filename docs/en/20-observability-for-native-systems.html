@@ -204,74 +204,74 @@
 <h3 id="what-debugging-looks-like-without-observability"><a class="header" href="#what-debugging-looks-like-without-observability">What debugging looks like without observability</a></h3>
 <p>To make the value concrete, consider a service that processes file uploads. A user reports that uploads are timing out. Here is the handler with no structured observability:</p>
 <pre><code class="language-cpp">void handle_upload(const http_request&amp; req) {
-	std::println("INFO: Processing upload");
+    std::println("INFO: Processing upload");
 
-	std::println("INFO: Starting validation");
-	auto validation = validate(req);
-	if (!validation) {
-		std::println(stderr, "ERROR: Validation failed: {}",
-		             validation.error().message());
-		return;
-	}
+    std::println("INFO: Starting validation");
+    auto validation = validate(req);
+    if (!validation) {
+        std::println(stderr, "ERROR: Validation failed: {}",
+                     validation.error().message());
+        return;
+    }
 
-	std::println("INFO: Storing file");
-	auto store_result = store(req);
-	if (!store_result) {
-		std::println(stderr, "ERROR: Store failed: {}",
-		             store_result.error().message());
-		return;
-	}
+    std::println("INFO: Storing file");
+    auto store_result = store(req);
+    if (!store_result) {
+        std::println(stderr, "ERROR: Store failed: {}",
+                     store_result.error().message());
+        return;
+    }
 
-	notify(req);
-	std::println("INFO: Upload complete");
+    notify(req);
+    std::println("INFO: Upload complete");
 }
 </code></pre>
 <p>Which upload failed? Was it the same user or a different one? What was it waiting on – disk I/O, a downstream service, a lock? How long did the store call take? Was the failure retried? None of these questions are answerable from the logs this function produces. The on-call engineer resorts to grepping logs by timestamp ranges, guessing at correlation, and asking the user to reproduce.</p>
 <p>Now the same function with structured logging, correlation IDs, and dimensional metrics:</p>
 <pre><code class="language-cpp">void handle_upload(upload_context&amp; ctx) {
-	auto span = ctx.tracer().start_span("handle_upload", {
-		{"request_id", ctx.request_id()},
-		{"user_id",    ctx.user_id()},
-		{"file_size",  ctx.file_size()},
-		{"shard",      ctx.shard_id()},
-	});
+    auto span = ctx.tracer().start_span("handle_upload", {
+        {"request_id", ctx.request_id()},
+        {"user_id",    ctx.user_id()},
+        {"file_size",  ctx.file_size()},
+        {"shard",      ctx.shard_id()},
+    });
 
-	ctx.log(severity::info, "upload_started", {
-		{"request_id", ctx.request_id()},
-		{"file_name",  ctx.file_name()},
-		{"file_size",  std::to_string(ctx.file_size())},
-	});
+    ctx.log(severity::info, "upload_started", {
+        {"request_id", ctx.request_id()},
+        {"file_name",  ctx.file_name()},
+        {"file_size",  std::to_string(ctx.file_size())},
+    });
 
-	auto validation = validate(ctx);
-	if (!validation) {
-		ctx.log(severity::warning, "validation_failed", {
-			{"request_id", ctx.request_id()},
-			{"reason",     validation.error().category()},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "validation"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto validation = validate(ctx);
+    if (!validation) {
+        ctx.log(severity::warning, "validation_failed", {
+            {"request_id", ctx.request_id()},
+            {"reason",     validation.error().category()},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "validation"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	auto store_result = store(ctx);
-	if (!store_result) {
-		ctx.log(severity::error, "store_failed", {
-			{"request_id",  ctx.request_id()},
-			{"dependency",  "blob_store"},
-			{"error_class", store_result.error().category()},
-			{"latency_ms",  std::to_string(store_result.elapsed_ms())},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "store"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto store_result = store(ctx);
+    if (!store_result) {
+        ctx.log(severity::error, "store_failed", {
+            {"request_id",  ctx.request_id()},
+            {"dependency",  "blob_store"},
+            {"error_class", store_result.error().category()},
+            {"latency_ms",  std::to_string(store_result.elapsed_ms())},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "store"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
-		{{"shard", ctx.shard_id()}});
-	ctx.log(severity::info, "upload_complete", {
-		{"request_id", ctx.request_id()},
-		{"latency_ms", std::to_string(span.elapsed_ms())},
-	});
+    ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
+        {{"shard", ctx.shard_id()}});
+    ctx.log(severity::info, "upload_complete", {
+        {"request_id", ctx.request_id()},
+        {"latency_ms", std::to_string(span.elapsed_ms())},
+    });
 }
 </code></pre>
 <p>Now the on-call engineer filters by <code>request_id</code>, sees that the timeout happened during <code>store</code> with <code>dependency=blob_store</code>, checks the <code>upload_duration_ms</code> histogram by shard, and discovers that shard-3 latency spiked at 09:40. The blob store dashboard confirms the dependency was degraded. Total investigation time drops from hours to minutes.</p>
@@ -358,30 +358,30 @@ ctx.log(severity::error, "dependency_connect_failed", {
 <p>A common failure mode in async native services is latency that lives in queueing, not in execution. Without trace propagation across executor boundaries, this is invisible:</p>
 <pre><code class="language-cpp">// No trace context propagation. The span only covers execution, not waiting.
 void enqueue_work(thread_pool&amp; pool, request req) {
-	pool.submit([req = std::move(req)] {
-		auto span = tracer::start_span("process_request");  // Starts when work RUNS.
-		process(req);
-	});
-	// Time between submit() and when the lambda actually executes is lost.
-	// If the pool is saturated, requests wait 500ms in the queue,
-	// but traces show 2ms of execution time. Operators see low latency
-	// in traces while users experience high latency. The queue time is a
-	// blind spot.
+    pool.submit([req = std::move(req)] {
+        auto span = tracer::start_span("process_request");  // Starts when work RUNS.
+        process(req);
+    });
+    // Time between submit() and when the lambda actually executes is lost.
+    // If the pool is saturated, requests wait 500ms in the queue,
+    // but traces show 2ms of execution time. Operators see low latency
+    // in traces while users experience high latency. The queue time is a
+    // blind spot.
 }
 </code></pre>
 <p>With proper context propagation, the full picture is visible:</p>
 <pre><code class="language-cpp">void enqueue_work(thread_pool&amp; pool, request req, trace_context ctx) {
-	auto enqueue_time = steady_clock::now();
-	pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
-		auto queue_span = ctx.start_span("queued", {
-			{"queue_ms", std::to_string(duration_cast&lt;milliseconds&gt;(
-				steady_clock::now() - enqueue_time).count())},
-		});
-		queue_span.end();
+    auto enqueue_time = steady_clock::now();
+    pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
+        auto queue_span = ctx.start_span("queued", {
+            {"queue_ms", std::to_string(duration_cast&lt;milliseconds&gt;(
+                steady_clock::now() - enqueue_time).count())},
+        });
+        queue_span.end();
 
-		auto exec_span = ctx.start_span("process_request");
-		process(req);
-	});
+        auto exec_span = ctx.start_span("process_request");
+        process(req);
+    });
 }
 </code></pre>
 <p>Now the trace shows two spans – queueing and execution – both linked to the parent request. When queue time dominates, it is immediately visible in the trace waterfall. This is the kind of latency that metrics alone (average processing time) systematically hide.</p>
@@ -416,20 +416,20 @@ void enqueue_work(thread_pool&amp; pool, request req) {
 <pre><code class="language-cpp">enum class severity { debug, info, warning, error };
 
 struct diagnostic_field {
-	std::string_view key;
-	std::string_view value;
+    std::string_view key;
+    std::string_view value;
 };
 
 struct diagnostics_sink {
-	virtual ~diagnostics_sink() = default;
+    virtual ~diagnostics_sink() = default;
 
-	virtual void record_event(severity level,
-							  std::string_view event_name,
-							  std::span&lt;diagnostic_field const&gt; fields) noexcept = 0;
+    virtual void record_event(severity level,
+                              std::string_view event_name,
+                              std::span&lt;diagnostic_field const&gt; fields) noexcept = 0;
 
-	virtual void increment_counter(std::string_view name,
-								   std::int64_t delta,
-								   std::span&lt;diagnostic_field const&gt; dimensions) noexcept = 0;
+    virtual void increment_counter(std::string_view name,
+                                   std::int64_t delta,
+                                   std::span&lt;diagnostic_field const&gt; dimensions) noexcept = 0;
 };
 </code></pre>
 <p>This kind of interface keeps the library honest. It can report parse failures, retries, cache evictions, or reload timings without hard-coding a vendor SDK into every binary that uses it. The host decides how to attach request IDs, export metrics, or bridge into traces.</p>

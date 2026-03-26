@@ -31,26 +31,26 @@
 
 ```cpp
 void handle_upload(const http_request& req) {
-	std::cout << "INFO: Processing upload" << std::endl;
+    std::cout << "INFO: Processing upload" << std::endl;
 
-	std::cout << "INFO: Starting validation" << std::endl;
-	auto validation = validate(req);
-	if (!validation) {
-		std::cerr << "ERROR: Validation failed: "
-		          << validation.error().message() << std::endl;
-		return;
-	}
+    std::cout << "INFO: Starting validation" << std::endl;
+    auto validation = validate(req);
+    if (!validation) {
+        std::cerr << "ERROR: Validation failed: "
+                  << validation.error().message() << std::endl;
+        return;
+    }
 
-	std::cout << "INFO: Storing file" << std::endl;
-	auto store_result = store(req);
-	if (!store_result) {
-		std::cerr << "ERROR: Store failed: "
-		          << store_result.error().message() << std::endl;
-		return;
-	}
+    std::cout << "INFO: Storing file" << std::endl;
+    auto store_result = store(req);
+    if (!store_result) {
+        std::cerr << "ERROR: Store failed: "
+                  << store_result.error().message() << std::endl;
+        return;
+    }
 
-	notify(req);
-	std::cout << "INFO: Upload complete" << std::endl;
+    notify(req);
+    std::cout << "INFO: Upload complete" << std::endl;
 }
 ```
 
@@ -60,49 +60,49 @@ void handle_upload(const http_request& req) {
 
 ```cpp
 void handle_upload(upload_context& ctx) {
-	auto span = ctx.tracer().start_span("handle_upload", {
-		{"request_id", ctx.request_id()},
-		{"user_id",    ctx.user_id()},
-		{"file_size",  ctx.file_size()},
-		{"shard",      ctx.shard_id()},
-	});
+    auto span = ctx.tracer().start_span("handle_upload", {
+        {"request_id", ctx.request_id()},
+        {"user_id",    ctx.user_id()},
+        {"file_size",  ctx.file_size()},
+        {"shard",      ctx.shard_id()},
+    });
 
-	ctx.log(severity::info, "upload_started", {
-		{"request_id", ctx.request_id()},
-		{"file_name",  ctx.file_name()},
-		{"file_size",  std::to_string(ctx.file_size())},
-	});
+    ctx.log(severity::info, "upload_started", {
+        {"request_id", ctx.request_id()},
+        {"file_name",  ctx.file_name()},
+        {"file_size",  std::to_string(ctx.file_size())},
+    });
 
-	auto validation = validate(ctx);
-	if (!validation) {
-		ctx.log(severity::warning, "validation_failed", {
-			{"request_id", ctx.request_id()},
-			{"reason",     validation.error().category()},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "validation"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto validation = validate(ctx);
+    if (!validation) {
+        ctx.log(severity::warning, "validation_failed", {
+            {"request_id", ctx.request_id()},
+            {"reason",     validation.error().category()},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "validation"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	auto store_result = store(ctx);
-	if (!store_result) {
-		ctx.log(severity::error, "store_failed", {
-			{"request_id",  ctx.request_id()},
-			{"dependency",  "blob_store"},
-			{"error_class", store_result.error().category()},
-			{"latency_ms",  std::to_string(store_result.elapsed_ms())},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "store"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto store_result = store(ctx);
+    if (!store_result) {
+        ctx.log(severity::error, "store_failed", {
+            {"request_id",  ctx.request_id()},
+            {"dependency",  "blob_store"},
+            {"error_class", store_result.error().category()},
+            {"latency_ms",  std::to_string(store_result.elapsed_ms())},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "store"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
-		{{"shard", ctx.shard_id()}});
-	ctx.log(severity::info, "upload_complete", {
-		{"request_id", ctx.request_id()},
-		{"latency_ms", std::to_string(span.elapsed_ms())},
-	});
+    ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
+        {{"shard", ctx.shard_id()}});
+    ctx.log(severity::info, "upload_complete", {
+        {"request_id", ctx.request_id()},
+        {"latency_ms", std::to_string(span.elapsed_ms())},
+    });
 }
 ```
 
@@ -226,15 +226,15 @@ Gauge 也需要警惕——加起来容易，读起来容易误判。队列深�
 ```cpp
 // 没有追踪上下文传播。span 只覆盖执行阶段，不覆盖等待阶段。
 void enqueue_work(thread_pool& pool, request req) {
-	pool.submit([req = std::move(req)] {
-		auto span = tracer::start_span("process_request");  // 工作运行时才开始计时。
-		process(req);
-	});
-	// submit() 到 lambda 实际执行之间的时间丢失了。
-	// 如果线程池饱和，请求在队列中等待 500ms，
-	// 但追踪显示 2ms 的执行时间。运维人员在追踪中
-	// 看到低延迟，而用户体验到高延迟。排队时间是
-	// 一个盲点。
+    pool.submit([req = std::move(req)] {
+        auto span = tracer::start_span("process_request");  // 工作运行时才开始计时。
+        process(req);
+    });
+    // submit() 到 lambda 实际执行之间的时间丢失了。
+    // 如果线程池饱和，请求在队列中等待 500ms，
+    // 但追踪显示 2ms 的执行时间。运维人员在追踪中
+    // 看到低延迟，而用户体验到高延迟。排队时间是
+    // 一个盲点。
 }
 ```
 
@@ -242,17 +242,17 @@ void enqueue_work(thread_pool& pool, request req) {
 
 ```cpp
 void enqueue_work(thread_pool& pool, request req, trace_context ctx) {
-	auto enqueue_time = steady_clock::now();
-	pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
-		auto queue_span = ctx.start_span("queued", {
-			{"queue_ms", std::to_string(duration_cast<milliseconds>(
-				steady_clock::now() - enqueue_time).count())},
-		});
-		queue_span.end();
+    auto enqueue_time = steady_clock::now();
+    pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
+        auto queue_span = ctx.start_span("queued", {
+            {"queue_ms", std::to_string(duration_cast<milliseconds>(
+                steady_clock::now() - enqueue_time).count())},
+        });
+        queue_span.end();
 
-		auto exec_span = ctx.start_span("process_request");
-		process(req);
-	});
+        auto exec_span = ctx.start_span("process_request");
+        process(req);
+    });
 }
 ```
 
@@ -300,20 +300,20 @@ C++ 服务中有一个反复出现的运维难题：逻辑工作量增长和内�
 enum class severity { debug, info, warning, error };
 
 struct diagnostic_field {
-	std::string_view key;
-	std::string_view value;
+    std::string_view key;
+    std::string_view value;
 };
 
 struct diagnostics_sink {
-	virtual ~diagnostics_sink() = default;
+    virtual ~diagnostics_sink() = default;
 
-	virtual void record_event(severity level,
-							  std::string_view event_name,
-							  std::span<diagnostic_field const> fields) noexcept = 0;
+    virtual void record_event(severity level,
+                              std::string_view event_name,
+                              std::span<diagnostic_field const> fields) noexcept = 0;
 
-	virtual void increment_counter(std::string_view name,
-								   std::int64_t delta,
-								   std::span<diagnostic_field const> dimensions) noexcept = 0;
+    virtual void increment_counter(std::string_view name,
+                                   std::int64_t delta,
+                                   std::span<diagnostic_field const> dimensions) noexcept = 0;
 };
 ```
 

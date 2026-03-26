@@ -112,31 +112,31 @@ Imagine a wire protocol subsystem with a fixed set of message descriptors that m
 
 ```cpp
 struct MessageDescriptor {
-	std::uint16_t opcode;
-	std::size_t max_payload;
+    std::uint16_t opcode;
+    std::size_t max_payload;
 };
 
 template <std::size_t N>
 consteval auto validate_descriptors(std::array<MessageDescriptor, N> table)
-	-> std::array<MessageDescriptor, N>
+    -> std::array<MessageDescriptor, N>
 {
-	for (std::size_t i = 0; i < N; ++i) {
-		if (table[i].max_payload > 64 * 1024) {
-			throw "payload limit exceeded";
-		}
-		for (std::size_t j = i + 1; j < N; ++j) {
-			if (table[i].opcode == table[j].opcode) {
-				throw "duplicate opcode";
-			}
-		}
-	}
-	return table;
+    for (std::size_t i = 0; i < N; ++i) {
+        if (table[i].max_payload > 64 * 1024) {
+            throw "payload limit exceeded";
+        }
+        for (std::size_t j = i + 1; j < N; ++j) {
+            if (table[i].opcode == table[j].opcode) {
+                throw "duplicate opcode";
+            }
+        }
+    }
+    return table;
 }
 
 constexpr auto descriptors = validate_descriptors(std::array{
-	MessageDescriptor{0x10, 1024},
-	MessageDescriptor{0x11, 4096},
-	MessageDescriptor{0x12, 512},
+    MessageDescriptor{0x10, 1024},
+    MessageDescriptor{0x11, 4096},
+    MessageDescriptor{0x12, 512},
 });
 ```
 

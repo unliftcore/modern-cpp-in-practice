@@ -202,69 +202,69 @@
 <h3 id="what-happens-without-raii"><a class="header" href="#what-happens-without-raii">What Happens Without RAII</a></h3>
 <p>Before illustrating the RAII pattern, it is worth seeing the manual approach in a fuller form. The following anti-pattern is intentionally buggy, because production codebases still contain code that looks exactly like this.</p>
 <pre><code class="language-cpp">socket_t create_server_socket(std::uint16_t port) {
-	socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
-	if (server == invalid_socket) {
-		throw NetworkError{"socket failed"};
-	}
+    socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (server == invalid_socket) {
+        throw NetworkError{"socket failed"};
+    }
 
-	int opt = 1;
-	if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"setsockopt failed"};
-	}
+    int opt = 1;
+    if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"setsockopt failed"};
+    }
 
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons(port);
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port);
 
-	if (::bind(server, reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"bind failed"};
-	}
+    if (::bind(server, reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"bind failed"};
+    }
 
-	if (::listen(server, 16) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"listen failed"};
-	}
+    if (::listen(server, 16) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"listen failed"};
+    }
 
-	return server; // RISK: caller now owns the raw descriptor by convention
+    return server; // RISK: caller now owns the raw descriptor by convention
 }
 
 void serve_once(std::uint16_t port) {
-	socket_t server = create_server_socket(port);
-	socket_t client = invalid_socket;
+    socket_t server = create_server_socket(port);
+    socket_t client = invalid_socket;
 
-	try {
-		sockaddr_in client_addr{};
-		socket_length addr_len = sizeof(client_addr);
-		client = ::accept(server,
-		                  reinterpret_cast&lt;sockaddr*&gt;(&amp;client_addr),
-		                  &amp;addr_len);
-		if (client == invalid_socket) {
-			::close_socket(server); // BUG: server will be closed twice (here + in catch)
-			throw NetworkError{"accept failed"};
-		}
+    try {
+        sockaddr_in client_addr{};
+        socket_length addr_len = sizeof(client_addr);
+        client = ::accept(server,
+                          reinterpret_cast&lt;sockaddr*&gt;(&amp;client_addr),
+                          &amp;addr_len);
+        if (client == invalid_socket) {
+            ::close_socket(server); // BUG: server will be closed twice (here + in catch)
+            throw NetworkError{"accept failed"};
+        }
 
-		std::array&lt;char, 8192&gt; buffer{};
-		auto n = read_from_socket(client, buffer.data(), buffer.size());
-		if (n &lt;= 0) {
-			::close_socket(client);
-			::close_socket(server);
-			return;
-		}
+        std::array&lt;char, 8192&gt; buffer{};
+        auto n = read_from_socket(client, buffer.data(), buffer.size());
+        if (n &lt;= 0) {
+            ::close_socket(client);
+            ::close_socket(server);
+            return;
+        }
 
-		process_request(client, std::string_view{buffer.data(), static_cast&lt;std::size_t&gt;(n)}); // RISK: any throw must preserve cleanup correctness
+        process_request(client, std::string_view{buffer.data(), static_cast&lt;std::size_t&gt;(n)}); // RISK: any throw must preserve cleanup correctness
 
-		::close_socket(client);
-		::close_socket(server);
-	} catch (...) {
-		if (client != invalid_socket) {
-			::close_socket(client);
-		}
-		::close_socket(server);
-		throw;
-	}
+        ::close_socket(client);
+        ::close_socket(server);
+    } catch (...) {
+        if (client != invalid_socket) {
+            ::close_socket(client);
+        }
+        ::close_socket(server);
+        throw;
+    }
 }
 </code></pre>
 <p>The problems compound quickly:</p>
@@ -376,37 +376,37 @@ void handle_connection(Socket client) const {
 <p>The alternative to RAII is usually not explicit manual cleanup done perfectly. It is cleanup by convention, which means cleanup gets skipped under stress.</p>
 <pre><code class="language-cpp">// Anti-pattern: ownership and cleanup are split across control flow.
 void publish_snapshot(Publisher&amp; publisher, std::string_view path) {
-	auto* file = ::open_config(path.data());
-	if (file == nullptr) {
-		throw ConfigError{"open failed"};
-	}
+    auto* file = ::open_config(path.data());
+    if (file == nullptr) {
+        throw ConfigError{"open failed"};
+    }
 
-	auto payload = read_payload(file);
-	if (!payload) {
-		::close_config(file); // BUG: one exit path remembered cleanup
-		throw ConfigError{"parse failed"};
-	}
+    auto payload = read_payload(file);
+    if (!payload) {
+        ::close_config(file); // BUG: one exit path remembered cleanup
+        throw ConfigError{"parse failed"};
+    }
 
-	publisher.send(*payload); // BUG: if this throws, file leaks
-	::close_config(file);
+    publisher.send(*payload); // BUG: if this throws, file leaks
+    ::close_config(file);
 }
 </code></pre>
 <p>This is not controversial because manual cleanup is ugly. It is wrong because cleanup policy is now interleaved with every exit path. Once the function acquires a second or third resource, the control flow becomes harder to audit than the work the function actually performs.</p>
 <p>The RAII version eliminates every manual release and every conditional cleanup path:</p>
 <pre><code class="language-cpp">void publish_snapshot(Publisher&amp; publisher, std::string_view path) {
-	auto file = ConfigFile::open(path); // RAII: destructor calls ::close_config
-	if (!file) {
-		throw ConfigError{"open failed"};
-	}
+    auto file = ConfigFile::open(path); // RAII: destructor calls ::close_config
+    if (!file) {
+        throw ConfigError{"open failed"};
+    }
 
-	auto payload = read_payload(*file);
-	if (!payload) {
-		throw ConfigError{"parse failed"};
-		// file releases automatically -- no manual cleanup needed
-	}
+    auto payload = read_payload(*file);
+    if (!payload) {
+        throw ConfigError{"parse failed"};
+        // file releases automatically -- no manual cleanup needed
+    }
 
-	publisher.send(*payload);
-	// file releases automatically at scope exit, whether normal or exceptional
+    publisher.send(*payload);
+    // file releases automatically at scope exit, whether normal or exceptional
 }
 </code></pre>
 <p>The function now has one concern: its actual logic. Cleanup is invisible because it is guaranteed. Adding a third, fourth, or tenth exit path changes nothing about resource safety. That composability is the real payoff of RAII – not prettier code, but correct code under maintenance pressure.</p>
@@ -419,14 +419,14 @@ void publish_snapshot(Publisher&amp; publisher, std::string_view path) {
 <p>A common symptom is shutdown non-determinism. When the last <code>shared_ptr</code> to a resource is released from an unpredictable callback or thread, the destructor runs at an unpredictable time and place:</p>
 <pre><code class="language-cpp">// Risky: destruction timing depends on which callback finishes last.
 void start_fanout(std::shared_ptr&lt;Connection&gt; conn) {
-	for (auto&amp; shard : shards_) {
-		shard.post([conn] {           // each lambda extends lifetime
-			conn-&gt;send(shard_ping()); // last lambda to finish destroys conn
-		});
-	}
-	// conn may already be destroyed here, or may live much longer --
-	// depends on thread scheduling. Destructor side effects (logging,
-	// metric flush, socket close) now happen at an uncontrolled point.
+    for (auto&amp; shard : shards_) {
+        shard.post([conn] {           // each lambda extends lifetime
+            conn-&gt;send(shard_ping()); // last lambda to finish destroys conn
+        });
+    }
+    // conn may already be destroyed here, or may live much longer --
+    // depends on thread scheduling. Destructor side effects (logging,
+    // metric flush, socket close) now happen at an uncontrolled point.
 }
 </code></pre>
 <p>When destruction order matters – and in production it almost always does – prefer <code>unique_ptr</code> with explicit lifetime scoping, and pass non-owning raw pointers or references to work that is guaranteed to complete within the owner’s lifetime.</p>
@@ -453,49 +453,49 @@ void start_fanout(std::shared_ptr&lt;Connection&gt; conn) {
 <pre><code class="language-cpp">// Anti-pattern: manual multi-resource construction with cleanup flags.
 class Pipeline {
 public:
-	Pipeline(const Config&amp; cfg) {
-		db_ = ::open_db(cfg.db_path().c_str());
-		if (!db_) throw InitError{"db open failed"};
+    Pipeline(const Config&amp; cfg) {
+        db_ = ::open_db(cfg.db_path().c_str());
+        if (!db_) throw InitError{"db open failed"};
 
-		cache_ = ::create_cache(cfg.cache_size());
-		if (!cache_) {
-			::close_db(db_); // must remember to clean up db_
-			throw InitError{"cache alloc failed"};
-		}
+        cache_ = ::create_cache(cfg.cache_size());
+        if (!cache_) {
+            ::close_db(db_); // must remember to clean up db_
+            throw InitError{"cache alloc failed"};
+        }
 
-		listener_ = ::bind_listener(cfg.port());
-		if (listener_ == invalid_socket) {
-			::destroy_cache(cache_); // must remember both prior resources
-			::close_db(db_);
-			throw InitError{"bind failed"};
-		}
-	}
+        listener_ = ::bind_listener(cfg.port());
+        if (listener_ == invalid_socket) {
+            ::destroy_cache(cache_); // must remember both prior resources
+            ::close_db(db_);
+            throw InitError{"bind failed"};
+        }
+    }
 
-	~Pipeline() {
-		::close_listener(listener_);
-		::destroy_cache(cache_);
-		::close_db(db_);
-	}
+    ~Pipeline() {
+        ::close_listener(listener_);
+        ::destroy_cache(cache_);
+        ::close_db(db_);
+    }
 
 private:
-	db_handle_t db_ = nullptr;
-	cache_handle_t cache_ = nullptr;
-	socket_t listener_ = invalid_socket;
+    db_handle_t db_ = nullptr;
+    cache_handle_t cache_ = nullptr;
+    socket_t listener_ = invalid_socket;
 };
 </code></pre>
 <p>Every new resource added to this constructor requires updating every prior failure branch. A maintenance change that reorders acquisitions silently breaks the cleanup logic.</p>
 <p>The RAII version uses member wrappers and relies on the language rule that already-constructed members are destroyed when a constructor throws:</p>
 <pre><code class="language-cpp">class Pipeline {
 public:
-	Pipeline(const Config&amp; cfg)
-		: db_(DbHandle::open(cfg.db_path()))       // destroyed automatically if
-		, cache_(Cache::create(cfg.cache_size()))   // a later member throws
-		, listener_(Listener::bind(cfg.port())) {}
+    Pipeline(const Config&amp; cfg)
+        : db_(DbHandle::open(cfg.db_path()))       // destroyed automatically if
+        , cache_(Cache::create(cfg.cache_size()))   // a later member throws
+        , listener_(Listener::bind(cfg.port())) {}
 
 private:
-	DbHandle db_;
-	Cache cache_;
-	Listener listener_;
+    DbHandle db_;
+    Cache cache_;
+    Listener listener_;
 };
 </code></pre>
 <p>No cleanup flags, no cascading <code>if</code> blocks, no order-sensitive manual teardown. The language does the work.</p>

@@ -295,20 +295,20 @@ import webapi.task;
 <p><strong>Adding a private member changes class size.</strong> A consumer compiled against v1 of a library allocates objects based on <code>sizeof(Widget)</code> at their compile time. If v2 adds a private member, the library’s methods now write past what the consumer allocated. The result is silent memory corruption, not a linker error.</p>
 <pre><code class="language-cpp">// v1: shipped in libwidget.so
 class EXPORT Widget {
-	int x_;
-	int y_;
+    int x_;
+    int y_;
 public:
-	void move(int dx, int dy);  // accesses x_, y_
+    void move(int dx, int dy);  // accesses x_, y_
 };
 // sizeof(Widget) == 8 for the consumer
 
 // v2: added a z-index member
 class EXPORT Widget {
-	int x_;
-	int y_;
-	int z_;  // sizeof(Widget) is now 12
+    int x_;
+    int y_;
+    int z_;  // sizeof(Widget) is now 12
 public:
-	void move(int dx, int dy);  // same signature, same symbol
+    void move(int dx, int dy);  // same signature, same symbol
 };
 // Consumer still allocates 8 bytes. Library writes 12. Corruption.
 </code></pre>
@@ -335,8 +335,8 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: fragile ABI surface for a shared library.
 class EXPORT Session {
 public:
-	virtual std::string send(const std::string&amp; request) = 0;
-	virtual ~Session() = default;
+    virtual std::string send(const std::string&amp; request) = 0;
+    virtual ~Session() = default;
 };
 
 std::unique_ptr&lt;Session&gt; create_session();
@@ -347,21 +347,21 @@ std::unique_ptr&lt;Session&gt; create_session();
 <pre><code class="language-cpp">struct session_v1;
 
 struct request_buffer {
-	const std::byte* data;
-	std::size_t size;
+    const std::byte* data;
+    std::size_t size;
 };
 
 struct response_buffer {
-	const std::byte* data;
-	std::size_t size;
+    const std::byte* data;
+    std::size_t size;
 };
 
 struct session_api_v1 {
-	std::uint32_t struct_size;
-	session_v1* (*create)() noexcept;
-	void (*destroy)(session_v1*) noexcept;
-	status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
-	void (*release_response)(response_buffer*) noexcept;
+    std::uint32_t struct_size;
+    session_v1* (*create)() noexcept;
+    void (*destroy)(session_v1*) noexcept;
+    status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
+    void (*release_response)(response_buffer*) noexcept;
 };
 </code></pre>
 <p>This is less pretty and much more honest. The boundary names allocation ownership, versioning surface, and error transport explicitly. Internally, the implementation can still use <code>std::expected</code>, <code>std::pmr</code>, coroutines, modules, and any C++23 technique that stays behind the wall.</p>
@@ -394,16 +394,16 @@ struct session_api_v1 {
 <pre><code class="language-cpp">// Anti-pattern: cross-boundary allocation mismatch.
 // Library (built with MSVC debug runtime, uses debug heap):
 EXPORT char* get_name() {
-	char* buf = new char[64];
-	std::strcpy(buf, "session-001");
-	return buf;
+    char* buf = new char[64];
+    std::strcpy(buf, "session-001");
+    return buf;
 }
 
 // Consumer (built with MSVC release runtime, uses release heap):
 void use_library() {
-	char* name = get_name();
-	// ...
-	delete[] name;  // CRASH: freeing debug-heap memory on release heap
+    char* name = get_name();
+    // ...
+    delete[] name;  // CRASH: freeing debug-heap memory on release heap
 }
 </code></pre>
 <p>The fix is to never let allocation and deallocation cross the boundary. The library that allocates must also provide the deallocation function, or the boundary must use caller-provided buffers.</p>

@@ -189,7 +189,7 @@
 <p>Many bad C++ APIs come from treating the signature as the smallest set of types that compiles. That approach ignores the fact that parameter and return choices are documentation with teeth.</p>
 <p>Take a parser boundary.</p>
 <pre><code class="language-cpp">auto parse_frame(std::span&lt;const std::byte&gt; bytes)
-	-&gt; std::expected&lt;Frame, ParseError&gt;;
+    -&gt; std::expected&lt;Frame, ParseError&gt;;
 </code></pre>
 <p>This single line communicates several things immediately.</p>
 <ul>
@@ -218,32 +218,32 @@ parse_request(std::string_view raw);
 <p>When a borrowed parameter outlives its source, the result is undefined behavior that often manifests as intermittent corruption rather than a clean crash:</p>
 <pre><code class="language-cpp">class Logger {
 public:
-	void set_prefix(std::string_view prefix) {
-		prefix_ = prefix; // BUG: stores a view, not a copy
-	}
+    void set_prefix(std::string_view prefix) {
+        prefix_ = prefix; // BUG: stores a view, not a copy
+    }
 
-	void log(std::string_view message) {
-		fmt::print("[{}] {}\n", prefix_, message); // reads dangling view
-	}
+    void log(std::string_view message) {
+        fmt::print("[{}] {}\n", prefix_, message); // reads dangling view
+    }
 
 private:
-	std::string_view prefix_; // non-owning -- lifetime depends on caller
+    std::string_view prefix_; // non-owning -- lifetime depends on caller
 };
 
 void configure_logger(Logger&amp; logger) {
-	std::string name = build_service_name();
-	logger.set_prefix(name); // name is destroyed at end of scope
+    std::string name = build_service_name();
+    logger.set_prefix(name); // name is destroyed at end of scope
 } // name destroyed here -- logger.prefix_ is now dangling
 </code></pre>
 <p>The fix is straightforward: if the member must outlive the call, it must own its data.</p>
 <pre><code class="language-cpp">class Logger {
 public:
-	void set_prefix(std::string prefix) { // takes ownership by value
-		prefix_ = std::move(prefix);
-	}
-	// ...
+    void set_prefix(std::string prefix) { // takes ownership by value
+        prefix_ = std::move(prefix);
+    }
+    // ...
 private:
-	std::string prefix_; // owning -- no lifetime dependency on caller
+    std::string prefix_; // owning -- no lifetime dependency on caller
 };
 </code></pre>
 <p>That is why a useful review heuristic is simple: if the parameter type says borrow, all retention must be visible in the implementation as an explicit copy or transformation to an owning type.</p>
@@ -252,11 +252,11 @@ private:
 <p>Consider a request object that stores a tenant name.</p>
 <pre><code class="language-cpp">class RequestContext {
 public:
-	explicit RequestContext(std::string tenant)
-		: tenant_(std::move(tenant)) {}
+    explicit RequestContext(std::string tenant)
+        : tenant_(std::move(tenant)) {}
 
 private:
-	std::string tenant_;
+    std::string tenant_;
 };
 </code></pre>
 <p>This constructor is often better than both <code>const std::string&amp;</code> and <code>std::string_view</code>.</p>
@@ -272,22 +272,22 @@ private:
 <p><strong>Unnecessary copy from <code>const std::string&amp;</code> when ownership is needed:</strong></p>
 <pre><code class="language-cpp">class Registry {
 public:
-	void register_name(const std::string&amp; name) {
-		names_.push_back(name); // always copies, even if caller passed a temporary
-	}
+    void register_name(const std::string&amp; name) {
+        names_.push_back(name); // always copies, even if caller passed a temporary
+    }
 private:
-	std::vector&lt;std::string&gt; names_;
+    std::vector&lt;std::string&gt; names_;
 };
 
 // Caller:
 registry.register_name(build_name()); // builds a temporary string, copies it,
-									  // then destroys the temporary. The move
-									  // that pass-by-value would have enabled
-									  // is lost.
+                                      // then destroys the temporary. The move
+                                      // that pass-by-value would have enabled
+                                      // is lost.
 </code></pre>
 <p>With pass-by-value-and-move, the temporary is moved directly into the container at zero copy cost:</p>
 <pre><code class="language-cpp">void register_name(std::string name) {
-	names_.push_back(std::move(name)); // rvalue callers: 1 move. lvalue callers: 1 copy + 1 move.
+    names_.push_back(std::move(name)); // rvalue callers: 1 move. lvalue callers: 1 copy + 1 move.
 }
 </code></pre>
 <p>The example project’s error module applies the same pattern. In <code>examples/web-api/src/modules/error.cppm</code>, <code>make_error</code> takes a <code>std::string</code> by value and moves it into the error object:</p>
@@ -336,8 +336,8 @@ auto avg = average(readings);
 <p>This kind of API survives in many codebases because it seems flexible.</p>
 <pre><code class="language-cpp">// Anti-pattern: signature hides ownership, failure, and buffer contract.
 bool encode_record(const Record&amp; record,
-			   std::vector&lt;std::byte&gt;&amp; output,
-			   std::string* error_message = nullptr);
+               std::vector&lt;std::byte&gt;&amp; output,
+               std::string* error_message = nullptr);
 </code></pre>
 <p>This one function now carries several hidden rules.</p>
 <ul>
@@ -349,11 +349,11 @@ bool encode_record(const Record&amp; record,
 <p>Nothing in the signature answers those questions cleanly.</p>
 <p>A stronger API usually splits the semantics.</p>
 <pre><code class="language-cpp">auto encode_record(const Record&amp; record)
-	-&gt; std::expected&lt;std::vector&lt;std::byte&gt;, EncodeError&gt;;
+    -&gt; std::expected&lt;std::vector&lt;std::byte&gt;, EncodeError&gt;;
 
 auto append_encoded_record(const Record&amp; record,
-				   ByteAppender&amp; output)
-	-&gt; std::expected&lt;void, EncodeError&gt;;
+                   ByteAppender&amp; output)
+    -&gt; std::expected&lt;void, EncodeError&gt;;
 </code></pre>
 <p>Now the caller chooses between owned result production and append-style mutation, and the failure contract is explicit. The two different operations no longer pretend to be one generic “flexible” interface.</p>
 <h2 id="factories-and-acquisition-functions-must-state-ownership-up-front"><a class="header" href="#factories-and-acquisition-functions-must-state-ownership-up-front">Factories and Acquisition Functions Must State Ownership Up Front</a></h2>
@@ -364,23 +364,23 @@ auto append_encoded_record(const Record&amp; record,
 Widget* create_widget(const WidgetConfig&amp; cfg);
 
 void setup() {
-	auto* w = create_widget(cfg);
-	// Does the caller own w? Does a global registry own it?
-	// Must the caller call delete? delete[]? A custom deallocator?
-	// Nothing in the signature answers these questions.
-	use(w);
-	// If the caller guesses wrong, the result is a leak or a double-free.
+    auto* w = create_widget(cfg);
+    // Does the caller own w? Does a global registry own it?
+    // Must the caller call delete? delete[]? A custom deallocator?
+    // Nothing in the signature answers these questions.
+    use(w);
+    // If the caller guesses wrong, the result is a leak or a double-free.
 }
 </code></pre>
 <pre><code class="language-cpp">// Clear: unique_ptr states exclusive caller ownership unambiguously.
 auto create_widget(const WidgetConfig&amp; cfg)
-	-&gt; std::expected&lt;std::unique_ptr&lt;Widget&gt;, WidgetError&gt;;
+    -&gt; std::expected&lt;std::unique_ptr&lt;Widget&gt;, WidgetError&gt;;
 
 void setup() {
-	auto result = create_widget(cfg);
-	if (!result) { /* handle error */ }
-	auto widget = std::move(*result); // ownership transferred, no ambiguity
-	// widget is destroyed automatically when it leaves scope
+    auto result = create_widget(cfg);
+    if (!result) { /* handle error */ }
+    auto widget = std::move(*result); // ownership transferred, no ambiguity
+    // widget is destroyed automatically when it leaves scope
 }
 </code></pre>
 <p>The example project shows a value-oriented variant of this pattern. In <code>examples/web-api/src/modules/task.cppm</code>, <code>Task::validate</code> is a factory-style function that takes a <code>Task</code> by value and returns <code>Result&lt;Task&gt;</code> (an alias for <code>std::expected&lt;Task, Error&gt;</code>):</p>

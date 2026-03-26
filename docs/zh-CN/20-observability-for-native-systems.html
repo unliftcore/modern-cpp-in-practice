@@ -204,74 +204,74 @@
 <h3 id="没有可观测性时调试是什么样子"><a class="header" href="#没有可观测性时调试是什么样子">没有可观测性时调试是什么样子</a></h3>
 <p>举个具体的例子。假设有一个处理文件上传的服务，某用户反映上传超时。以下是没有结构化可观测性时的处理函数：</p>
 <pre><code class="language-cpp">void handle_upload(const http_request&amp; req) {
-	std::cout &lt;&lt; "INFO: Processing upload" &lt;&lt; std::endl;
+    std::cout &lt;&lt; "INFO: Processing upload" &lt;&lt; std::endl;
 
-	std::cout &lt;&lt; "INFO: Starting validation" &lt;&lt; std::endl;
-	auto validation = validate(req);
-	if (!validation) {
-		std::cerr &lt;&lt; "ERROR: Validation failed: "
-		          &lt;&lt; validation.error().message() &lt;&lt; std::endl;
-		return;
-	}
+    std::cout &lt;&lt; "INFO: Starting validation" &lt;&lt; std::endl;
+    auto validation = validate(req);
+    if (!validation) {
+        std::cerr &lt;&lt; "ERROR: Validation failed: "
+                  &lt;&lt; validation.error().message() &lt;&lt; std::endl;
+        return;
+    }
 
-	std::cout &lt;&lt; "INFO: Storing file" &lt;&lt; std::endl;
-	auto store_result = store(req);
-	if (!store_result) {
-		std::cerr &lt;&lt; "ERROR: Store failed: "
-		          &lt;&lt; store_result.error().message() &lt;&lt; std::endl;
-		return;
-	}
+    std::cout &lt;&lt; "INFO: Storing file" &lt;&lt; std::endl;
+    auto store_result = store(req);
+    if (!store_result) {
+        std::cerr &lt;&lt; "ERROR: Store failed: "
+                  &lt;&lt; store_result.error().message() &lt;&lt; std::endl;
+        return;
+    }
 
-	notify(req);
-	std::cout &lt;&lt; "INFO: Upload complete" &lt;&lt; std::endl;
+    notify(req);
+    std::cout &lt;&lt; "INFO: Upload complete" &lt;&lt; std::endl;
 }
 </code></pre>
 <p>哪次上传失败了？是同一个用户还是不同用户？在等什么——磁盘 I/O、下游服务还是锁？store 调用花了多长时间？失败后有没有重试？这些问题从这个函数产生的日志中一个都答不上来。值班工程师只能按时间戳范围 grep 日志，靠猜测建立关联，然后请用户重现问题。</p>
 <p>再看同一个函数加上结构化日志、关联 ID 和维度指标之后的效果：</p>
 <pre><code class="language-cpp">void handle_upload(upload_context&amp; ctx) {
-	auto span = ctx.tracer().start_span("handle_upload", {
-		{"request_id", ctx.request_id()},
-		{"user_id",    ctx.user_id()},
-		{"file_size",  ctx.file_size()},
-		{"shard",      ctx.shard_id()},
-	});
+    auto span = ctx.tracer().start_span("handle_upload", {
+        {"request_id", ctx.request_id()},
+        {"user_id",    ctx.user_id()},
+        {"file_size",  ctx.file_size()},
+        {"shard",      ctx.shard_id()},
+    });
 
-	ctx.log(severity::info, "upload_started", {
-		{"request_id", ctx.request_id()},
-		{"file_name",  ctx.file_name()},
-		{"file_size",  std::to_string(ctx.file_size())},
-	});
+    ctx.log(severity::info, "upload_started", {
+        {"request_id", ctx.request_id()},
+        {"file_name",  ctx.file_name()},
+        {"file_size",  std::to_string(ctx.file_size())},
+    });
 
-	auto validation = validate(ctx);
-	if (!validation) {
-		ctx.log(severity::warning, "validation_failed", {
-			{"request_id", ctx.request_id()},
-			{"reason",     validation.error().category()},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "validation"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto validation = validate(ctx);
+    if (!validation) {
+        ctx.log(severity::warning, "validation_failed", {
+            {"request_id", ctx.request_id()},
+            {"reason",     validation.error().category()},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "validation"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	auto store_result = store(ctx);
-	if (!store_result) {
-		ctx.log(severity::error, "store_failed", {
-			{"request_id",  ctx.request_id()},
-			{"dependency",  "blob_store"},
-			{"error_class", store_result.error().category()},
-			{"latency_ms",  std::to_string(store_result.elapsed_ms())},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "store"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto store_result = store(ctx);
+    if (!store_result) {
+        ctx.log(severity::error, "store_failed", {
+            {"request_id",  ctx.request_id()},
+            {"dependency",  "blob_store"},
+            {"error_class", store_result.error().category()},
+            {"latency_ms",  std::to_string(store_result.elapsed_ms())},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "store"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
-		{{"shard", ctx.shard_id()}});
-	ctx.log(severity::info, "upload_complete", {
-		{"request_id", ctx.request_id()},
-		{"latency_ms", std::to_string(span.elapsed_ms())},
-	});
+    ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
+        {{"shard", ctx.shard_id()}});
+    ctx.log(severity::info, "upload_complete", {
+        {"request_id", ctx.request_id()},
+        {"latency_ms", std::to_string(span.elapsed_ms())},
+    });
 }
 </code></pre>
 <p>现在值班工程师按 <code>request_id</code> 过滤，立刻看到超时发生在 <code>store</code> 阶段、<code>dependency=blob_store</code>，再查看按 shard 分组的 <code>upload_duration_ms</code> 直方图，发现 shard-3 延迟在 09:40 飙升。blob store 仪表盘印证了该依赖当时确实在劣化。整个调查从数小时缩短到数分钟。</p>
@@ -358,30 +358,30 @@ ctx.log(severity::error, "dependency_connect_failed", {
 <p>异步原生服务中有一个常见问题：延迟其实花在了排队上，而不是执行上。如果追踪上下文没有跨执行器边界传播，这部分时间就是不可见的：</p>
 <pre><code class="language-cpp">// 没有追踪上下文传播。span 只覆盖执行阶段，不覆盖等待阶段。
 void enqueue_work(thread_pool&amp; pool, request req) {
-	pool.submit([req = std::move(req)] {
-		auto span = tracer::start_span("process_request");  // 工作运行时才开始计时。
-		process(req);
-	});
-	// submit() 到 lambda 实际执行之间的时间丢失了。
-	// 如果线程池饱和，请求在队列中等待 500ms，
-	// 但追踪显示 2ms 的执行时间。运维人员在追踪中
-	// 看到低延迟，而用户体验到高延迟。排队时间是
-	// 一个盲点。
+    pool.submit([req = std::move(req)] {
+        auto span = tracer::start_span("process_request");  // 工作运行时才开始计时。
+        process(req);
+    });
+    // submit() 到 lambda 实际执行之间的时间丢失了。
+    // 如果线程池饱和，请求在队列中等待 500ms，
+    // 但追踪显示 2ms 的执行时间。运维人员在追踪中
+    // 看到低延迟，而用户体验到高延迟。排队时间是
+    // 一个盲点。
 }
 </code></pre>
 <p>正确传播上下文后，完整图景一目了然：</p>
 <pre><code class="language-cpp">void enqueue_work(thread_pool&amp; pool, request req, trace_context ctx) {
-	auto enqueue_time = steady_clock::now();
-	pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
-		auto queue_span = ctx.start_span("queued", {
-			{"queue_ms", std::to_string(duration_cast&lt;milliseconds&gt;(
-				steady_clock::now() - enqueue_time).count())},
-		});
-		queue_span.end();
+    auto enqueue_time = steady_clock::now();
+    pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
+        auto queue_span = ctx.start_span("queued", {
+            {"queue_ms", std::to_string(duration_cast&lt;milliseconds&gt;(
+                steady_clock::now() - enqueue_time).count())},
+        });
+        queue_span.end();
 
-		auto exec_span = ctx.start_span("process_request");
-		process(req);
-	});
+        auto exec_span = ctx.start_span("process_request");
+        process(req);
+    });
 }
 </code></pre>
 <p>现在追踪中显示两个 span——排队和执行——都挂在父请求下面。一旦排队时间占了大头，在追踪瀑布图中一眼就能看出来。这恰恰是只靠指标（比如平均处理时间）会系统性掩盖的那类延迟。</p>
@@ -416,20 +416,20 @@ void enqueue_work(thread_pool&amp; pool, request req) {
 <pre><code class="language-cpp">enum class severity { debug, info, warning, error };
 
 struct diagnostic_field {
-	std::string_view key;
-	std::string_view value;
+    std::string_view key;
+    std::string_view value;
 };
 
 struct diagnostics_sink {
-	virtual ~diagnostics_sink() = default;
+    virtual ~diagnostics_sink() = default;
 
-	virtual void record_event(severity level,
-							  std::string_view event_name,
-							  std::span&lt;diagnostic_field const&gt; fields) noexcept = 0;
+    virtual void record_event(severity level,
+                              std::string_view event_name,
+                              std::span&lt;diagnostic_field const&gt; fields) noexcept = 0;
 
-	virtual void increment_counter(std::string_view name,
-								   std::int64_t delta,
-								   std::span&lt;diagnostic_field const&gt; dimensions) noexcept = 0;
+    virtual void increment_counter(std::string_view name,
+                                   std::int64_t delta,
+                                   std::span&lt;diagnostic_field const&gt; dimensions) noexcept = 0;
 };
 </code></pre>
 <p>这类接口让库保持本分。库可以上报解析失败、重试、缓存淘汰或重加载耗时，而不必把某个厂商 SDK 硬编码进每个使用它的二进制文件。怎么附加请求 ID、怎么导出指标、怎么接入追踪系统，都由宿主来决定。</p>

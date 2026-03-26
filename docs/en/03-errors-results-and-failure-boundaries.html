@@ -205,11 +205,11 @@ enum ConfigErrorCode { kOk = 0, kFileNotFound = 1, kParseError = 2, kInvalidValu
 ConfigErrorCode load_service_config(const std::string&amp; path, ServiceConfig* out);
 
 void startup() {
-	ServiceConfig cfg;
-	load_service_config("/etc/app/config.yaml", &amp;cfg); // BUG: return code silently ignored
+    ServiceConfig cfg;
+    load_service_config("/etc/app/config.yaml", &amp;cfg); // BUG: return code silently ignored
 
-	// cfg may be uninitialized garbage -- the program continues anyway.
-	listen(cfg.port); // binds to nonsense port or zero
+    // cfg may be uninitialized garbage -- the program continues anyway.
+    listen(cfg.port); // binds to nonsense port or zero
 }
 </code></pre>
 <p>The core problem is that error codes are advisory. The compiler does not require the caller to inspect them. Even with <code>[[nodiscard]]</code>, a cast to <code>void</code> or an accidental omission silences the warning. In large codebases, studies of C error-code APIs consistently find that 30-60% of error returns are never checked at some call sites.</p>
@@ -247,36 +247,36 @@ make_error(ErrorCode code, std::string detail) {
 <p>Parsing, validation, boundary translation, and request-level operations often fall into this category. The call site usually needs to branch, emit a structured rejection, choose retry behavior, or attach context. Returning an <code>expected</code> makes that decision point explicit.</p>
 <p>Consider a configuration loader:</p>
 <pre><code class="language-cpp">enum class ConfigErrorCode {
-	file_not_found,
-	parse_error,
-	invalid_value,
+    file_not_found,
+    parse_error,
+    invalid_value,
 };
 
 struct ConfigError {
-	ConfigErrorCode code;
-	std::string message;
-	std::string source;
+    ConfigErrorCode code;
+    std::string message;
+    std::string source;
 };
 
 auto load_service_config(std::filesystem::path path)
-	-&gt; std::expected&lt;ServiceConfig, ConfigError&gt;;
+    -&gt; std::expected&lt;ServiceConfig, ConfigError&gt;;
 </code></pre>
 <p>This contract tells the reader something important. Failure is part of normal control flow at this boundary. The caller must decide whether to abort startup, fall back to a default environment, or report a clear diagnostic. That is different from a deep internal helper whose only sensible failure policy is to unwind to the boundary that can actually choose.</p>
 <p>Compare the <code>expected</code>-based loader with a traditional output-parameter-plus-bool approach to see how much information the old style loses:</p>
 <pre><code class="language-cpp">// Old style: bool return, output parameter, no structured error.
 bool load_service_config(const std::filesystem::path&amp; path,
-						 ServiceConfig* out,
-						 std::string* error_msg = nullptr);
+                         ServiceConfig* out,
+                         std::string* error_msg = nullptr);
 
 void startup() {
-	ServiceConfig cfg;
-	std::string err;
-	if (!load_service_config("/etc/app/config.yaml", &amp;cfg, &amp;err)) {
-		// What kind of failure? File missing? Parse error? Permission denied?
-		// err is a free-form string -- no programmatic branching possible.
-		LOG_ERROR("config load failed: {}", err);
-		std::exit(1); // only option: cannot distinguish retriable from fatal
-	}
+    ServiceConfig cfg;
+    std::string err;
+    if (!load_service_config("/etc/app/config.yaml", &amp;cfg, &amp;err)) {
+        // What kind of failure? File missing? Parse error? Permission denied?
+        // err is a free-form string -- no programmatic branching possible.
+        LOG_ERROR("config load failed: {}", err);
+        std::exit(1); // only option: cannot distinguish retriable from fatal
+    }
 }
 </code></pre>
 <p>With <code>std::expected&lt;ServiceConfig, ConfigError&gt;</code>, the caller can branch on <code>ConfigErrorCode::file_not_found</code> versus <code>ConfigErrorCode::parse_error</code>, choose different recovery strategies, and still access a human-readable message for logging. The type system carries the decision-relevant information rather than burying it in a string.</p>
@@ -285,19 +285,19 @@ void startup() {
 <p>One of the most common production failures is logging plus partial status plus occasional throwing, all in the same subsystem.</p>
 <pre><code class="language-cpp">// Anti-pattern: side effects and transport are mixed.
 bool refresh_profile(Cache&amp; cache, DbClient&amp; db, UserId user_id) {
-	try {
-		auto row = db.fetch_profile(user_id);
-		if (!row) {
-			LOG_ERROR("profile not found for {}", user_id);
-			return false;
-		}
+    try {
+        auto row = db.fetch_profile(user_id);
+        if (!row) {
+            LOG_ERROR("profile not found for {}", user_id);
+            return false;
+        }
 
-		cache.put(user_id, to_profile(*row));
-		return true;
-	} catch (const DbTimeout&amp; e) {
-		LOG_WARNING("db timeout: {}", e.what());
-		throw; // RISK: some failures logged here, some rethrown, signature hides both
-	}
+        cache.put(user_id, to_profile(*row));
+        return true;
+    } catch (const DbTimeout&amp; e) {
+        LOG_WARNING("db timeout: {}", e.what());
+        throw; // RISK: some failures logged here, some rethrown, signature hides both
+    }
 }
 </code></pre>
 <p>This function is expensive to use because the caller does not know what <code>false</code> means, which failures were already logged, or whether it still needs to add context. If several layers follow this pattern, incidents become noisy and under-explained at the same time.</p>
@@ -306,23 +306,23 @@ bool refresh_profile(Cache&amp; cache, DbClient&amp; db, UserId user_id) {
 <p>A subtler variant of the side-effect problem is code that converts failures into default values without any signal to the caller.</p>
 <pre><code class="language-cpp">// Anti-pattern: failure becomes a silent default.
 int get_retry_limit(const Config&amp; cfg) {
-	auto val = cfg.get_int("retry_limit");
-	if (!val) {
-		return 3; // silent fallback -- no log, no metric, no trace
-	}
-	return *val;
+    auto val = cfg.get_int("retry_limit");
+    if (!val) {
+        return 3; // silent fallback -- no log, no metric, no trace
+    }
+    return *val;
 }
 </code></pre>
 <p>This is seductive because the code never crashes. But when the configuration file has a typo (<code>retry_limt</code> instead of <code>retry_limit</code>), the system silently uses a hardcoded default. During an incident, operators change the configuration expecting behavior to update, and nothing happens. The bug is invisible precisely because the error was swallowed.</p>
 <p>The better approach makes the default explicit and the fallback observable:</p>
 <pre><code class="language-cpp">auto get_retry_limit(const Config&amp; cfg) -&gt; std::uint32_t {
-	constexpr std::uint32_t default_limit = 3;
-	auto val = cfg.get_uint("retry_limit");
-	if (!val) {
-		LOG_INFO("retry_limit not configured, using default={}", default_limit);
-		return default_limit;
-	}
-	return *val;
+    constexpr std::uint32_t default_limit = 3;
+    auto val = cfg.get_uint("retry_limit");
+    if (!val) {
+        LOG_INFO("retry_limit not configured, using default={}", default_limit);
+        return default_limit;
+    }
+    return *val;
 }
 </code></pre>
 <p>Or, if the caller should decide whether a missing value is acceptable, return the <code>expected</code> or <code>optional</code> directly and let the boundary make the policy choice.</p>
@@ -331,21 +331,21 @@ int get_retry_limit(const Config&amp; cfg) {
 <p>A storage adapter may receive driver exceptions, status codes, retry hints, or platform errors. The rest of the system usually does not want those details directly. It wants decision-relevant categories and maybe enough attached context for diagnostics.</p>
 <p>That means translation should happen close to the unstable dependency, not in business logic three layers away.</p>
 <pre><code class="language-cpp">auto AccountRepository::load(AccountId id)
-	-&gt; std::expected&lt;AccountSnapshot, AccountLoadError&gt;
+    -&gt; std::expected&lt;AccountSnapshot, AccountLoadError&gt;
 {
-	try {
-		auto row = client_.fetch_account(id);
-		if (!row) {
-			return std::unexpected(AccountLoadError::not_found(id));
-		}
-		return to_snapshot(*row);
-	} catch (const DbTimeout&amp; e) {
-		return std::unexpected(AccountLoadError::temporarily_unavailable(
-			id, e.what()));
-	} catch (const DbProtocolError&amp; e) {
-		return std::unexpected(AccountLoadError::backend_fault(
-			id, e.what()));
-	}
+    try {
+        auto row = client_.fetch_account(id);
+        if (!row) {
+            return std::unexpected(AccountLoadError::not_found(id));
+        }
+        return to_snapshot(*row);
+    } catch (const DbTimeout&amp; e) {
+        return std::unexpected(AccountLoadError::temporarily_unavailable(
+            id, e.what()));
+    } catch (const DbProtocolError&amp; e) {
+        return std::unexpected(AccountLoadError::backend_fault(
+            id, e.what()));
+    }
 }
 </code></pre>
 <p>This does not erase useful information. It packages it in a form the caller can act on. Business logic can now distinguish not-found from temporary unavailability without learning the storage client’s failure taxonomy.</p>

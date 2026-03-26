@@ -24,18 +24,18 @@
 ```cpp
 // Continuation-passing style — correct but unreadable at scale.
 void handle_request(request req, std::function<void(response)> done) {
-	fetch_profile(req.user_id, [req, done](std::expected<profile, error> prof) {
-		if (!prof) { done(error_response(prof.error())); return; }
-		validate_access(prof->role, req.resource,
-			[req, prof = *prof, done](std::expected<bool, error> ok) {
-				if (!ok || !*ok) { done(denied_response()); return; }
-				store_audit_log(req, prof,
-					[req, prof, done](std::expected<void, error> result) {
-						if (!result) { done(error_response(result.error())); return; }
-						done(success_response(prof));
-					});
-			});
-	});
+    fetch_profile(req.user_id, [req, done](std::expected<profile, error> prof) {
+        if (!prof) { done(error_response(prof.error())); return; }
+        validate_access(prof->role, req.resource,
+            [req, prof = *prof, done](std::expected<bool, error> ok) {
+                if (!ok || !*ok) { done(denied_response()); return; }
+                store_audit_log(req, prof,
+                    [req, prof, done](std::expected<void, error> result) {
+                        if (!result) { done(error_response(result.error())); return; }
+                        done(success_response(prof));
+                    });
+            });
+    });
 }
 ```
 
@@ -45,16 +45,16 @@ void handle_request(request req, std::function<void(response)> done) {
 
 ```cpp
 task<response> handle_request(request req) {
-	auto prof = co_await fetch_profile(req.user_id);
-	if (!prof) co_return error_response(prof.error());
+    auto prof = co_await fetch_profile(req.user_id);
+    if (!prof) co_return error_response(prof.error());
 
-	auto ok = co_await validate_access(prof->role, req.resource);
-	if (!ok || !*ok) co_return denied_response();
+    auto ok = co_await validate_access(prof->role, req.resource);
+    if (!ok || !*ok) co_return denied_response();
 
-	auto result = co_await store_audit_log(req, *prof);
-	if (!result) co_return error_response(result.error());
+    auto result = co_await store_audit_log(req, *prof);
+    if (!result) co_return error_response(result.error());
 
-	co_return success_response(*prof);
+    co_return success_response(*prof);
 }
 ```
 
@@ -94,11 +94,11 @@ task<response> handle_request(request req) {
 ```cpp
 // Anti-pattern: borrowed data may dangle after suspension.
 task<parsed_request> parse_and_authorize(
-	std::string_view body,
-	const auth_context& auth) {
+    std::string_view body,
+    const auth_context& auth) {
 
-	auto token = co_await fetch_access_token(auth.user_id());
-	co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
+    auto token = co_await fetch_access_token(auth.user_id());
+    co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
 }
 ```
 
@@ -108,11 +108,11 @@ task<parsed_request> parse_and_authorize(
 
 ```cpp
 task<parsed_request> parse_and_authorize(
-	std::string body,
-	auth_context auth) {
+    std::string body,
+    auth_context auth) {
 
-	auto token = co_await fetch_access_token(auth.user_id());
-	co_return parse_request(body, token);
+    auto token = co_await fetch_access_token(auth.user_id());
+    co_return parse_request(body, token);
 }
 ```
 
@@ -127,10 +127,10 @@ task<parsed_request> parse_and_authorize(
 ```cpp
 // BUG: coroutine captures a reference to a local that dies when the caller returns.
 task<void> start_processing(dispatcher& d) {
-	std::vector<record> batch = build_batch();
-	co_await d.schedule([&batch] {     // lambda captures batch by reference
-		process(batch);                // batch may be destroyed if start_processing
-	});                                // is suspended and its caller exits
+    std::vector<record> batch = build_batch();
+    co_await d.schedule([&batch] {     // lambda captures batch by reference
+        process(batch);                // batch may be destroyed if start_processing
+    });                                // is suspended and its caller exits
 }
 ```
 
@@ -143,8 +143,8 @@ task<void> start_processing(dispatcher& d) {
 task<void> log_message(std::string_view msg);
 
 void caller() {
-	log_message("request started"s + request_id()); // temporary std::string
-	// temporary is destroyed here, before the coroutine even begins if lazy-start
+    log_message("request started"s + request_id()); // temporary std::string
+    // temporary is destroyed here, before the coroutine even begins if lazy-start
 }
 ```
 
@@ -155,12 +155,12 @@ void caller() {
 ```cpp
 // BUG: 'this' may dangle if the object is moved or destroyed while suspended.
 class connection {
-	std::string peer_addr_;
+    std::string peer_addr_;
 public:
-	task<void> run() {
-		auto data = co_await read_socket();    // suspended here
-		log("received from " + peer_addr_);    // 'this' may be invalid
-	}
+    task<void> run() {
+        auto data = co_await read_socket();    // suspended here
+        log("received from " + peer_addr_);    // 'this' may be invalid
+    }
 };
 ```
 

@@ -48,14 +48,14 @@
 // Anti-pattern: a growing base class that every derived type must satisfy.
 class Widget {
 public:
-	virtual void draw(Canvas& c) = 0;
-	virtual void handle_input(const InputEvent& e) = 0;
-	virtual Size preferred_size() const = 0;
-	virtual void set_theme(const Theme& t) = 0;
-	virtual void serialize(Archive& ar) = 0;    // added in v2
-	virtual void animate(Duration dt) = 0;       // added in v3
-	virtual AccessibilityInfo accessibility() = 0; // added in v4
-	virtual ~Widget() = default;
+    virtual void draw(Canvas& c) = 0;
+    virtual void handle_input(const InputEvent& e) = 0;
+    virtual Size preferred_size() const = 0;
+    virtual void set_theme(const Theme& t) = 0;
+    virtual void serialize(Archive& ar) = 0;    // added in v2
+    virtual void animate(Duration dt) = 0;       // added in v3
+    virtual AccessibilityInfo accessibility() = 0; // added in v4
+    virtual ~Widget() = default;
 };
 ```
 
@@ -70,28 +70,28 @@ public:
 ```cpp
 class Readable {
 public:
-	virtual std::expected<std::size_t, IoError>
-	read(std::span<std::byte> buffer) = 0;
-	virtual void close() = 0;  // close the read side
-	virtual ~Readable() = default;
+    virtual std::expected<std::size_t, IoError>
+    read(std::span<std::byte> buffer) = 0;
+    virtual void close() = 0;  // close the read side
+    virtual ~Readable() = default;
 };
 
 class Writable {
 public:
-	virtual std::expected<std::size_t, IoError>
-	write(std::span<const std::byte> data) = 0;
-	virtual void close() = 0;  // close the write side
-	virtual ~Writable() = default;
+    virtual std::expected<std::size_t, IoError>
+    write(std::span<const std::byte> data) = 0;
+    virtual void close() = 0;  // close the write side
+    virtual ~Writable() = default;
 };
 
 // Diamond: what does close() mean here? Read side? Write side? Both?
 class ReadWriteStream : public virtual Readable, public virtual Writable {
 public:
-	// Single close() must now serve two different semantic contracts.
-	// Callers holding a Readable* expect close() to close the read side.
-	// Callers holding a Writable* expect close() to close the write side.
-	// There is no way to satisfy both through one override.
-	void close() override { /* ??? */ }
+    // Single close() must now serve two different semantic contracts.
+    // Callers holding a Readable* expect close() to close the read side.
+    // Callers holding a Writable* expect close() to close the write side.
+    // There is no way to satisfy both through one override.
+    void close() override { /* ??? */ }
 };
 ```
 
@@ -108,17 +108,17 @@ using DrawAction = std::move_only_function<void(Canvas&)>;
 using InputHandler = std::move_only_function<bool(const InputEvent&)>;
 
 struct WidgetBehavior {
-	DrawAction draw;
-	InputHandler handle_input;
+    DrawAction draw;
+    InputHandler handle_input;
 };
 
 // A simple widget only provides what it needs.
 // No obligation to implement serialize, animate, or accessibility.
 WidgetBehavior make_label(std::string text) {
-	return {
-		.draw = [t = std::move(text)](Canvas& c) { c.draw_text(t); },
-		.handle_input = [](const InputEvent&) { return false; }
-	};
+    return {
+        .draw = [t = std::move(text)](Canvas& c) { c.draw_text(t); },
+        .handle_input = [](const InputEvent&) { return false; }
+    };
 }
 ```
 
@@ -167,7 +167,7 @@ chain(R&& middlewares, http::Handler base) {
 ```cpp
 // This will not compile. std::function requires CopyConstructible.
 auto handler = std::function<void()>{
-	[conn = std::make_unique<DbConnection>()](){ conn->heartbeat(); }
+    [conn = std::make_unique<DbConnection>()](){ conn->heartbeat(); }
 };
 ```
 
@@ -177,7 +177,7 @@ auto handler = std::function<void()>{
 // Workaround: shared_ptr "fixes" compilation but lies about ownership.
 auto conn = std::make_shared<DbConnection>();
 auto handler = std::function<void()>{
-	[conn]() { conn->heartbeat(); }
+    [conn]() { conn->heartbeat(); }
 };
 // Now conn is shared. Who shuts it down? When? The ownership story is gone.
 ```
@@ -215,9 +215,9 @@ auto handler = std::function<void()>{
 ```cpp
 class TimerQueue {
 public:
-	using Task = std::move_only_function<void() noexcept>;
+    using Task = std::move_only_function<void() noexcept>;
 
-	void schedule_after(std::chrono::milliseconds delay, Task task);
+    void schedule_after(std::chrono::milliseconds delay, Task task);
 };
 ```
 
@@ -231,14 +231,14 @@ public:
 // Anti-pattern: ambiguous retention and capture lifetime.
 class EventSource {
 public:
-	void on_message(std::function<void(std::string_view)> handler);
+    void on_message(std::function<void(std::string_view)> handler);
 };
 
 void wire(EventSource& source, Session& session) {
-	source.on_message([&session](std::string_view payload) {
-		session.record(payload);
-	});
-	// RISK: if EventSource stores the handler past Session lifetime, this dangles.
+    source.on_message([&session](std::string_view payload) {
+        session.record(payload);
+    });
+    // RISK: if EventSource stores the handler past Session lifetime, this dangles.
 }
 ```
 

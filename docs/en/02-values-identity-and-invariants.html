@@ -205,30 +205,30 @@
 <p>When configuration is modeled as a shared mutable object rather than a value snapshot, aliasing bugs appear:</p>
 <pre><code class="language-cpp">// Anti-pattern: shared mutable configuration.
 struct AppConfig {
-	std::string db_host;
-	int db_port;
-	std::chrono::seconds timeout;
+    std::string db_host;
+    int db_port;
+    std::chrono::seconds timeout;
 };
 
 // A single global mutable instance, shared by reference.
 AppConfig g_config;
 
 void handle_request(RequestContext&amp; ctx) {
-	auto conn = connect(g_config.db_host, g_config.db_port);
-	// ... long operation ...
-	// BUG: another thread calls reload_config(), mutating g_config
-	// mid-request. conn was opened with the old host, but now
-	// ctx uses the new timeout. The request operates against
-	// an incoherent mix of old and new configuration.
-	conn.set_timeout(g_config.timeout);
+    auto conn = connect(g_config.db_host, g_config.db_port);
+    // ... long operation ...
+    // BUG: another thread calls reload_config(), mutating g_config
+    // mid-request. conn was opened with the old host, but now
+    // ctx uses the new timeout. The request operates against
+    // an incoherent mix of old and new configuration.
+    conn.set_timeout(g_config.timeout);
 }
 </code></pre>
 <p>With value semantics, each request captures its own immutable snapshot. No lock is needed to read fields, and no mid-flight mutation can create incoherent state:</p>
 <pre><code class="language-cpp">void handle_request(RequestContext&amp; ctx, const ServiceConfig&amp; config) {
-	// config is a value -- it cannot change during this call.
-	auto conn = connect(config.db_host(), config.db_port());
-	conn.set_timeout(config.timeout());
-	// Entire request sees a single consistent configuration.
+    // config is a value -- it cannot change during this call.
+    auto conn = connect(config.db_host(), config.db_port());
+    conn.set_timeout(config.timeout());
+    // Entire request sees a single consistent configuration.
 }
 </code></pre>
 <p>The deeper point is that values compose well. They can sit inside containers, cross threads, participate in deterministic tests, and form stable inputs to hashing or comparison. Identity-bearing objects can do those things too, but they require more rules and more caution. Use that complexity only when the model truly needs it.</p>
@@ -239,34 +239,34 @@ void handle_request(RequestContext&amp; ctx) {
 <p>Consider a scheduling subsystem.</p>
 <pre><code class="language-cpp">class RetryPolicy {
 public:
-	static auto create(std::chrono::milliseconds base_delay,
-					   std::chrono::milliseconds max_delay,
-					   std::uint32_t max_attempts)
-		-&gt; std::expected&lt;RetryPolicy, ConfigError&gt;;
+    static auto create(std::chrono::milliseconds base_delay,
+                       std::chrono::milliseconds max_delay,
+                       std::uint32_t max_attempts)
+        -&gt; std::expected&lt;RetryPolicy, ConfigError&gt;;
 
-	auto base_delay() const noexcept -&gt; std::chrono::milliseconds {
-		return base_delay_;
-	}
+    auto base_delay() const noexcept -&gt; std::chrono::milliseconds {
+        return base_delay_;
+    }
 
-	auto max_delay() const noexcept -&gt; std::chrono::milliseconds {
-		return max_delay_;
-	}
+    auto max_delay() const noexcept -&gt; std::chrono::milliseconds {
+        return max_delay_;
+    }
 
-	auto max_attempts() const noexcept -&gt; std::uint32_t {
-		return max_attempts_;
-	}
+    auto max_attempts() const noexcept -&gt; std::uint32_t {
+        return max_attempts_;
+    }
 
 private:
-	RetryPolicy(std::chrono::milliseconds base_delay,
-				std::chrono::milliseconds max_delay,
-				std::uint32_t max_attempts) noexcept
-		: base_delay_(base_delay),
-		  max_delay_(max_delay),
-		  max_attempts_(max_attempts) {}
+    RetryPolicy(std::chrono::milliseconds base_delay,
+                std::chrono::milliseconds max_delay,
+                std::uint32_t max_attempts) noexcept
+        : base_delay_(base_delay),
+          max_delay_(max_delay),
+          max_attempts_(max_attempts) {}
 
-	std::chrono::milliseconds base_delay_;
-	std::chrono::milliseconds max_delay_;
-	std::uint32_t max_attempts_;
+    std::chrono::milliseconds base_delay_;
+    std::chrono::milliseconds max_delay_;
+    std::uint32_t max_attempts_;
 };
 </code></pre>
 <p>The details of error transport belong more fully in the next chapter, but the modeling point is already clear: a <code>RetryPolicy</code> should not exist in a nonsense state. Once created, code using it should not have to ask whether the delays are inverted or the attempt count is zero unless those are valid meanings the domain actually wants.</p>
@@ -275,18 +275,18 @@ private:
 <p>Compare the factory-validated <code>RetryPolicy</code> above with a plain aggregate that leaves validation to callers:</p>
 <pre><code class="language-cpp">// Anti-pattern: invariants left to the caller.
 struct RetryPolicy {
-	std::chrono::milliseconds base_delay;
-	std::chrono::milliseconds max_delay;
-	std::uint32_t max_attempts;
+    std::chrono::milliseconds base_delay;
+    std::chrono::milliseconds max_delay;
+    std::uint32_t max_attempts;
 };
 
 void schedule_retries(const RetryPolicy&amp; policy) {
-	// Caller forgot to validate. base_delay is negative, max_attempts is 0.
-	// This loop does nothing, silently dropping work.
-	for (std::uint32_t i = 0; i &lt; policy.max_attempts; ++i) {
-		auto delay = std::min(policy.base_delay * (1 &lt;&lt; i), policy.max_delay);
-		enqueue_after(delay); // never executes when max_attempts == 0
-	}
+    // Caller forgot to validate. base_delay is negative, max_attempts is 0.
+    // This loop does nothing, silently dropping work.
+    for (std::uint32_t i = 0; i &lt; policy.max_attempts; ++i) {
+        auto delay = std::min(policy.base_delay * (1 &lt;&lt; i), policy.max_delay);
+        enqueue_after(delay); // never executes when max_attempts == 0
+    }
 }
 </code></pre>
 <p>Every function that receives <code>RetryPolicy</code> must now independently check for nonsense values, or assume some earlier layer already did. In practice, some callers check and some do not, producing inconsistent behavior depending on the call path. The factory approach shown earlier makes this class of bug structurally impossible: if you have a <code>RetryPolicy</code>, it is valid.</p>
@@ -307,11 +307,11 @@ void schedule_retries(const RetryPolicy&amp; policy) {
 <p>One recurring failure is a type that looks like a value because it is copied and compared, but actually carries identity-bearing mutation.</p>
 <pre><code class="language-cpp">// Anti-pattern: one type tries to be both a value and a live entity.
 struct Job {
-	std::string id;
-	std::string owner;
-	std::vector&lt;Task&gt; tasks;
-	std::mutex mutex; // RISK: identity-bearing synchronization hidden inside data model
-	bool cancelled = false;
+    std::string id;
+    std::string owner;
+    std::vector&lt;Task&gt; tasks;
+    std::mutex mutex; // RISK: identity-bearing synchronization hidden inside data model
+    bool cancelled = false;
 };
 </code></pre>
 <p>This object cannot honestly behave like a value because copying a mutex and a live cancellation flag has no sensible meaning. It also cannot honestly behave like a narrow entity model because the entire mutable representation is public. The type will infect the rest of the codebase with ambiguity.</p>
@@ -337,30 +337,30 @@ struct Job {
 <p>When a type looks like a value but shares internal state through pointers or references, copies become aliases rather than independent values:</p>
 <pre><code class="language-cpp">// Anti-pattern: shallow copy creates aliasing bugs.
 struct Route {
-	std::string name;
-	std::shared_ptr&lt;std::vector&lt;Endpoint&gt;&gt; endpoints; // shared, not owned
+    std::string name;
+    std::shared_ptr&lt;std::vector&lt;Endpoint&gt;&gt; endpoints; // shared, not owned
 };
 
 void reconfigure(Route primary) {
-	Route backup = primary; // looks like a copy, but endpoints are shared
+    Route backup = primary; // looks like a copy, but endpoints are shared
 
-	backup.name = "backup-" + primary.name;
-	backup.endpoints-&gt;push_back(fallback_endpoint()); // BUG: mutates primary too
+    backup.name = "backup-" + primary.name;
+    backup.endpoints-&gt;push_back(fallback_endpoint()); // BUG: mutates primary too
 
-	// primary.endpoints and backup.endpoints point to the same vector.
-	// The caller who passed primary now sees an endpoint they never added.
+    // primary.endpoints and backup.endpoints point to the same vector.
+    // The caller who passed primary now sees an endpoint they never added.
 }
 </code></pre>
 <p>The fix is to give the type genuine value semantics. Either store the vector directly as a member (so copies are deep), or use a copy-on-write strategy, or make the type immutable so sharing is safe:</p>
 <pre><code class="language-cpp">struct Route {
-	std::string name;
-	std::vector&lt;Endpoint&gt; endpoints; // owned, copied on assignment
+    std::string name;
+    std::vector&lt;Endpoint&gt; endpoints; // owned, copied on assignment
 
-	auto with_endpoint(Endpoint ep) const -&gt; Route {
-		Route copy = *this;
-		copy.endpoints.push_back(std::move(ep));
-		return copy;
-	}
+    auto with_endpoint(Endpoint ep) const -&gt; Route {
+        Route copy = *this;
+        copy.endpoints.push_back(std::move(ep));
+        return copy;
+    }
 };
 </code></pre>
 <p>Now <code>Route</code> behaves as a value. Copies are independent. Mutation through <code>with_endpoint</code> produces a new value without disturbing the original. No aliasing surprise is possible.</p>
@@ -372,44 +372,44 @@ void reconfigure(Route primary) {
 <p>If mutation can break invariants between two field assignments, the type likely needs a stronger operation boundary. If callers must lock, update three fields, and remember to recompute a derived flag, the invariant was never really owned by the type.</p>
 <pre><code class="language-cpp">// Anti-pattern: public fields allow invariant-breaking mutation.
 struct TimeWindow {
-	std::chrono::system_clock::time_point start;
-	std::chrono::system_clock::time_point end;
+    std::chrono::system_clock::time_point start;
+    std::chrono::system_clock::time_point end;
 };
 
 void extend_deadline(TimeWindow&amp; window, std::chrono::hours extra) {
-	window.end += extra; // fine
+    window.end += extra; // fine
 }
 
 void shift_start(TimeWindow&amp; window, std::chrono::hours shift) {
-	window.start += shift;
-	// BUG: if shift is large enough, start &gt; end.
-	// Every consumer of TimeWindow must now defend against this.
+    window.start += shift;
+    // BUG: if shift is large enough, start &gt; end.
+    // Every consumer of TimeWindow must now defend against this.
 }
 </code></pre>
 <p>An encapsulated type eliminates this class of bug by making the invariant un-breakable from outside:</p>
 <pre><code class="language-cpp">class TimeWindow {
 public:
-	static auto create(system_clock::time_point start,
-					   system_clock::time_point end)
-		-&gt; std::optional&lt;TimeWindow&gt;
-	{
-		if (start &gt; end) return std::nullopt;
-		return TimeWindow{start, end};
-	}
+    static auto create(system_clock::time_point start,
+                       system_clock::time_point end)
+        -&gt; std::optional&lt;TimeWindow&gt;
+    {
+        if (start &gt; end) return std::nullopt;
+        return TimeWindow{start, end};
+    }
 
-	auto start() const noexcept { return start_; }
-	auto end() const noexcept { return end_; }
+    auto start() const noexcept { return start_; }
+    auto end() const noexcept { return end_; }
 
-	auto with_extended_end(std::chrono::hours extra) const -&gt; TimeWindow {
-		return TimeWindow{start_, end_ + extra}; // always valid: end moves forward
-	}
+    auto with_extended_end(std::chrono::hours extra) const -&gt; TimeWindow {
+        return TimeWindow{start_, end_ + extra}; // always valid: end moves forward
+    }
 
 private:
-	TimeWindow(system_clock::time_point s, system_clock::time_point e)
-		: start_(s), end_(e) {}
+    TimeWindow(system_clock::time_point s, system_clock::time_point e)
+        : start_(s), end_(e) {}
 
-	system_clock::time_point start_;
-	system_clock::time_point end_;
+    system_clock::time_point start_;
+    system_clock::time_point end_;
 };
 </code></pre>
 <p>Callers cannot produce an invalid <code>TimeWindow</code>. The invariant <code>start &lt;= end</code> is enforced once, in the type, rather than diffusely across every mutation site.</p>

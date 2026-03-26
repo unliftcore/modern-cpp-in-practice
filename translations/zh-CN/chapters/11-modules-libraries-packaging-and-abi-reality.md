@@ -169,20 +169,20 @@ import webapi.task;
 ```cpp
 // v1: shipped in libwidget.so
 class EXPORT Widget {
-	int x_;
-	int y_;
+    int x_;
+    int y_;
 public:
-	void move(int dx, int dy);  // accesses x_, y_
+    void move(int dx, int dy);  // accesses x_, y_
 };
 // sizeof(Widget) == 8 for the consumer
 
 // v2: added a z-index member
 class EXPORT Widget {
-	int x_;
-	int y_;
-	int z_;  // sizeof(Widget) is now 12
+    int x_;
+    int y_;
+    int z_;  // sizeof(Widget) is now 12
 public:
-	void move(int dx, int dy);  // same signature, same symbol
+    void move(int dx, int dy);  // same signature, same symbol
 };
 // Consumer still allocates 8 bytes. Library writes 12. Corruption.
 ```
@@ -221,8 +221,8 @@ Header-only 库之所以流行，正是因为免去了二进制分发的麻烦�
 // Anti-pattern: fragile ABI surface for a shared library.
 class EXPORT Session {
 public:
-	virtual std::string send(const std::string& request) = 0;
-	virtual ~Session() = default;
+    virtual std::string send(const std::string& request) = 0;
+    virtual ~Session() = default;
 };
 
 std::unique_ptr<Session> create_session();
@@ -238,21 +238,21 @@ std::unique_ptr<Session> create_session();
 struct session_v1;
 
 struct request_buffer {
-	const std::byte* data;
-	std::size_t size;
+    const std::byte* data;
+    std::size_t size;
 };
 
 struct response_buffer {
-	const std::byte* data;
-	std::size_t size;
+    const std::byte* data;
+    std::size_t size;
 };
 
 struct session_api_v1 {
-	std::uint32_t struct_size;
-	session_v1* (*create)() noexcept;
-	void (*destroy)(session_v1*) noexcept;
-	status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
-	void (*release_response)(response_buffer*) noexcept;
+    std::uint32_t struct_size;
+    session_v1* (*create)() noexcept;
+    void (*destroy)(session_v1*) noexcept;
+    status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
+    void (*release_response)(response_buffer*) noexcept;
 };
 ```
 
@@ -302,16 +302,16 @@ struct session_api_v1 {
 // Anti-pattern: cross-boundary allocation mismatch.
 // Library (built with MSVC debug runtime, uses debug heap):
 EXPORT char* get_name() {
-	char* buf = new char[64];
-	std::strcpy(buf, "session-001");
-	return buf;
+    char* buf = new char[64];
+    std::strcpy(buf, "session-001");
+    return buf;
 }
 
 // Consumer (built with MSVC release runtime, uses release heap):
 void use_library() {
-	char* name = get_name();
-	// ...
-	delete[] name;  // CRASH: freeing debug-heap memory on release heap
+    char* name = get_name();
+    // ...
+    delete[] name;  // CRASH: freeing debug-heap memory on release heap
 }
 ```
 

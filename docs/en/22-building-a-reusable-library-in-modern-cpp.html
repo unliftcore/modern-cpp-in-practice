@@ -195,25 +195,25 @@
 <p>Value types are often the right center of gravity for library APIs because they travel well across teams and tests. They make copying cost visible, move semantics deliberate, and invariants attachable to construction or validation boundaries. Borrowed inputs such as <code>std::string_view</code> and <code>std::span</code> are still excellent for call boundaries, but they should be used only when the library can complete its work within the borrowed lifetime or copy what it must retain.</p>
 <h3 id="intentional-partial-a-caller-facing-api-with-explicit-contracts"><a class="header" href="#intentional-partial-a-caller-facing-api-with-explicit-contracts">Intentional partial: a caller-facing API with explicit contracts</a></h3>
 <pre><code class="language-cpp">enum class parse_error {
-	invalid_syntax,
-	unsupported_version,
-	duplicate_key,
-	resource_limit_exceeded,
+    invalid_syntax,
+    unsupported_version,
+    duplicate_key,
+    resource_limit_exceeded,
 };
 
 struct parse_options {
-	std::size_t max_document_bytes = 1 &lt;&lt; 20;
-	bool allow_comments = false;
+    std::size_t max_document_bytes = 1 &lt;&lt; 20;
+    bool allow_comments = false;
 };
 
 struct document {
-	std::pmr::vector&lt;entry&gt; entries;
+    std::pmr::vector&lt;entry&gt; entries;
 };
 
 [[nodiscard]] auto parse_document(std::string_view input,
-								  parse_options const&amp; options,
-								  std::pmr::memory_resource&amp; memory)
-	-&gt; std::expected&lt;document, parse_error&gt;;
+                                  parse_options const&amp; options,
+                                  std::pmr::memory_resource&amp; memory)
+    -&gt; std::expected&lt;document, parse_error&gt;;
 </code></pre>
 <p>This excerpt does a few useful things. It separates caller-controlled policy from input bytes. It makes allocation strategy visible without forcing a global allocator policy. It returns a domain error rather than a transport-specific or parser-internal type. It also makes result checking harder to forget through <code>[[nodiscard]]</code> and <code>std::expected</code>.</p>
 <p>The tradeoff is that the function signature is less minimal than <code>document parse(std::string_view)</code>. That is fine. Reusable libraries do not get paid for looking compact in slides. They get paid for making costs and contracts legible.</p>

@@ -77,14 +77,14 @@ This is the single most common microbenchmark lie. The compiler sees that a resu
 // BROKEN: the compiler may eliminate the entire loop because
 // 'total' is never observed.
 static void BM_bad_dce(benchmark::State& state) {
-	std::vector<double> data(1'000'000, 1.0);
-	for (auto _ : state) {
-		double total = 0.0;
-		for (double d : data)
-			total += d * d;
-		// total is dead.  Optimizer removes the loop.
-		// Benchmark reports ~0 ns/iteration.
-	}
+    std::vector<double> data(1'000'000, 1.0);
+    for (auto _ : state) {
+        double total = 0.0;
+        for (double d : data)
+            total += d * d;
+        // total is dead.  Optimizer removes the loop.
+        // Benchmark reports ~0 ns/iteration.
+    }
 }
 ```
 
@@ -92,13 +92,13 @@ static void BM_bad_dce(benchmark::State& state) {
 // FIXED: benchmark::DoNotOptimize prevents the compiler from
 // proving the result is unused.
 static void BM_good_dce(benchmark::State& state) {
-	std::vector<double> data(1'000'000, 1.0);
-	for (auto _ : state) {
-		double total = 0.0;
-		for (double d : data)
-			total += d * d;
-		benchmark::DoNotOptimize(total);
-	}
+    std::vector<double> data(1'000'000, 1.0);
+    for (auto _ : state) {
+        double total = 0.0;
+        for (double d : data)
+            total += d * d;
+        benchmark::DoNotOptimize(total);
+    }
 }
 ```
 
@@ -110,22 +110,22 @@ static void BM_good_dce(benchmark::State& state) {
 // BROKEN: construction cost dominates. The benchmark is
 // measuring vector allocation and initialization, not lookup.
 static void BM_bad_lookup(benchmark::State& state) {
-	for (auto _ : state) {
-		std::vector<int> v(1'000'000);
-		std::iota(v.begin(), v.end(), 0);
-		auto it = std::lower_bound(v.begin(), v.end(), 500'000);
-		benchmark::DoNotOptimize(it);
-	}
+    for (auto _ : state) {
+        std::vector<int> v(1'000'000);
+        std::iota(v.begin(), v.end(), 0);
+        auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+        benchmark::DoNotOptimize(it);
+    }
 }
 
 // FIXED: setup goes outside the timing loop.
 static void BM_good_lookup(benchmark::State& state) {
-	std::vector<int> v(1'000'000);
-	std::iota(v.begin(), v.end(), 0);
-	for (auto _ : state) {
-		auto it = std::lower_bound(v.begin(), v.end(), 500'000);
-		benchmark::DoNotOptimize(it);
-	}
+    std::vector<int> v(1'000'000);
+    std::iota(v.begin(), v.end(), 0);
+    for (auto _ : state) {
+        auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+        benchmark::DoNotOptimize(it);
+    }
 }
 ```
 
@@ -139,13 +139,13 @@ Comparing two designs against an unfair baseline is subtler and more dangerous:
 // in production is sorted vector with binary search, which may
 // be within 2x and uses half the memory.
 static void BM_linear_scan(benchmark::State& state) {
-	std::vector<std::pair<int,int>> data(100'000);
-	// ... fill with random kv pairs, unsorted ...
-	for (auto _ : state) {
-		auto it = std::find_if(data.begin(), data.end(),
-			[](const auto& p) { return p.first == 42; });
-		benchmark::DoNotOptimize(it);
-	}
+    std::vector<std::pair<int,int>> data(100'000);
+    // ... fill with random kv pairs, unsorted ...
+    for (auto _ : state) {
+        auto it = std::find_if(data.begin(), data.end(),
+            [](const auto& p) { return p.first == 42; });
+        benchmark::DoNotOptimize(it);
+    }
 }
 ```
 
@@ -158,15 +158,15 @@ The right baseline is the realistic alternative, not the worst possible option. 
 // iteration.  Production accesses the same structure after
 // processing unrelated data that evicts it from cache.
 static void BM_warm_cache(benchmark::State& state) {
-	std::vector<int> v(1'000);  // ~4 KB, fits in L1
-	std::iota(v.begin(), v.end(), 0);
-	for (auto _ : state) {
-		int sum = 0;
-		for (int x : v) sum += x;
-		benchmark::DoNotOptimize(sum);
-	}
-	// Reports ~50 ns.  In production, with cache-cold data,
-	// the same operation takes 10-50x longer.
+    std::vector<int> v(1'000);  // ~4 KB, fits in L1
+    std::iota(v.begin(), v.end(), 0);
+    for (auto _ : state) {
+        int sum = 0;
+        for (int x : v) sum += x;
+        benchmark::DoNotOptimize(sum);
+    }
+    // Reports ~50 ns.  In production, with cache-cold data,
+    // the same operation takes 10-50x longer.
 }
 ```
 
@@ -180,14 +180,14 @@ Google Benchmark (`benchmark::`) is widely used and generally solid, but several
 
 ```cpp
 static void BM_modify(benchmark::State& state) {
-	std::vector<int> v(10'000, 0);
-	for (auto _ : state) {
-		for (auto& x : v) x += 1;
-		benchmark::ClobberMemory();
-		// Without ClobberMemory, the compiler could theoretically
-		// observe that v is never read and eliminate the writes,
-		// or combine multiple iterations into one.
-	}
+    std::vector<int> v(10'000, 0);
+    for (auto _ : state) {
+        for (auto& x : v) x += 1;
+        benchmark::ClobberMemory();
+        // Without ClobberMemory, the compiler could theoretically
+        // observe that v is never read and eliminate the writes,
+        // or combine multiple iterations into one.
+    }
 }
 ```
 

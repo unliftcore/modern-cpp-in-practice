@@ -202,58 +202,58 @@
 <p>Consider a service that rewrites an on-disk snapshot atomically. The production rule is not “call <code>write</code>, then <code>rename</code>, then <code>remove</code> on failure.” The production rule is “either the new snapshot becomes visible, or the old one remains intact and the staging file is cleaned up.” A useful test targets that rule directly.</p>
 <h3 id="intentional-partial-a-seam-that-makes-rollback-testable"><a class="header" href="#intentional-partial-a-seam-that-makes-rollback-testable">Intentional partial: a seam that makes rollback testable</a></h3>
 <pre><code class="language-cpp">struct file_system {
-	virtual ~file_system() = default;
+    virtual ~file_system() = default;
 
-	virtual auto write(std::filesystem::path const&amp; path,
-					   std::span&lt;char const&gt; bytes)
-		-&gt; std::expected&lt;void, std::error_code&gt; = 0;
+    virtual auto write(std::filesystem::path const&amp; path,
+                       std::span&lt;char const&gt; bytes)
+        -&gt; std::expected&lt;void, std::error_code&gt; = 0;
 
-	virtual auto rename(std::filesystem::path const&amp; from,
-						std::filesystem::path const&amp; to)
-		-&gt; std::expected&lt;void, std::error_code&gt; = 0;
+    virtual auto rename(std::filesystem::path const&amp; from,
+                        std::filesystem::path const&amp; to)
+        -&gt; std::expected&lt;void, std::error_code&gt; = 0;
 
-	virtual void remove(std::filesystem::path const&amp; path) noexcept = 0;
+    virtual void remove(std::filesystem::path const&amp; path) noexcept = 0;
 };
 
 enum class snapshot_error {
-	staging_write_failed,
-	commit_failed,
+    staging_write_failed,
+    commit_failed,
 };
 
 auto write_snapshot_atomically(file_system&amp; fs,
-							   std::filesystem::path const&amp; target,
-							   std::span&lt;char const&gt; bytes)
-	-&gt; std::expected&lt;void, snapshot_error&gt;
+                               std::filesystem::path const&amp; target,
+                               std::span&lt;char const&gt; bytes)
+    -&gt; std::expected&lt;void, snapshot_error&gt;
 {
-	auto staging = target;
-	staging += ".tmp";
+    auto staging = target;
+    staging += ".tmp";
 
-	if (auto r = fs.write(staging, bytes); !r) {
-		return std::unexpected(snapshot_error::staging_write_failed);
-	}
+    if (auto r = fs.write(staging, bytes); !r) {
+        return std::unexpected(snapshot_error::staging_write_failed);
+    }
 
-	if (auto r = fs.rename(staging, target); !r) {
-		fs.remove(staging);
-		return std::unexpected(snapshot_error::commit_failed);
-	}
+    if (auto r = fs.rename(staging, target); !r) {
+        fs.remove(staging);
+        return std::unexpected(snapshot_error::commit_failed);
+    }
 
-	return {};
+    return {};
 }
 </code></pre>
 <pre><code class="language-cpp">TEST(write_snapshot_atomically_cleans_up_staging_file_on_commit_failure)
 {
-	fake_file_system fs;
-	fs.fail_rename_with(make_error_code(std::errc::device_or_resource_busy));
+    fake_file_system fs;
+    fs.fail_rename_with(make_error_code(std::errc::device_or_resource_busy));
 
-	auto result = write_snapshot_atomically(
-		fs,
-		"cache/index.bin",
-		std::as_bytes(std::span{"new snapshot"sv.data(), "new snapshot"sv.size()}));
+    auto result = write_snapshot_atomically(
+        fs,
+        "cache/index.bin",
+        std::as_bytes(std::span{"new snapshot"sv.data(), "new snapshot"sv.size()}));
 
-	ASSERT_FALSE(result.has_value());
-	EXPECT_EQ(result.error(), snapshot_error::commit_failed);
-	EXPECT_FALSE(fs.exists("cache/index.bin.tmp"));
-	EXPECT_EQ(fs.read("cache/index.bin"), "old snapshot");
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), snapshot_error::commit_failed);
+    EXPECT_FALSE(fs.exists("cache/index.bin.tmp"));
+    EXPECT_EQ(fs.read("cache/index.bin"), "old snapshot");
 }
 </code></pre>
 <p>This is the right kind of seam because it sits at the business boundary. The test does not mock half the standard library. It creates one replaceable interface around the external effect and checks the postconditions the caller depends on.</p>
@@ -263,13 +263,13 @@ auto write_snapshot_atomically(file_system&amp; fs,
 <pre><code class="language-cpp">// BAD: This test passes, but proves nothing about cleanup.
 TEST(write_snapshot_calls_remove_on_rename_failure)
 {
-	strict_mock_file_system fs;
-	EXPECT_CALL(fs, write(_, _)).WillOnce(Return(std::expected&lt;void, std::error_code&gt;{}));
-	EXPECT_CALL(fs, rename(_, _)).WillOnce(Return(
-		std::unexpected(make_error_code(std::errc::device_or_resource_busy))));
-	EXPECT_CALL(fs, remove("cache/index.bin.tmp")).Times(1);
+    strict_mock_file_system fs;
+    EXPECT_CALL(fs, write(_, _)).WillOnce(Return(std::expected&lt;void, std::error_code&gt;{}));
+    EXPECT_CALL(fs, rename(_, _)).WillOnce(Return(
+        std::unexpected(make_error_code(std::errc::device_or_resource_busy))));
+    EXPECT_CALL(fs, remove("cache/index.bin.tmp")).Times(1);
 
-	write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
+    write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
 }
 </code></pre>
 <p>This test verifies that <code>remove</code> is called. It does not verify that the staging file is actually gone or that the original file is untouched. If someone refactors the cleanup to use <code>std::filesystem::remove_all</code> or changes the staging path convention, this test breaks – but a real bug where <code>remove</code> silently fails and leaves the staging file behind would pass. The earlier test against <code>fake_file_system</code> is stronger because it asserts observable postconditions, not call sequences.</p>
@@ -277,38 +277,38 @@ TEST(write_snapshot_calls_remove_on_rename_failure)
 <p>Scoped RAII is not enough if error paths skip construction or move ownership incorrectly. A surprisingly common pattern is a resource that leaks only on a specific failure path:</p>
 <pre><code class="language-cpp">class connection_pool {
 public:
-	auto acquire() -&gt; std::expected&lt;pooled_connection, pool_error&gt;;
-	void release(pooled_connection conn) noexcept;
+    auto acquire() -&gt; std::expected&lt;pooled_connection, pool_error&gt;;
+    void release(pooled_connection conn) noexcept;
 };
 
 // This function has a leak on the second acquire failure.
 auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
-	-&gt; std::expected&lt;receipt, transfer_error&gt;
+    -&gt; std::expected&lt;receipt, transfer_error&gt;
 {
-	auto src = pool.acquire();
-	if (!src) return std::unexpected(transfer_error::no_connection);
+    auto src = pool.acquire();
+    if (!src) return std::unexpected(transfer_error::no_connection);
 
-	auto dst = pool.acquire();
-	if (!dst) {
-		// BUG: forgot to release src back to the pool.
-		return std::unexpected(transfer_error::no_connection);
-	}
+    auto dst = pool.acquire();
+    if (!dst) {
+        // BUG: forgot to release src back to the pool.
+        return std::unexpected(transfer_error::no_connection);
+    }
 
-	// ... perform transfer, release both on success ...
-	pool.release(std::move(*src));
-	pool.release(std::move(*dst));
-	return receipt{};
+    // ... perform transfer, release both on success ...
+    pool.release(std::move(*src));
+    pool.release(std::move(*dst));
+    return receipt{};
 }
 </code></pre>
 <p>A test that only exercises the success path never sees the leak. A test that only checks the return value on failure also misses it. The test that catches it asserts pool state:</p>
 <pre><code class="language-cpp">TEST(transfer_releases_source_connection_when_dest_acquire_fails)
 {
-	counting_connection_pool pool{.max_connections = 1};
+    counting_connection_pool pool{.max_connections = 1};
 
-	auto result = transfer(pool, make_request());
+    auto result = transfer(pool, make_request());
 
-	ASSERT_FALSE(result.has_value());
-	EXPECT_EQ(pool.available(), 1);  // Source connection must be returned.
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(pool.available(), 1);  // Source connection must be returned.
 }
 </code></pre>
 <p>This is the pattern: if you own a scarce resource, your failure-path tests should assert that the resource is released, not just that an error was returned.</p>
@@ -316,19 +316,19 @@ auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
 <p>Even <code>noexcept</code>-free code paths deserve testing when exception safety matters. A container or cache that provides the strong exception guarantee should be tested for it:</p>
 <pre><code class="language-cpp">TEST(cache_insert_preserves_existing_entries_on_allocation_failure)
 {
-	lru_cache&lt;std::string, std::string&gt; cache(/*capacity=*/4);
-	cache.insert("key1", "value1");
-	cache.insert("key2", "value2");
+    lru_cache&lt;std::string, std::string&gt; cache(/*capacity=*/4);
+    cache.insert("key1", "value1");
+    cache.insert("key2", "value2");
 
-	failing_allocator::arm_failure_after(1);  // Fail during insert internals.
+    failing_allocator::arm_failure_after(1);  // Fail during insert internals.
 
-	auto result = cache.insert("key3", "value3");
-	EXPECT_FALSE(result.has_value());
+    auto result = cache.insert("key3", "value3");
+    EXPECT_FALSE(result.has_value());
 
-	// Strong guarantee: pre-existing entries are intact.
-	EXPECT_EQ(cache.get("key1"), "value1");
-	EXPECT_EQ(cache.get("key2"), "value2");
-	EXPECT_EQ(cache.size(), 2);
+    // Strong guarantee: pre-existing entries are intact.
+    EXPECT_EQ(cache.get("key1"), "value1");
+    EXPECT_EQ(cache.get("key2"), "value2");
+    EXPECT_EQ(cache.size(), 2);
 }
 </code></pre>
 <p>If the cache provides only the basic guarantee, the test should still verify that no resources leaked and the cache is in a valid (if modified) state. The worst outcome is no test at all – the cache silently corrupts its internal structure on exception, and callers discover the problem under production allocation pressure.</p>
@@ -344,21 +344,21 @@ auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
 // This test passes because the input string outlives the config.
 TEST(config_parser_reads_server_name)
 {
-	std::string input = R"({"server": "prod-01"})";
-	auto cfg = parse_config(input);
-	EXPECT_EQ(cfg.server_name(), "prod-01");  // PASSES -- but fragile.
+    std::string input = R"({"server": "prod-01"})";
+    auto cfg = parse_config(input);
+    EXPECT_EQ(cfg.server_name(), "prod-01");  // PASSES -- but fragile.
 }
 
 // This test exposes the dangling view.
 TEST(config_survives_input_destruction)
 {
-	auto cfg = []{
-		std::string input = R"({"server": "prod-01"})";
-		return parse_config(input);
-	}();
-	// input is destroyed. If server_name() holds a string_view into it,
-	// this is use-after-free. It may still "pass" without sanitizers.
-	EXPECT_EQ(cfg.server_name(), "prod-01");
+    auto cfg = []{
+        std::string input = R"({"server": "prod-01"})";
+        return parse_config(input);
+    }();
+    // input is destroyed. If server_name() holds a string_view into it,
+    // this is use-after-free. It may still "pass" without sanitizers.
+    EXPECT_EQ(cfg.server_name(), "prod-01");
 }
 </code></pre>
 <p>The first test is the one most teams write. The second is the one that catches the real bug. Pair it with AddressSanitizer (next chapter) to turn the silent corruption into a hard failure.</p>

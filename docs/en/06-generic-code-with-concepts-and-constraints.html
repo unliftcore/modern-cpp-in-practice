@@ -195,22 +195,22 @@
 <p>Consider a batching helper that writes already-serialized records to some sink:</p>
 <pre><code class="language-cpp">template &lt;typename Sink&gt;
 concept ByteSink = requires(Sink sink,
-							std::span&lt;const std::byte&gt; bytes) {
-	{ sink.write(bytes) } -&gt; std::same_as&lt;std::expected&lt;void, WriteError&gt;&gt;;
-	{ sink.flush() } -&gt; std::same_as&lt;std::expected&lt;void, WriteError&gt;&gt;;
+                            std::span&lt;const std::byte&gt; bytes) {
+    { sink.write(bytes) } -&gt; std::same_as&lt;std::expected&lt;void, WriteError&gt;&gt;;
+    { sink.flush() } -&gt; std::same_as&lt;std::expected&lt;void, WriteError&gt;&gt;;
 };
 
 template &lt;ByteSink Sink&gt;
 auto flush_batch(Sink&amp; sink,
-				 std::span&lt;const EncodedRecord&gt; batch)
-	-&gt; std::expected&lt;void, WriteError&gt;
+                 std::span&lt;const EncodedRecord&gt; batch)
+    -&gt; std::expected&lt;void, WriteError&gt;
 {
-	for (const auto&amp; record : batch) {
-		if (auto result = sink.write(record.bytes); !result) {
-			return std::unexpected(result.error());
-		}
-	}
-	return sink.flush();
+    for (const auto&amp; record : batch) {
+        if (auto result = sink.write(record.bytes); !result) {
+            return std::unexpected(result.error());
+        }
+    }
+    return sink.flush();
 }
 </code></pre>
 <p>This does several things well.</p>
@@ -223,10 +223,10 @@ auto flush_batch(Sink&amp; sink,
 <p>The alternative is the classic unconstrained template:</p>
 <pre><code class="language-cpp">template &lt;typename Sink&gt;
 auto flush_batch(Sink&amp; sink, const auto&amp; batch) {
-	for (const auto&amp; record : batch) {
-		sink.push(record.data(), record.size()); // RISK: hidden, undocumented assumptions
-	}
-	sink.commit();
+    for (const auto&amp; record : batch) {
+        sink.push(record.data(), record.size()); // RISK: hidden, undocumented assumptions
+    }
+    sink.commit();
 }
 </code></pre>
 <p>This version looks shorter. It is worse in every production-relevant way. The assumptions are unstated. The error contract is unclear. The required record shape is accidental. A mismatch produces compiler noise at the use site rather than a crisp statement of the interface.</p>

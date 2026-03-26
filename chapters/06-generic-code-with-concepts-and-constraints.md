@@ -25,22 +25,22 @@ Consider a batching helper that writes already-serialized records to some sink:
 ```cpp
 template <typename Sink>
 concept ByteSink = requires(Sink sink,
-							std::span<const std::byte> bytes) {
-	{ sink.write(bytes) } -> std::same_as<std::expected<void, WriteError>>;
-	{ sink.flush() } -> std::same_as<std::expected<void, WriteError>>;
+                            std::span<const std::byte> bytes) {
+    { sink.write(bytes) } -> std::same_as<std::expected<void, WriteError>>;
+    { sink.flush() } -> std::same_as<std::expected<void, WriteError>>;
 };
 
 template <ByteSink Sink>
 auto flush_batch(Sink& sink,
-				 std::span<const EncodedRecord> batch)
-	-> std::expected<void, WriteError>
+                 std::span<const EncodedRecord> batch)
+    -> std::expected<void, WriteError>
 {
-	for (const auto& record : batch) {
-		if (auto result = sink.write(record.bytes); !result) {
-			return std::unexpected(result.error());
-		}
-	}
-	return sink.flush();
+    for (const auto& record : batch) {
+        if (auto result = sink.write(record.bytes); !result) {
+            return std::unexpected(result.error());
+        }
+    }
+    return sink.flush();
 }
 ```
 
@@ -56,10 +56,10 @@ The alternative is the classic unconstrained template:
 ```cpp
 template <typename Sink>
 auto flush_batch(Sink& sink, const auto& batch) {
-	for (const auto& record : batch) {
-		sink.push(record.data(), record.size()); // RISK: hidden, undocumented assumptions
-	}
-	sink.commit();
+    for (const auto& record : batch) {
+        sink.push(record.data(), record.size()); // RISK: hidden, undocumented assumptions
+    }
+    sink.commit();
 }
 ```
 

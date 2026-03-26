@@ -16,28 +16,28 @@ The service object should therefore model ownership directly. It should be the p
 
 ```cpp
 struct service_components {
-	config cfg;
-	request_router router;
-	storage_client storage;
-	bounded_executor executor;
-	telemetry telemetry;
-	http_listener listener;
+    config cfg;
+    request_router router;
+    storage_client storage;
+    bounded_executor executor;
+    telemetry telemetry;
+    http_listener listener;
 };
 
 class service {
 public:
-	explicit service(service_components components)
-		: components_(std::move(components)) {}
+    explicit service(service_components components)
+        : components_(std::move(components)) {}
 
-	auto run(std::stop_token stop) -> std::expected<void, service_error>;
-	void request_stop() noexcept;
+    auto run(std::stop_token stop) -> std::expected<void, service_error>;
+    void request_stop() noexcept;
 
 private:
-	auto start() -> std::expected<void, service_error>;
-	auto drain() noexcept -> void;
+    auto start() -> std::expected<void, service_error>;
+    auto drain() noexcept -> void;
 
-	service_components components_;
-	std::atomic<bool> stopping_{false};
+    service_components components_;
+    std::atomic<bool> stopping_{false};
 };
 ```
 

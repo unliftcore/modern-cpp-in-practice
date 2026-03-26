@@ -198,33 +198,33 @@
 <p>To appreciate coroutine design tradeoffs, see what they displace. Pre-coroutine asynchronous code relies on continuation-passing style, where each step chains a callback into the next. A simple “fetch, validate, store” sequence looks like this:</p>
 <pre><code class="language-cpp">// Continuation-passing style — correct but unreadable at scale.
 void handle_request(request req, std::function&lt;void(response)&gt; done) {
-	fetch_profile(req.user_id, [req, done](std::expected&lt;profile, error&gt; prof) {
-		if (!prof) { done(error_response(prof.error())); return; }
-		validate_access(prof-&gt;role, req.resource,
-			[req, prof = *prof, done](std::expected&lt;bool, error&gt; ok) {
-				if (!ok || !*ok) { done(denied_response()); return; }
-				store_audit_log(req, prof,
-					[req, prof, done](std::expected&lt;void, error&gt; result) {
-						if (!result) { done(error_response(result.error())); return; }
-						done(success_response(prof));
-					});
-			});
-	});
+    fetch_profile(req.user_id, [req, done](std::expected&lt;profile, error&gt; prof) {
+        if (!prof) { done(error_response(prof.error())); return; }
+        validate_access(prof-&gt;role, req.resource,
+            [req, prof = *prof, done](std::expected&lt;bool, error&gt; ok) {
+                if (!ok || !*ok) { done(denied_response()); return; }
+                store_audit_log(req, prof,
+                    [req, prof, done](std::expected&lt;void, error&gt; result) {
+                        if (!result) { done(error_response(result.error())); return; }
+                        done(success_response(prof));
+                    });
+            });
+    });
 }
 </code></pre>
 <p>Every step nests deeper. Error handling is duplicated at each level. Lifetime of captured values must be managed manually — capture by value inflates copies, capture by reference invites dangling. Adding timeout, cancellation, or retry logic multiplies the nesting further. This is not a strawman; it is the shape of real pre-coroutine async C++ in production codebases.</p>
 <p>The coroutine equivalent:</p>
 <pre><code class="language-cpp">task&lt;response&gt; handle_request(request req) {
-	auto prof = co_await fetch_profile(req.user_id);
-	if (!prof) co_return error_response(prof.error());
+    auto prof = co_await fetch_profile(req.user_id);
+    if (!prof) co_return error_response(prof.error());
 
-	auto ok = co_await validate_access(prof-&gt;role, req.resource);
-	if (!ok || !*ok) co_return denied_response();
+    auto ok = co_await validate_access(prof-&gt;role, req.resource);
+    if (!ok || !*ok) co_return denied_response();
 
-	auto result = co_await store_audit_log(req, *prof);
-	if (!result) co_return error_response(result.error());
+    auto result = co_await store_audit_log(req, *prof);
+    if (!result) co_return error_response(result.error());
 
-	co_return success_response(*prof);
+    co_return success_response(*prof);
 }
 </code></pre>
 <p>Sequential reading, single error path per step, no nesting. The improvement is real. But the state machine did not vanish — it moved into the coroutine frame. The rest of this chapter is about what that means for ownership and lifetime.</p>
@@ -249,21 +249,21 @@ void handle_request(request req, std::function&lt;void(response)&gt; done) {
 <h2 id="anti-pattern-borrowed-request-state-survives-suspension"><a class="header" href="#anti-pattern-borrowed-request-state-survives-suspension">Anti-pattern: Borrowed Request State Survives Suspension</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: borrowed data may dangle after suspension.
 task&lt;parsed_request&gt; parse_and_authorize(
-	std::string_view body,
-	const auth_context&amp; auth) {
+    std::string_view body,
+    const auth_context&amp; auth) {
 
-	auto token = co_await fetch_access_token(auth.user_id());
-	co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
+    auto token = co_await fetch_access_token(auth.user_id());
+    co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
 }
 </code></pre>
 <p>This code looks efficient because it avoids a copy. It is only correct if the caller guarantees that <code>body</code> remains valid until the coroutine completes. In service code that often means until network I/O, authentication lookup, retries, and timeout handling have all finished. That is not a small promise. It is usually the wrong one.</p>
 <p>The safer default is to move ownership into the coroutine when the data is needed after suspension.</p>
 <pre><code class="language-cpp">task&lt;parsed_request&gt; parse_and_authorize(
-	std::string body,
-	auth_context auth) {
+    std::string body,
+    auth_context auth) {
 
-	auto token = co_await fetch_access_token(auth.user_id());
-	co_return parse_request(body, token);
+    auto token = co_await fetch_access_token(auth.user_id());
+    co_return parse_request(body, token);
 }
 </code></pre>
 <p>The copy or move is visible and reviewable. The coroutine frame now owns what it needs. If that allocation cost matters, measure it and redesign around message boundaries or storage reuse. Do not silently borrow across time.</p>
@@ -272,10 +272,10 @@ task&lt;parsed_request&gt; parse_and_authorize(
 <h3 id="dangling-reference-to-a-callers-local"><a class="header" href="#dangling-reference-to-a-callers-local">Dangling reference to a caller’s local</a></h3>
 <pre><code class="language-cpp">// BUG: coroutine captures a reference to a local that dies when the caller returns.
 task&lt;void&gt; start_processing(dispatcher&amp; d) {
-	std::vector&lt;record&gt; batch = build_batch();
-	co_await d.schedule([&amp;batch] {     // lambda captures batch by reference
-		process(batch);                // batch may be destroyed if start_processing
-	});                                // is suspended and its caller exits
+    std::vector&lt;record&gt; batch = build_batch();
+    co_await d.schedule([&amp;batch] {     // lambda captures batch by reference
+        process(batch);                // batch may be destroyed if start_processing
+    });                                // is suspended and its caller exits
 }
 </code></pre>
 <p>When <code>start_processing</code> suspends at <code>co_await</code>, the coroutine frame keeps <code>batch</code> alive — but only if the frame itself is alive. If the task is detached or the parent scope exits, the frame is destroyed, and the lambda’s reference dangles. The fix: capture by value, or ensure the parent scope outlives the scheduled work through structured ownership.</p>
@@ -284,20 +284,20 @@ task&lt;void&gt; start_processing(dispatcher&amp; d) {
 task&lt;void&gt; log_message(std::string_view msg);
 
 void caller() {
-	log_message("request started"s + request_id()); // temporary std::string
-	// temporary is destroyed here, before the coroutine even begins if lazy-start
+    log_message("request started"s + request_id()); // temporary std::string
+    // temporary is destroyed here, before the coroutine even begins if lazy-start
 }
 </code></pre>
 <p>With a lazy-start coroutine, the temporary <code>std::string</code> is destroyed at the semicolon, but the coroutine has not yet executed. Even with eager-start coroutines, if the frame stores <code>msg</code> as a <code>string_view</code>, it points to freed memory after the first suspension. The solution is to accept <code>std::string</code> by value in the coroutine signature so the frame owns a copy.</p>
 <h3 id="the-this-pointer-across-suspension"><a class="header" href="#the-this-pointer-across-suspension">The <code>this</code> pointer across suspension</a></h3>
 <pre><code class="language-cpp">// BUG: 'this' may dangle if the object is moved or destroyed while suspended.
 class connection {
-	std::string peer_addr_;
+    std::string peer_addr_;
 public:
-	task&lt;void&gt; run() {
-		auto data = co_await read_socket();    // suspended here
-		log("received from " + peer_addr_);    // 'this' may be invalid
-	}
+    task&lt;void&gt; run() {
+        auto data = co_await read_socket();    // suspended here
+        log("received from " + peer_addr_);    // 'this' may be invalid
+    }
 };
 </code></pre>
 <p>If a <code>connection</code> object is moved into another container, or destroyed while <code>run()</code> is suspended, <code>this</code> becomes invalid at resumption. Member coroutines are safe only when the object’s lifetime is guaranteed to exceed the coroutine’s. In practice, this often means the coroutine should take a <code>shared_ptr&lt;connection&gt;</code> or the owning scope must be structured to prevent destruction during suspension.</p>

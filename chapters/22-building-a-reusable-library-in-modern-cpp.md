@@ -26,25 +26,25 @@ Value types are often the right center of gravity for library APIs because they 
 
 ```cpp
 enum class parse_error {
-	invalid_syntax,
-	unsupported_version,
-	duplicate_key,
-	resource_limit_exceeded,
+    invalid_syntax,
+    unsupported_version,
+    duplicate_key,
+    resource_limit_exceeded,
 };
 
 struct parse_options {
-	std::size_t max_document_bytes = 1 << 20;
-	bool allow_comments = false;
+    std::size_t max_document_bytes = 1 << 20;
+    bool allow_comments = false;
 };
 
 struct document {
-	std::pmr::vector<entry> entries;
+    std::pmr::vector<entry> entries;
 };
 
 [[nodiscard]] auto parse_document(std::string_view input,
-								  parse_options const& options,
-								  std::pmr::memory_resource& memory)
-	-> std::expected<document, parse_error>;
+                                  parse_options const& options,
+                                  std::pmr::memory_resource& memory)
+    -> std::expected<document, parse_error>;
 ```
 
 This excerpt does a few useful things. It separates caller-controlled policy from input bytes. It makes allocation strategy visible without forcing a global allocator policy. It returns a domain error rather than a transport-specific or parser-internal type. It also makes result checking harder to forget through `[[nodiscard]]` and `std::expected`.

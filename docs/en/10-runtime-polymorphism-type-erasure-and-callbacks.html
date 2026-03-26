@@ -214,14 +214,14 @@
 <pre><code class="language-cpp">// Anti-pattern: a growing base class that every derived type must satisfy.
 class Widget {
 public:
-	virtual void draw(Canvas&amp; c) = 0;
-	virtual void handle_input(const InputEvent&amp; e) = 0;
-	virtual Size preferred_size() const = 0;
-	virtual void set_theme(const Theme&amp; t) = 0;
-	virtual void serialize(Archive&amp; ar) = 0;    // added in v2
-	virtual void animate(Duration dt) = 0;       // added in v3
-	virtual AccessibilityInfo accessibility() = 0; // added in v4
-	virtual ~Widget() = default;
+    virtual void draw(Canvas&amp; c) = 0;
+    virtual void handle_input(const InputEvent&amp; e) = 0;
+    virtual Size preferred_size() const = 0;
+    virtual void set_theme(const Theme&amp; t) = 0;
+    virtual void serialize(Archive&amp; ar) = 0;    // added in v2
+    virtual void animate(Duration dt) = 0;       // added in v3
+    virtual AccessibilityInfo accessibility() = 0; // added in v4
+    virtual ~Widget() = default;
 };
 </code></pre>
 <p>Every new virtual method forces every derived class to implement it or inherit a possibly wrong default. Classes that only need drawing must still address input, serialization, animation, and accessibility. Testing a simple leaf widget requires constructing <code>Canvas</code>, <code>InputEvent</code>, <code>Theme</code>, <code>Archive</code>, and <code>AccessibilityInfo</code> objects. The base class becomes a change amplifier: a single addition to <code>Widget</code> triggers recompilation and potential modification of every derived class across the codebase.</p>
@@ -230,28 +230,28 @@ public:
 <p>Multiple inheritance of interface hierarchies introduces diamond problems that <code>virtual</code> inheritance only partially addresses.</p>
 <pre><code class="language-cpp">class Readable {
 public:
-	virtual std::expected&lt;std::size_t, IoError&gt;
-	read(std::span&lt;std::byte&gt; buffer) = 0;
-	virtual void close() = 0;  // close the read side
-	virtual ~Readable() = default;
+    virtual std::expected&lt;std::size_t, IoError&gt;
+    read(std::span&lt;std::byte&gt; buffer) = 0;
+    virtual void close() = 0;  // close the read side
+    virtual ~Readable() = default;
 };
 
 class Writable {
 public:
-	virtual std::expected&lt;std::size_t, IoError&gt;
-	write(std::span&lt;const std::byte&gt; data) = 0;
-	virtual void close() = 0;  // close the write side
-	virtual ~Writable() = default;
+    virtual std::expected&lt;std::size_t, IoError&gt;
+    write(std::span&lt;const std::byte&gt; data) = 0;
+    virtual void close() = 0;  // close the write side
+    virtual ~Writable() = default;
 };
 
 // Diamond: what does close() mean here? Read side? Write side? Both?
 class ReadWriteStream : public virtual Readable, public virtual Writable {
 public:
-	// Single close() must now serve two different semantic contracts.
-	// Callers holding a Readable* expect close() to close the read side.
-	// Callers holding a Writable* expect close() to close the write side.
-	// There is no way to satisfy both through one override.
-	void close() override { /* ??? */ }
+    // Single close() must now serve two different semantic contracts.
+    // Callers holding a Readable* expect close() to close the read side.
+    // Callers holding a Writable* expect close() to close the write side.
+    // There is no way to satisfy both through one override.
+    void close() override { /* ??? */ }
 };
 </code></pre>
 <p>Virtual inheritance solves the layout duplication but not the semantic conflict. The result is code that compiles but whose behavior depends on which base pointer the caller holds. This ambiguity is structural. It does not go away with more careful implementation.</p>
@@ -263,17 +263,17 @@ using DrawAction = std::move_only_function&lt;void(Canvas&amp;)&gt;;
 using InputHandler = std::move_only_function&lt;bool(const InputEvent&amp;)&gt;;
 
 struct WidgetBehavior {
-	DrawAction draw;
-	InputHandler handle_input;
+    DrawAction draw;
+    InputHandler handle_input;
 };
 
 // A simple widget only provides what it needs.
 // No obligation to implement serialize, animate, or accessibility.
 WidgetBehavior make_label(std::string text) {
-	return {
-		.draw = [t = std::move(text)](Canvas&amp; c) { c.draw_text(t); },
-		.handle_input = [](const InputEvent&amp;) { return false; }
-	};
+    return {
+        .draw = [t = std::move(text)](Canvas&amp; c) { c.draw_text(t); },
+        .handle_input = [](const InputEvent&amp;) { return false; }
+    };
 }
 </code></pre>
 <p>There is no base class to grow. Adding animation support does not force label widgets to change. Testing <code>draw</code> does not require constructing an <code>InputEvent</code>. Each concern is independently composable. The cost is that you lose the named-object-protocol clarity of a class hierarchy, which may matter if the protocol is genuinely stable and rich. The tradeoff is worth evaluating case by case.</p>
@@ -308,14 +308,14 @@ chain(R&amp;&amp; middlewares, http::Handler base) {
 <p><code>std::function</code> requires its target to be copyable. This seems harmless until real callback state enters the picture.</p>
 <pre><code class="language-cpp">// This will not compile. std::function requires CopyConstructible.
 auto handler = std::function&lt;void()&gt;{
-	[conn = std::make_unique&lt;DbConnection&gt;()](){ conn-&gt;heartbeat(); }
+    [conn = std::make_unique&lt;DbConnection&gt;()](){ conn-&gt;heartbeat(); }
 };
 </code></pre>
 <p>Teams work around this by wrapping unique pointers in shared pointers, adding reference counting and shared mutation to code that was naturally single-owner. The workaround compiles but weakens the ownership model.</p>
 <pre><code class="language-cpp">// Workaround: shared_ptr "fixes" compilation but lies about ownership.
 auto conn = std::make_shared&lt;DbConnection&gt;();
 auto handler = std::function&lt;void()&gt;{
-	[conn]() { conn-&gt;heartbeat(); }
+    [conn]() { conn-&gt;heartbeat(); }
 };
 // Now conn is shared. Who shuts it down? When? The ownership story is gone.
 </code></pre>
@@ -340,9 +340,9 @@ auto handler = std::function&lt;void()&gt;{
 <p>A completion path that fires exactly once is often better modeled as move-only from the start. This aligns the type with reality and prevents accidental sharing of stateful handlers.</p>
 <pre><code class="language-cpp">class TimerQueue {
 public:
-	using Task = std::move_only_function&lt;void() noexcept&gt;;
+    using Task = std::move_only_function&lt;void() noexcept&gt;;
 
-	void schedule_after(std::chrono::milliseconds delay, Task task);
+    void schedule_after(std::chrono::milliseconds delay, Task task);
 };
 </code></pre>
 <p>This signature says something important. The queue takes ownership, may run later, and expects the task not to throw across the scheduler boundary. That is much more precise than a generic <code>std::function&lt;void()&gt;</code> parameter.</p>
@@ -351,14 +351,14 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: ambiguous retention and capture lifetime.
 class EventSource {
 public:
-	void on_message(std::function&lt;void(std::string_view)&gt; handler);
+    void on_message(std::function&lt;void(std::string_view)&gt; handler);
 };
 
 void wire(EventSource&amp; source, Session&amp; session) {
-	source.on_message([&amp;session](std::string_view payload) {
-		session.record(payload);
-	});
-	// RISK: if EventSource stores the handler past Session lifetime, this dangles.
+    source.on_message([&amp;session](std::string_view payload) {
+        session.record(payload);
+    });
+    // RISK: if EventSource stores the handler past Session lifetime, this dangles.
 }
 </code></pre>
 <p>The problem is not only the reference capture. The problem is that the API failed to state whether the handler is borrowed for one operation, stored until unregistration, invoked concurrently, or called during destruction. The abstraction chose generality over a usable contract.</p>

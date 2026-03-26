@@ -33,60 +33,60 @@ Consider a service that rewrites an on-disk snapshot atomically. The production 
 
 ```cpp
 struct file_system {
-	virtual ~file_system() = default;
+    virtual ~file_system() = default;
 
-	virtual auto write(std::filesystem::path const& path,
-					   std::span<char const> bytes)
-		-> std::expected<void, std::error_code> = 0;
+    virtual auto write(std::filesystem::path const& path,
+                       std::span<char const> bytes)
+        -> std::expected<void, std::error_code> = 0;
 
-	virtual auto rename(std::filesystem::path const& from,
-						std::filesystem::path const& to)
-		-> std::expected<void, std::error_code> = 0;
+    virtual auto rename(std::filesystem::path const& from,
+                        std::filesystem::path const& to)
+        -> std::expected<void, std::error_code> = 0;
 
-	virtual void remove(std::filesystem::path const& path) noexcept = 0;
+    virtual void remove(std::filesystem::path const& path) noexcept = 0;
 };
 
 enum class snapshot_error {
-	staging_write_failed,
-	commit_failed,
+    staging_write_failed,
+    commit_failed,
 };
 
 auto write_snapshot_atomically(file_system& fs,
-							   std::filesystem::path const& target,
-							   std::span<char const> bytes)
-	-> std::expected<void, snapshot_error>
+                               std::filesystem::path const& target,
+                               std::span<char const> bytes)
+    -> std::expected<void, snapshot_error>
 {
-	auto staging = target;
-	staging += ".tmp";
+    auto staging = target;
+    staging += ".tmp";
 
-	if (auto r = fs.write(staging, bytes); !r) {
-		return std::unexpected(snapshot_error::staging_write_failed);
-	}
+    if (auto r = fs.write(staging, bytes); !r) {
+        return std::unexpected(snapshot_error::staging_write_failed);
+    }
 
-	if (auto r = fs.rename(staging, target); !r) {
-		fs.remove(staging);
-		return std::unexpected(snapshot_error::commit_failed);
-	}
+    if (auto r = fs.rename(staging, target); !r) {
+        fs.remove(staging);
+        return std::unexpected(snapshot_error::commit_failed);
+    }
 
-	return {};
+    return {};
 }
 ```
 
 ```cpp
 TEST(write_snapshot_atomically_cleans_up_staging_file_on_commit_failure)
 {
-	fake_file_system fs;
-	fs.fail_rename_with(make_error_code(std::errc::device_or_resource_busy));
+    fake_file_system fs;
+    fs.fail_rename_with(make_error_code(std::errc::device_or_resource_busy));
 
-	auto result = write_snapshot_atomically(
-		fs,
-		"cache/index.bin",
-		std::as_bytes(std::span{"new snapshot"sv.data(), "new snapshot"sv.size()}));
+    auto result = write_snapshot_atomically(
+        fs,
+        "cache/index.bin",
+        std::as_bytes(std::span{"new snapshot"sv.data(), "new snapshot"sv.size()}));
 
-	ASSERT_FALSE(result.has_value());
-	EXPECT_EQ(result.error(), snapshot_error::commit_failed);
-	EXPECT_FALSE(fs.exists("cache/index.bin.tmp"));
-	EXPECT_EQ(fs.read("cache/index.bin"), "old snapshot");
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), snapshot_error::commit_failed);
+    EXPECT_FALSE(fs.exists("cache/index.bin.tmp"));
+    EXPECT_EQ(fs.read("cache/index.bin"), "old snapshot");
 }
 ```
 
@@ -102,13 +102,13 @@ Consider the difference between a test that checks implementation details and on
 // BAD: This test passes, but proves nothing about cleanup.
 TEST(write_snapshot_calls_remove_on_rename_failure)
 {
-	strict_mock_file_system fs;
-	EXPECT_CALL(fs, write(_, _)).WillOnce(Return(std::expected<void, std::error_code>{}));
-	EXPECT_CALL(fs, rename(_, _)).WillOnce(Return(
-		std::unexpected(make_error_code(std::errc::device_or_resource_busy))));
-	EXPECT_CALL(fs, remove("cache/index.bin.tmp")).Times(1);
+    strict_mock_file_system fs;
+    EXPECT_CALL(fs, write(_, _)).WillOnce(Return(std::expected<void, std::error_code>{}));
+    EXPECT_CALL(fs, rename(_, _)).WillOnce(Return(
+        std::unexpected(make_error_code(std::errc::device_or_resource_busy))));
+    EXPECT_CALL(fs, remove("cache/index.bin.tmp")).Times(1);
 
-	write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
+    write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
 }
 ```
 
@@ -121,27 +121,27 @@ Scoped RAII is not enough if error paths skip construction or move ownership inc
 ```cpp
 class connection_pool {
 public:
-	auto acquire() -> std::expected<pooled_connection, pool_error>;
-	void release(pooled_connection conn) noexcept;
+    auto acquire() -> std::expected<pooled_connection, pool_error>;
+    void release(pooled_connection conn) noexcept;
 };
 
 // This function has a leak on the second acquire failure.
 auto transfer(connection_pool& pool, transfer_request const& req)
-	-> std::expected<receipt, transfer_error>
+    -> std::expected<receipt, transfer_error>
 {
-	auto src = pool.acquire();
-	if (!src) return std::unexpected(transfer_error::no_connection);
+    auto src = pool.acquire();
+    if (!src) return std::unexpected(transfer_error::no_connection);
 
-	auto dst = pool.acquire();
-	if (!dst) {
-		// BUG: forgot to release src back to the pool.
-		return std::unexpected(transfer_error::no_connection);
-	}
+    auto dst = pool.acquire();
+    if (!dst) {
+        // BUG: forgot to release src back to the pool.
+        return std::unexpected(transfer_error::no_connection);
+    }
 
-	// ... perform transfer, release both on success ...
-	pool.release(std::move(*src));
-	pool.release(std::move(*dst));
-	return receipt{};
+    // ... perform transfer, release both on success ...
+    pool.release(std::move(*src));
+    pool.release(std::move(*dst));
+    return receipt{};
 }
 ```
 
@@ -150,12 +150,12 @@ A test that only exercises the success path never sees the leak. A test that onl
 ```cpp
 TEST(transfer_releases_source_connection_when_dest_acquire_fails)
 {
-	counting_connection_pool pool{.max_connections = 1};
+    counting_connection_pool pool{.max_connections = 1};
 
-	auto result = transfer(pool, make_request());
+    auto result = transfer(pool, make_request());
 
-	ASSERT_FALSE(result.has_value());
-	EXPECT_EQ(pool.available(), 1);  // Source connection must be returned.
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(pool.available(), 1);  // Source connection must be returned.
 }
 ```
 
@@ -168,19 +168,19 @@ Even `noexcept`-free code paths deserve testing when exception safety matters. A
 ```cpp
 TEST(cache_insert_preserves_existing_entries_on_allocation_failure)
 {
-	lru_cache<std::string, std::string> cache(/*capacity=*/4);
-	cache.insert("key1", "value1");
-	cache.insert("key2", "value2");
+    lru_cache<std::string, std::string> cache(/*capacity=*/4);
+    cache.insert("key1", "value1");
+    cache.insert("key2", "value2");
 
-	failing_allocator::arm_failure_after(1);  // Fail during insert internals.
+    failing_allocator::arm_failure_after(1);  // Fail during insert internals.
 
-	auto result = cache.insert("key3", "value3");
-	EXPECT_FALSE(result.has_value());
+    auto result = cache.insert("key3", "value3");
+    EXPECT_FALSE(result.has_value());
 
-	// Strong guarantee: pre-existing entries are intact.
-	EXPECT_EQ(cache.get("key1"), "value1");
-	EXPECT_EQ(cache.get("key2"), "value2");
-	EXPECT_EQ(cache.size(), 2);
+    // Strong guarantee: pre-existing entries are intact.
+    EXPECT_EQ(cache.get("key1"), "value1");
+    EXPECT_EQ(cache.get("key2"), "value2");
+    EXPECT_EQ(cache.size(), 2);
 }
 ```
 
@@ -207,21 +207,21 @@ Pay attention to boundary conditions that look harmless in isolation but interac
 // This test passes because the input string outlives the config.
 TEST(config_parser_reads_server_name)
 {
-	std::string input = R"({"server": "prod-01"})";
-	auto cfg = parse_config(input);
-	EXPECT_EQ(cfg.server_name(), "prod-01");  // PASSES -- but fragile.
+    std::string input = R"({"server": "prod-01"})";
+    auto cfg = parse_config(input);
+    EXPECT_EQ(cfg.server_name(), "prod-01");  // PASSES -- but fragile.
 }
 
 // This test exposes the dangling view.
 TEST(config_survives_input_destruction)
 {
-	auto cfg = []{
-		std::string input = R"({"server": "prod-01"})";
-		return parse_config(input);
-	}();
-	// input is destroyed. If server_name() holds a string_view into it,
-	// this is use-after-free. It may still "pass" without sanitizers.
-	EXPECT_EQ(cfg.server_name(), "prod-01");
+    auto cfg = []{
+        std::string input = R"({"server": "prod-01"})";
+        return parse_config(input);
+    }();
+    // input is destroyed. If server_name() holds a string_view into it,
+    // this is use-after-free. It may still "pass" without sanitizers.
+    EXPECT_EQ(cfg.server_name(), "prod-01");
 }
 ```
 

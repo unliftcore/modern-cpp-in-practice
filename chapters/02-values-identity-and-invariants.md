@@ -39,22 +39,22 @@ When configuration is modeled as a shared mutable object rather than a value sna
 ```cpp
 // Anti-pattern: shared mutable configuration.
 struct AppConfig {
-	std::string db_host;
-	int db_port;
-	std::chrono::seconds timeout;
+    std::string db_host;
+    int db_port;
+    std::chrono::seconds timeout;
 };
 
 // A single global mutable instance, shared by reference.
 AppConfig g_config;
 
 void handle_request(RequestContext& ctx) {
-	auto conn = connect(g_config.db_host, g_config.db_port);
-	// ... long operation ...
-	// BUG: another thread calls reload_config(), mutating g_config
-	// mid-request. conn was opened with the old host, but now
-	// ctx uses the new timeout. The request operates against
-	// an incoherent mix of old and new configuration.
-	conn.set_timeout(g_config.timeout);
+    auto conn = connect(g_config.db_host, g_config.db_port);
+    // ... long operation ...
+    // BUG: another thread calls reload_config(), mutating g_config
+    // mid-request. conn was opened with the old host, but now
+    // ctx uses the new timeout. The request operates against
+    // an incoherent mix of old and new configuration.
+    conn.set_timeout(g_config.timeout);
 }
 ```
 
@@ -62,10 +62,10 @@ With value semantics, each request captures its own immutable snapshot. No lock 
 
 ```cpp
 void handle_request(RequestContext& ctx, const ServiceConfig& config) {
-	// config is a value -- it cannot change during this call.
-	auto conn = connect(config.db_host(), config.db_port());
-	conn.set_timeout(config.timeout());
-	// Entire request sees a single consistent configuration.
+    // config is a value -- it cannot change during this call.
+    auto conn = connect(config.db_host(), config.db_port());
+    conn.set_timeout(config.timeout());
+    // Entire request sees a single consistent configuration.
 }
 ```
 
@@ -84,34 +84,34 @@ Consider a scheduling subsystem.
 ```cpp
 class RetryPolicy {
 public:
-	static auto create(std::chrono::milliseconds base_delay,
-					   std::chrono::milliseconds max_delay,
-					   std::uint32_t max_attempts)
-		-> std::expected<RetryPolicy, ConfigError>;
+    static auto create(std::chrono::milliseconds base_delay,
+                       std::chrono::milliseconds max_delay,
+                       std::uint32_t max_attempts)
+        -> std::expected<RetryPolicy, ConfigError>;
 
-	auto base_delay() const noexcept -> std::chrono::milliseconds {
-		return base_delay_;
-	}
+    auto base_delay() const noexcept -> std::chrono::milliseconds {
+        return base_delay_;
+    }
 
-	auto max_delay() const noexcept -> std::chrono::milliseconds {
-		return max_delay_;
-	}
+    auto max_delay() const noexcept -> std::chrono::milliseconds {
+        return max_delay_;
+    }
 
-	auto max_attempts() const noexcept -> std::uint32_t {
-		return max_attempts_;
-	}
+    auto max_attempts() const noexcept -> std::uint32_t {
+        return max_attempts_;
+    }
 
 private:
-	RetryPolicy(std::chrono::milliseconds base_delay,
-				std::chrono::milliseconds max_delay,
-				std::uint32_t max_attempts) noexcept
-		: base_delay_(base_delay),
-		  max_delay_(max_delay),
-		  max_attempts_(max_attempts) {}
+    RetryPolicy(std::chrono::milliseconds base_delay,
+                std::chrono::milliseconds max_delay,
+                std::uint32_t max_attempts) noexcept
+        : base_delay_(base_delay),
+          max_delay_(max_delay),
+          max_attempts_(max_attempts) {}
 
-	std::chrono::milliseconds base_delay_;
-	std::chrono::milliseconds max_delay_;
-	std::uint32_t max_attempts_;
+    std::chrono::milliseconds base_delay_;
+    std::chrono::milliseconds max_delay_;
+    std::uint32_t max_attempts_;
 };
 ```
 
@@ -126,18 +126,18 @@ Compare the factory-validated `RetryPolicy` above with a plain aggregate that le
 ```cpp
 // Anti-pattern: invariants left to the caller.
 struct RetryPolicy {
-	std::chrono::milliseconds base_delay;
-	std::chrono::milliseconds max_delay;
-	std::uint32_t max_attempts;
+    std::chrono::milliseconds base_delay;
+    std::chrono::milliseconds max_delay;
+    std::uint32_t max_attempts;
 };
 
 void schedule_retries(const RetryPolicy& policy) {
-	// Caller forgot to validate. base_delay is negative, max_attempts is 0.
-	// This loop does nothing, silently dropping work.
-	for (std::uint32_t i = 0; i < policy.max_attempts; ++i) {
-		auto delay = std::min(policy.base_delay * (1 << i), policy.max_delay);
-		enqueue_after(delay); // never executes when max_attempts == 0
-	}
+    // Caller forgot to validate. base_delay is negative, max_attempts is 0.
+    // This loop does nothing, silently dropping work.
+    for (std::uint32_t i = 0; i < policy.max_attempts; ++i) {
+        auto delay = std::min(policy.base_delay * (1 << i), policy.max_delay);
+        enqueue_after(delay); // never executes when max_attempts == 0
+    }
 }
 ```
 
@@ -167,11 +167,11 @@ One recurring failure is a type that looks like a value because it is copied and
 ```cpp
 // Anti-pattern: one type tries to be both a value and a live entity.
 struct Job {
-	std::string id;
-	std::string owner;
-	std::vector<Task> tasks;
-	std::mutex mutex; // RISK: identity-bearing synchronization hidden inside data model
-	bool cancelled = false;
+    std::string id;
+    std::string owner;
+    std::vector<Task> tasks;
+    std::mutex mutex; // RISK: identity-bearing synchronization hidden inside data model
+    bool cancelled = false;
 };
 ```
 
@@ -214,18 +214,18 @@ When a type looks like a value but shares internal state through pointers or ref
 ```cpp
 // Anti-pattern: shallow copy creates aliasing bugs.
 struct Route {
-	std::string name;
-	std::shared_ptr<std::vector<Endpoint>> endpoints; // shared, not owned
+    std::string name;
+    std::shared_ptr<std::vector<Endpoint>> endpoints; // shared, not owned
 };
 
 void reconfigure(Route primary) {
-	Route backup = primary; // looks like a copy, but endpoints are shared
+    Route backup = primary; // looks like a copy, but endpoints are shared
 
-	backup.name = "backup-" + primary.name;
-	backup.endpoints->push_back(fallback_endpoint()); // BUG: mutates primary too
+    backup.name = "backup-" + primary.name;
+    backup.endpoints->push_back(fallback_endpoint()); // BUG: mutates primary too
 
-	// primary.endpoints and backup.endpoints point to the same vector.
-	// The caller who passed primary now sees an endpoint they never added.
+    // primary.endpoints and backup.endpoints point to the same vector.
+    // The caller who passed primary now sees an endpoint they never added.
 }
 ```
 
@@ -233,14 +233,14 @@ The fix is to give the type genuine value semantics. Either store the vector dir
 
 ```cpp
 struct Route {
-	std::string name;
-	std::vector<Endpoint> endpoints; // owned, copied on assignment
+    std::string name;
+    std::vector<Endpoint> endpoints; // owned, copied on assignment
 
-	auto with_endpoint(Endpoint ep) const -> Route {
-		Route copy = *this;
-		copy.endpoints.push_back(std::move(ep));
-		return copy;
-	}
+    auto with_endpoint(Endpoint ep) const -> Route {
+        Route copy = *this;
+        copy.endpoints.push_back(std::move(ep));
+        return copy;
+    }
 };
 ```
 
@@ -261,18 +261,18 @@ If mutation can break invariants between two field assignments, the type likely 
 ```cpp
 // Anti-pattern: public fields allow invariant-breaking mutation.
 struct TimeWindow {
-	std::chrono::system_clock::time_point start;
-	std::chrono::system_clock::time_point end;
+    std::chrono::system_clock::time_point start;
+    std::chrono::system_clock::time_point end;
 };
 
 void extend_deadline(TimeWindow& window, std::chrono::hours extra) {
-	window.end += extra; // fine
+    window.end += extra; // fine
 }
 
 void shift_start(TimeWindow& window, std::chrono::hours shift) {
-	window.start += shift;
-	// BUG: if shift is large enough, start > end.
-	// Every consumer of TimeWindow must now defend against this.
+    window.start += shift;
+    // BUG: if shift is large enough, start > end.
+    // Every consumer of TimeWindow must now defend against this.
 }
 ```
 
@@ -281,27 +281,27 @@ An encapsulated type eliminates this class of bug by making the invariant un-bre
 ```cpp
 class TimeWindow {
 public:
-	static auto create(system_clock::time_point start,
-					   system_clock::time_point end)
-		-> std::optional<TimeWindow>
-	{
-		if (start > end) return std::nullopt;
-		return TimeWindow{start, end};
-	}
+    static auto create(system_clock::time_point start,
+                       system_clock::time_point end)
+        -> std::optional<TimeWindow>
+    {
+        if (start > end) return std::nullopt;
+        return TimeWindow{start, end};
+    }
 
-	auto start() const noexcept { return start_; }
-	auto end() const noexcept { return end_; }
+    auto start() const noexcept { return start_; }
+    auto end() const noexcept { return end_; }
 
-	auto with_extended_end(std::chrono::hours extra) const -> TimeWindow {
-		return TimeWindow{start_, end_ + extra}; // always valid: end moves forward
-	}
+    auto with_extended_end(std::chrono::hours extra) const -> TimeWindow {
+        return TimeWindow{start_, end_ + extra}; // always valid: end moves forward
+    }
 
 private:
-	TimeWindow(system_clock::time_point s, system_clock::time_point e)
-		: start_(s), end_(e) {}
+    TimeWindow(system_clock::time_point s, system_clock::time_point e)
+        : start_(s), end_(e) {}
 
-	system_clock::time_point start_;
-	system_clock::time_point end_;
+    system_clock::time_point start_;
+    system_clock::time_point end_;
 };
 ```
 

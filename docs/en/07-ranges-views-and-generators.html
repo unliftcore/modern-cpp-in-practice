@@ -203,17 +203,17 @@ for (auto it = records.begin(); it != records.end(); ++it) {
 <p>This version works, but the filtering logic and the transformation logic are fused into a single loop body. The reader must parse the <code>if</code> to understand what is kept and parse the body to understand what is produced. In more complex cases, these loops accumulate nested conditions, early <code>continue</code> statements, index arithmetic, and manual bookkeeping that obscure the data flow. Off-by-one errors in index-based variants (<code>for (size_t i = 0; i &lt; records.size(); ++i)</code>) are a persistent source of bugs, especially when the loop body mutates the container or uses the index for more than one purpose.</p>
 <p>The range version separates the concerns structurally:</p>
 <pre><code class="language-cpp">auto export_rows = records
-	| std::views::filter([](const LogRecord&amp; r) {
-		  return r.severity &gt;= Severity::warning &amp;&amp; !r.redacted;
-	  })
-	| std::views::transform([](const LogRecord&amp; r) {
-		  return ExportRow{
-			  .timestamp = r.timestamp,
-			  .service = r.service,
-			  .message = r.message,
-		  };
-	  })
-	| std::ranges::to&lt;std::vector&gt;();
+    | std::views::filter([](const LogRecord&amp; r) {
+          return r.severity &gt;= Severity::warning &amp;&amp; !r.redacted;
+      })
+    | std::views::transform([](const LogRecord&amp; r) {
+          return ExportRow{
+              .timestamp = r.timestamp,
+              .service = r.service,
+              .message = r.message,
+          };
+      })
+    | std::ranges::to&lt;std::vector&gt;();
 </code></pre>
 <p>This is good range code because the pipeline is the business logic. There is no tricky mutation, no lifetime ambiguity in the source, and a clear materialization point at the end. The intermediate storage never existed conceptually, so not allocating it improves both clarity and cost.</p>
 <p>Now compare that with a loop that updates shared counters, emits metrics, mutates records in place, and conditionally retries downstream writes. A pipeline there often hides the part that matters most: sequencing and side effects. Range syntax is not a readability win when the computation is stateful and effect-heavy.</p>
@@ -244,10 +244,10 @@ records.erase(
 <p>The hardest production bug class with ranges is not algorithmic. It is lifetime. Views are often non-owning, and lazy pipelines delay work until iteration. That means the place where a view is constructed and the place where its bug becomes visible may be far apart.</p>
 <p>Consider an anti-pattern that shows up in request processing code:</p>
 <pre><code class="language-cpp">auto tenant_ids() {
-	return load_tenants()
-		| std::views::transform([](const Tenant&amp; t) {
-			  return std::string_view{t.id};
-		  }); // BUG: returned view depends on destroyed temporary container
+    return load_tenants()
+        | std::views::transform([](const Tenant&amp; t) {
+              return std::string_view{t.id};
+          }); // BUG: returned view depends on destroyed temporary container
 }
 </code></pre>
 <p>The code looks tidy. It is wrong. <code>load_tenants()</code> returns an owning container temporary. The view pipeline borrows from that container. Returning the view returns a delayed lifetime bug.</p>

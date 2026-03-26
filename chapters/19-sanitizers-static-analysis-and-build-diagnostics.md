@@ -79,18 +79,18 @@ This is the canonical case that wastes days of debugging time in codebases that 
 
 ```cpp
 auto get_session_name(session_registry& registry, session_id id)
-	-> std::string_view
+    -> std::string_view
 {
-	auto it = registry.find(id);
-	if (it == registry.end()) return {};
-	return it->second.name();  // Returns view into the session object.
+    auto it = registry.find(id);
+    if (it == registry.end()) return {};
+    return it->second.name();  // Returns view into the session object.
 }
 
 void log_and_remove_session(session_registry& registry, session_id id)
 {
-	auto name = get_session_name(registry, id);
-	registry.erase(id);             // Session destroyed. name is now dangling.
-	audit_log("removed session: {}", name);  // Use-after-free.
+    auto name = get_session_name(registry, id);
+    registry.erase(id);             // Session destroyed. name is now dangling.
+    audit_log("removed session: {}", name);  // Use-after-free.
 }
 ```
 
@@ -123,7 +123,7 @@ Typical build characteristics look like this:
 
 ```bash
 clang++ -std=c++23 -O1 -g -fno-omit-frame-pointer \
-	-fsanitize=address,undefined
+    -fsanitize=address,undefined
 ```
 
 The exact flags vary by toolchain, but the principles are stable: keep enough optimization to preserve realistic structure, keep debug info, and keep frame pointers so stacks are usable.
@@ -138,9 +138,9 @@ A concrete example: signed overflow in size calculations is a common source of s
 
 ```cpp
 auto compute_buffer_size(std::int32_t width, std::int32_t height, std::int32_t channels)
-	-> std::int32_t
+    -> std::int32_t
 {
-	return width * height * channels;  // Signed overflow if product exceeds INT32_MAX.
+    return width * height * channels;  // Signed overflow if product exceeds INT32_MAX.
 }
 ```
 
@@ -163,21 +163,21 @@ Data races are invisible to testing without TSan because they depend on scheduli
 
 ```cpp
 struct service_stats {
-	std::int64_t requests_handled = 0;   // No synchronization.
-	std::int64_t bytes_processed = 0;
+    std::int64_t requests_handled = 0;   // No synchronization.
+    std::int64_t bytes_processed = 0;
 };
 
 // Thread 1: request handler
 void handle_request(service_stats& stats, request const& req) {
-	process(req);
-	stats.requests_handled++;    // Data race: unsynchronized write.
-	stats.bytes_processed += req.size();
+    process(req);
+    stats.requests_handled++;    // Data race: unsynchronized write.
+    stats.bytes_processed += req.size();
 }
 
 // Thread 2: periodic reporter
 void report_stats(service_stats const& stats) {
-	log_metrics("requests", stats.requests_handled);   // Data race: unsynchronized read.
-	log_metrics("bytes", stats.bytes_processed);
+    log_metrics("requests", stats.requests_handled);   // Data race: unsynchronized read.
+    log_metrics("bytes", stats.bytes_processed);
 }
 ```
 

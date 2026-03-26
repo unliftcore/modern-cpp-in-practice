@@ -248,69 +248,69 @@
 <h3 id="what-happens-without-raii"><a class="header" href="#what-happens-without-raii">What Happens Without RAII</a></h3>
 <p>Before illustrating the RAII pattern, it is worth seeing the manual approach in a fuller form. The following anti-pattern is intentionally buggy, because production codebases still contain code that looks exactly like this.</p>
 <pre><code class="language-cpp">socket_t create_server_socket(std::uint16_t port) {
-	socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
-	if (server == invalid_socket) {
-		throw NetworkError{"socket failed"};
-	}
+    socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (server == invalid_socket) {
+        throw NetworkError{"socket failed"};
+    }
 
-	int opt = 1;
-	if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"setsockopt failed"};
-	}
+    int opt = 1;
+    if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"setsockopt failed"};
+    }
 
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons(port);
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port);
 
-	if (::bind(server, reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"bind failed"};
-	}
+    if (::bind(server, reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"bind failed"};
+    }
 
-	if (::listen(server, 16) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"listen failed"};
-	}
+    if (::listen(server, 16) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"listen failed"};
+    }
 
-	return server; // RISK: caller now owns the raw descriptor by convention
+    return server; // RISK: caller now owns the raw descriptor by convention
 }
 
 void serve_once(std::uint16_t port) {
-	socket_t server = create_server_socket(port);
-	socket_t client = invalid_socket;
+    socket_t server = create_server_socket(port);
+    socket_t client = invalid_socket;
 
-	try {
-		sockaddr_in client_addr{};
-		socket_length addr_len = sizeof(client_addr);
-		client = ::accept(server,
-		                  reinterpret_cast&lt;sockaddr*&gt;(&amp;client_addr),
-		                  &amp;addr_len);
-		if (client == invalid_socket) {
-			::close_socket(server); // BUG: server will be closed twice (here + in catch)
-			throw NetworkError{"accept failed"};
-		}
+    try {
+        sockaddr_in client_addr{};
+        socket_length addr_len = sizeof(client_addr);
+        client = ::accept(server,
+                          reinterpret_cast&lt;sockaddr*&gt;(&amp;client_addr),
+                          &amp;addr_len);
+        if (client == invalid_socket) {
+            ::close_socket(server); // BUG: server will be closed twice (here + in catch)
+            throw NetworkError{"accept failed"};
+        }
 
-		std::array&lt;char, 8192&gt; buffer{};
-		auto n = read_from_socket(client, buffer.data(), buffer.size());
-		if (n &lt;= 0) {
-			::close_socket(client);
-			::close_socket(server);
-			return;
-		}
+        std::array&lt;char, 8192&gt; buffer{};
+        auto n = read_from_socket(client, buffer.data(), buffer.size());
+        if (n &lt;= 0) {
+            ::close_socket(client);
+            ::close_socket(server);
+            return;
+        }
 
-		process_request(client, std::string_view{buffer.data(), static_cast&lt;std::size_t&gt;(n)}); // RISK: any throw must preserve cleanup correctness
+        process_request(client, std::string_view{buffer.data(), static_cast&lt;std::size_t&gt;(n)}); // RISK: any throw must preserve cleanup correctness
 
-		::close_socket(client);
-		::close_socket(server);
-	} catch (...) {
-		if (client != invalid_socket) {
-			::close_socket(client);
-		}
-		::close_socket(server);
-		throw;
-	}
+        ::close_socket(client);
+        ::close_socket(server);
+    } catch (...) {
+        if (client != invalid_socket) {
+            ::close_socket(client);
+        }
+        ::close_socket(server);
+        throw;
+    }
 }
 </code></pre>
 <p>The problems compound quickly:</p>
@@ -422,37 +422,37 @@ void handle_connection(Socket client) const {
 <p>The alternative to RAII is usually not explicit manual cleanup done perfectly. It is cleanup by convention, which means cleanup gets skipped under stress.</p>
 <pre><code class="language-cpp">// Anti-pattern: ownership and cleanup are split across control flow.
 void publish_snapshot(Publisher&amp; publisher, std::string_view path) {
-	auto* file = ::open_config(path.data());
-	if (file == nullptr) {
-		throw ConfigError{"open failed"};
-	}
+    auto* file = ::open_config(path.data());
+    if (file == nullptr) {
+        throw ConfigError{"open failed"};
+    }
 
-	auto payload = read_payload(file);
-	if (!payload) {
-		::close_config(file); // BUG: one exit path remembered cleanup
-		throw ConfigError{"parse failed"};
-	}
+    auto payload = read_payload(file);
+    if (!payload) {
+        ::close_config(file); // BUG: one exit path remembered cleanup
+        throw ConfigError{"parse failed"};
+    }
 
-	publisher.send(*payload); // BUG: if this throws, file leaks
-	::close_config(file);
+    publisher.send(*payload); // BUG: if this throws, file leaks
+    ::close_config(file);
 }
 </code></pre>
 <p>This is not controversial because manual cleanup is ugly. It is wrong because cleanup policy is now interleaved with every exit path. Once the function acquires a second or third resource, the control flow becomes harder to audit than the work the function actually performs.</p>
 <p>The RAII version eliminates every manual release and every conditional cleanup path:</p>
 <pre><code class="language-cpp">void publish_snapshot(Publisher&amp; publisher, std::string_view path) {
-	auto file = ConfigFile::open(path); // RAII: destructor calls ::close_config
-	if (!file) {
-		throw ConfigError{"open failed"};
-	}
+    auto file = ConfigFile::open(path); // RAII: destructor calls ::close_config
+    if (!file) {
+        throw ConfigError{"open failed"};
+    }
 
-	auto payload = read_payload(*file);
-	if (!payload) {
-		throw ConfigError{"parse failed"};
-		// file releases automatically -- no manual cleanup needed
-	}
+    auto payload = read_payload(*file);
+    if (!payload) {
+        throw ConfigError{"parse failed"};
+        // file releases automatically -- no manual cleanup needed
+    }
 
-	publisher.send(*payload);
-	// file releases automatically at scope exit, whether normal or exceptional
+    publisher.send(*payload);
+    // file releases automatically at scope exit, whether normal or exceptional
 }
 </code></pre>
 <p>The function now has one concern: its actual logic. Cleanup is invisible because it is guaranteed. Adding a third, fourth, or tenth exit path changes nothing about resource safety. That composability is the real payoff of RAII – not prettier code, but correct code under maintenance pressure.</p>
@@ -465,14 +465,14 @@ void publish_snapshot(Publisher&amp; publisher, std::string_view path) {
 <p>A common symptom is shutdown non-determinism. When the last <code>shared_ptr</code> to a resource is released from an unpredictable callback or thread, the destructor runs at an unpredictable time and place:</p>
 <pre><code class="language-cpp">// Risky: destruction timing depends on which callback finishes last.
 void start_fanout(std::shared_ptr&lt;Connection&gt; conn) {
-	for (auto&amp; shard : shards_) {
-		shard.post([conn] {           // each lambda extends lifetime
-			conn-&gt;send(shard_ping()); // last lambda to finish destroys conn
-		});
-	}
-	// conn may already be destroyed here, or may live much longer --
-	// depends on thread scheduling. Destructor side effects (logging,
-	// metric flush, socket close) now happen at an uncontrolled point.
+    for (auto&amp; shard : shards_) {
+        shard.post([conn] {           // each lambda extends lifetime
+            conn-&gt;send(shard_ping()); // last lambda to finish destroys conn
+        });
+    }
+    // conn may already be destroyed here, or may live much longer --
+    // depends on thread scheduling. Destructor side effects (logging,
+    // metric flush, socket close) now happen at an uncontrolled point.
 }
 </code></pre>
 <p>When destruction order matters – and in production it almost always does – prefer <code>unique_ptr</code> with explicit lifetime scoping, and pass non-owning raw pointers or references to work that is guaranteed to complete within the owner’s lifetime.</p>
@@ -499,49 +499,49 @@ void start_fanout(std::shared_ptr&lt;Connection&gt; conn) {
 <pre><code class="language-cpp">// Anti-pattern: manual multi-resource construction with cleanup flags.
 class Pipeline {
 public:
-	Pipeline(const Config&amp; cfg) {
-		db_ = ::open_db(cfg.db_path().c_str());
-		if (!db_) throw InitError{"db open failed"};
+    Pipeline(const Config&amp; cfg) {
+        db_ = ::open_db(cfg.db_path().c_str());
+        if (!db_) throw InitError{"db open failed"};
 
-		cache_ = ::create_cache(cfg.cache_size());
-		if (!cache_) {
-			::close_db(db_); // must remember to clean up db_
-			throw InitError{"cache alloc failed"};
-		}
+        cache_ = ::create_cache(cfg.cache_size());
+        if (!cache_) {
+            ::close_db(db_); // must remember to clean up db_
+            throw InitError{"cache alloc failed"};
+        }
 
-		listener_ = ::bind_listener(cfg.port());
-		if (listener_ == invalid_socket) {
-			::destroy_cache(cache_); // must remember both prior resources
-			::close_db(db_);
-			throw InitError{"bind failed"};
-		}
-	}
+        listener_ = ::bind_listener(cfg.port());
+        if (listener_ == invalid_socket) {
+            ::destroy_cache(cache_); // must remember both prior resources
+            ::close_db(db_);
+            throw InitError{"bind failed"};
+        }
+    }
 
-	~Pipeline() {
-		::close_listener(listener_);
-		::destroy_cache(cache_);
-		::close_db(db_);
-	}
+    ~Pipeline() {
+        ::close_listener(listener_);
+        ::destroy_cache(cache_);
+        ::close_db(db_);
+    }
 
 private:
-	db_handle_t db_ = nullptr;
-	cache_handle_t cache_ = nullptr;
-	socket_t listener_ = invalid_socket;
+    db_handle_t db_ = nullptr;
+    cache_handle_t cache_ = nullptr;
+    socket_t listener_ = invalid_socket;
 };
 </code></pre>
 <p>Every new resource added to this constructor requires updating every prior failure branch. A maintenance change that reorders acquisitions silently breaks the cleanup logic.</p>
 <p>The RAII version uses member wrappers and relies on the language rule that already-constructed members are destroyed when a constructor throws:</p>
 <pre><code class="language-cpp">class Pipeline {
 public:
-	Pipeline(const Config&amp; cfg)
-		: db_(DbHandle::open(cfg.db_path()))       // destroyed automatically if
-		, cache_(Cache::create(cfg.cache_size()))   // a later member throws
-		, listener_(Listener::bind(cfg.port())) {}
+    Pipeline(const Config&amp; cfg)
+        : db_(DbHandle::open(cfg.db_path()))       // destroyed automatically if
+        , cache_(Cache::create(cfg.cache_size()))   // a later member throws
+        , listener_(Listener::bind(cfg.port())) {}
 
 private:
-	DbHandle db_;
-	Cache cache_;
-	Listener listener_;
+    DbHandle db_;
+    Cache cache_;
+    Listener listener_;
 };
 </code></pre>
 <p>No cleanup flags, no cascading <code>if</code> blocks, no order-sensitive manual teardown. The language does the work.</p>
@@ -608,30 +608,30 @@ int main() {
 <p>When configuration is modeled as a shared mutable object rather than a value snapshot, aliasing bugs appear:</p>
 <pre><code class="language-cpp">// Anti-pattern: shared mutable configuration.
 struct AppConfig {
-	std::string db_host;
-	int db_port;
-	std::chrono::seconds timeout;
+    std::string db_host;
+    int db_port;
+    std::chrono::seconds timeout;
 };
 
 // A single global mutable instance, shared by reference.
 AppConfig g_config;
 
 void handle_request(RequestContext&amp; ctx) {
-	auto conn = connect(g_config.db_host, g_config.db_port);
-	// ... long operation ...
-	// BUG: another thread calls reload_config(), mutating g_config
-	// mid-request. conn was opened with the old host, but now
-	// ctx uses the new timeout. The request operates against
-	// an incoherent mix of old and new configuration.
-	conn.set_timeout(g_config.timeout);
+    auto conn = connect(g_config.db_host, g_config.db_port);
+    // ... long operation ...
+    // BUG: another thread calls reload_config(), mutating g_config
+    // mid-request. conn was opened with the old host, but now
+    // ctx uses the new timeout. The request operates against
+    // an incoherent mix of old and new configuration.
+    conn.set_timeout(g_config.timeout);
 }
 </code></pre>
 <p>With value semantics, each request captures its own immutable snapshot. No lock is needed to read fields, and no mid-flight mutation can create incoherent state:</p>
 <pre><code class="language-cpp">void handle_request(RequestContext&amp; ctx, const ServiceConfig&amp; config) {
-	// config is a value -- it cannot change during this call.
-	auto conn = connect(config.db_host(), config.db_port());
-	conn.set_timeout(config.timeout());
-	// Entire request sees a single consistent configuration.
+    // config is a value -- it cannot change during this call.
+    auto conn = connect(config.db_host(), config.db_port());
+    conn.set_timeout(config.timeout());
+    // Entire request sees a single consistent configuration.
 }
 </code></pre>
 <p>The deeper point is that values compose well. They can sit inside containers, cross threads, participate in deterministic tests, and form stable inputs to hashing or comparison. Identity-bearing objects can do those things too, but they require more rules and more caution. Use that complexity only when the model truly needs it.</p>
@@ -642,34 +642,34 @@ void handle_request(RequestContext&amp; ctx) {
 <p>Consider a scheduling subsystem.</p>
 <pre><code class="language-cpp">class RetryPolicy {
 public:
-	static auto create(std::chrono::milliseconds base_delay,
-					   std::chrono::milliseconds max_delay,
-					   std::uint32_t max_attempts)
-		-&gt; std::expected&lt;RetryPolicy, ConfigError&gt;;
+    static auto create(std::chrono::milliseconds base_delay,
+                       std::chrono::milliseconds max_delay,
+                       std::uint32_t max_attempts)
+        -&gt; std::expected&lt;RetryPolicy, ConfigError&gt;;
 
-	auto base_delay() const noexcept -&gt; std::chrono::milliseconds {
-		return base_delay_;
-	}
+    auto base_delay() const noexcept -&gt; std::chrono::milliseconds {
+        return base_delay_;
+    }
 
-	auto max_delay() const noexcept -&gt; std::chrono::milliseconds {
-		return max_delay_;
-	}
+    auto max_delay() const noexcept -&gt; std::chrono::milliseconds {
+        return max_delay_;
+    }
 
-	auto max_attempts() const noexcept -&gt; std::uint32_t {
-		return max_attempts_;
-	}
+    auto max_attempts() const noexcept -&gt; std::uint32_t {
+        return max_attempts_;
+    }
 
 private:
-	RetryPolicy(std::chrono::milliseconds base_delay,
-				std::chrono::milliseconds max_delay,
-				std::uint32_t max_attempts) noexcept
-		: base_delay_(base_delay),
-		  max_delay_(max_delay),
-		  max_attempts_(max_attempts) {}
+    RetryPolicy(std::chrono::milliseconds base_delay,
+                std::chrono::milliseconds max_delay,
+                std::uint32_t max_attempts) noexcept
+        : base_delay_(base_delay),
+          max_delay_(max_delay),
+          max_attempts_(max_attempts) {}
 
-	std::chrono::milliseconds base_delay_;
-	std::chrono::milliseconds max_delay_;
-	std::uint32_t max_attempts_;
+    std::chrono::milliseconds base_delay_;
+    std::chrono::milliseconds max_delay_;
+    std::uint32_t max_attempts_;
 };
 </code></pre>
 <p>The details of error transport belong more fully in the next chapter, but the modeling point is already clear: a <code>RetryPolicy</code> should not exist in a nonsense state. Once created, code using it should not have to ask whether the delays are inverted or the attempt count is zero unless those are valid meanings the domain actually wants.</p>
@@ -678,18 +678,18 @@ private:
 <p>Compare the factory-validated <code>RetryPolicy</code> above with a plain aggregate that leaves validation to callers:</p>
 <pre><code class="language-cpp">// Anti-pattern: invariants left to the caller.
 struct RetryPolicy {
-	std::chrono::milliseconds base_delay;
-	std::chrono::milliseconds max_delay;
-	std::uint32_t max_attempts;
+    std::chrono::milliseconds base_delay;
+    std::chrono::milliseconds max_delay;
+    std::uint32_t max_attempts;
 };
 
 void schedule_retries(const RetryPolicy&amp; policy) {
-	// Caller forgot to validate. base_delay is negative, max_attempts is 0.
-	// This loop does nothing, silently dropping work.
-	for (std::uint32_t i = 0; i &lt; policy.max_attempts; ++i) {
-		auto delay = std::min(policy.base_delay * (1 &lt;&lt; i), policy.max_delay);
-		enqueue_after(delay); // never executes when max_attempts == 0
-	}
+    // Caller forgot to validate. base_delay is negative, max_attempts is 0.
+    // This loop does nothing, silently dropping work.
+    for (std::uint32_t i = 0; i &lt; policy.max_attempts; ++i) {
+        auto delay = std::min(policy.base_delay * (1 &lt;&lt; i), policy.max_delay);
+        enqueue_after(delay); // never executes when max_attempts == 0
+    }
 }
 </code></pre>
 <p>Every function that receives <code>RetryPolicy</code> must now independently check for nonsense values, or assume some earlier layer already did. In practice, some callers check and some do not, producing inconsistent behavior depending on the call path. The factory approach shown earlier makes this class of bug structurally impossible: if you have a <code>RetryPolicy</code>, it is valid.</p>
@@ -710,11 +710,11 @@ void schedule_retries(const RetryPolicy&amp; policy) {
 <p>One recurring failure is a type that looks like a value because it is copied and compared, but actually carries identity-bearing mutation.</p>
 <pre><code class="language-cpp">// Anti-pattern: one type tries to be both a value and a live entity.
 struct Job {
-	std::string id;
-	std::string owner;
-	std::vector&lt;Task&gt; tasks;
-	std::mutex mutex; // RISK: identity-bearing synchronization hidden inside data model
-	bool cancelled = false;
+    std::string id;
+    std::string owner;
+    std::vector&lt;Task&gt; tasks;
+    std::mutex mutex; // RISK: identity-bearing synchronization hidden inside data model
+    bool cancelled = false;
 };
 </code></pre>
 <p>This object cannot honestly behave like a value because copying a mutex and a live cancellation flag has no sensible meaning. It also cannot honestly behave like a narrow entity model because the entire mutable representation is public. The type will infect the rest of the codebase with ambiguity.</p>
@@ -740,30 +740,30 @@ struct Job {
 <p>When a type looks like a value but shares internal state through pointers or references, copies become aliases rather than independent values:</p>
 <pre><code class="language-cpp">// Anti-pattern: shallow copy creates aliasing bugs.
 struct Route {
-	std::string name;
-	std::shared_ptr&lt;std::vector&lt;Endpoint&gt;&gt; endpoints; // shared, not owned
+    std::string name;
+    std::shared_ptr&lt;std::vector&lt;Endpoint&gt;&gt; endpoints; // shared, not owned
 };
 
 void reconfigure(Route primary) {
-	Route backup = primary; // looks like a copy, but endpoints are shared
+    Route backup = primary; // looks like a copy, but endpoints are shared
 
-	backup.name = "backup-" + primary.name;
-	backup.endpoints-&gt;push_back(fallback_endpoint()); // BUG: mutates primary too
+    backup.name = "backup-" + primary.name;
+    backup.endpoints-&gt;push_back(fallback_endpoint()); // BUG: mutates primary too
 
-	// primary.endpoints and backup.endpoints point to the same vector.
-	// The caller who passed primary now sees an endpoint they never added.
+    // primary.endpoints and backup.endpoints point to the same vector.
+    // The caller who passed primary now sees an endpoint they never added.
 }
 </code></pre>
 <p>The fix is to give the type genuine value semantics. Either store the vector directly as a member (so copies are deep), or use a copy-on-write strategy, or make the type immutable so sharing is safe:</p>
 <pre><code class="language-cpp">struct Route {
-	std::string name;
-	std::vector&lt;Endpoint&gt; endpoints; // owned, copied on assignment
+    std::string name;
+    std::vector&lt;Endpoint&gt; endpoints; // owned, copied on assignment
 
-	auto with_endpoint(Endpoint ep) const -&gt; Route {
-		Route copy = *this;
-		copy.endpoints.push_back(std::move(ep));
-		return copy;
-	}
+    auto with_endpoint(Endpoint ep) const -&gt; Route {
+        Route copy = *this;
+        copy.endpoints.push_back(std::move(ep));
+        return copy;
+    }
 };
 </code></pre>
 <p>Now <code>Route</code> behaves as a value. Copies are independent. Mutation through <code>with_endpoint</code> produces a new value without disturbing the original. No aliasing surprise is possible.</p>
@@ -775,44 +775,44 @@ void reconfigure(Route primary) {
 <p>If mutation can break invariants between two field assignments, the type likely needs a stronger operation boundary. If callers must lock, update three fields, and remember to recompute a derived flag, the invariant was never really owned by the type.</p>
 <pre><code class="language-cpp">// Anti-pattern: public fields allow invariant-breaking mutation.
 struct TimeWindow {
-	std::chrono::system_clock::time_point start;
-	std::chrono::system_clock::time_point end;
+    std::chrono::system_clock::time_point start;
+    std::chrono::system_clock::time_point end;
 };
 
 void extend_deadline(TimeWindow&amp; window, std::chrono::hours extra) {
-	window.end += extra; // fine
+    window.end += extra; // fine
 }
 
 void shift_start(TimeWindow&amp; window, std::chrono::hours shift) {
-	window.start += shift;
-	// BUG: if shift is large enough, start &gt; end.
-	// Every consumer of TimeWindow must now defend against this.
+    window.start += shift;
+    // BUG: if shift is large enough, start &gt; end.
+    // Every consumer of TimeWindow must now defend against this.
 }
 </code></pre>
 <p>An encapsulated type eliminates this class of bug by making the invariant un-breakable from outside:</p>
 <pre><code class="language-cpp">class TimeWindow {
 public:
-	static auto create(system_clock::time_point start,
-					   system_clock::time_point end)
-		-&gt; std::optional&lt;TimeWindow&gt;
-	{
-		if (start &gt; end) return std::nullopt;
-		return TimeWindow{start, end};
-	}
+    static auto create(system_clock::time_point start,
+                       system_clock::time_point end)
+        -&gt; std::optional&lt;TimeWindow&gt;
+    {
+        if (start &gt; end) return std::nullopt;
+        return TimeWindow{start, end};
+    }
 
-	auto start() const noexcept { return start_; }
-	auto end() const noexcept { return end_; }
+    auto start() const noexcept { return start_; }
+    auto end() const noexcept { return end_; }
 
-	auto with_extended_end(std::chrono::hours extra) const -&gt; TimeWindow {
-		return TimeWindow{start_, end_ + extra}; // always valid: end moves forward
-	}
+    auto with_extended_end(std::chrono::hours extra) const -&gt; TimeWindow {
+        return TimeWindow{start_, end_ + extra}; // always valid: end moves forward
+    }
 
 private:
-	TimeWindow(system_clock::time_point s, system_clock::time_point e)
-		: start_(s), end_(e) {}
+    TimeWindow(system_clock::time_point s, system_clock::time_point e)
+        : start_(s), end_(e) {}
 
-	system_clock::time_point start_;
-	system_clock::time_point end_;
+    system_clock::time_point start_;
+    system_clock::time_point end_;
 };
 </code></pre>
 <p>Callers cannot produce an invalid <code>TimeWindow</code>. The invariant <code>start &lt;= end</code> is enforced once, in the type, rather than diffusely across every mutation site.</p>
@@ -869,11 +869,11 @@ enum ConfigErrorCode { kOk = 0, kFileNotFound = 1, kParseError = 2, kInvalidValu
 ConfigErrorCode load_service_config(const std::string&amp; path, ServiceConfig* out);
 
 void startup() {
-	ServiceConfig cfg;
-	load_service_config("/etc/app/config.yaml", &amp;cfg); // BUG: return code silently ignored
+    ServiceConfig cfg;
+    load_service_config("/etc/app/config.yaml", &amp;cfg); // BUG: return code silently ignored
 
-	// cfg may be uninitialized garbage -- the program continues anyway.
-	listen(cfg.port); // binds to nonsense port or zero
+    // cfg may be uninitialized garbage -- the program continues anyway.
+    listen(cfg.port); // binds to nonsense port or zero
 }
 </code></pre>
 <p>The core problem is that error codes are advisory. The compiler does not require the caller to inspect them. Even with <code>[[nodiscard]]</code>, a cast to <code>void</code> or an accidental omission silences the warning. In large codebases, studies of C error-code APIs consistently find that 30-60% of error returns are never checked at some call sites.</p>
@@ -911,36 +911,36 @@ make_error(ErrorCode code, std::string detail) {
 <p>Parsing, validation, boundary translation, and request-level operations often fall into this category. The call site usually needs to branch, emit a structured rejection, choose retry behavior, or attach context. Returning an <code>expected</code> makes that decision point explicit.</p>
 <p>Consider a configuration loader:</p>
 <pre><code class="language-cpp">enum class ConfigErrorCode {
-	file_not_found,
-	parse_error,
-	invalid_value,
+    file_not_found,
+    parse_error,
+    invalid_value,
 };
 
 struct ConfigError {
-	ConfigErrorCode code;
-	std::string message;
-	std::string source;
+    ConfigErrorCode code;
+    std::string message;
+    std::string source;
 };
 
 auto load_service_config(std::filesystem::path path)
-	-&gt; std::expected&lt;ServiceConfig, ConfigError&gt;;
+    -&gt; std::expected&lt;ServiceConfig, ConfigError&gt;;
 </code></pre>
 <p>This contract tells the reader something important. Failure is part of normal control flow at this boundary. The caller must decide whether to abort startup, fall back to a default environment, or report a clear diagnostic. That is different from a deep internal helper whose only sensible failure policy is to unwind to the boundary that can actually choose.</p>
 <p>Compare the <code>expected</code>-based loader with a traditional output-parameter-plus-bool approach to see how much information the old style loses:</p>
 <pre><code class="language-cpp">// Old style: bool return, output parameter, no structured error.
 bool load_service_config(const std::filesystem::path&amp; path,
-						 ServiceConfig* out,
-						 std::string* error_msg = nullptr);
+                         ServiceConfig* out,
+                         std::string* error_msg = nullptr);
 
 void startup() {
-	ServiceConfig cfg;
-	std::string err;
-	if (!load_service_config("/etc/app/config.yaml", &amp;cfg, &amp;err)) {
-		// What kind of failure? File missing? Parse error? Permission denied?
-		// err is a free-form string -- no programmatic branching possible.
-		LOG_ERROR("config load failed: {}", err);
-		std::exit(1); // only option: cannot distinguish retriable from fatal
-	}
+    ServiceConfig cfg;
+    std::string err;
+    if (!load_service_config("/etc/app/config.yaml", &amp;cfg, &amp;err)) {
+        // What kind of failure? File missing? Parse error? Permission denied?
+        // err is a free-form string -- no programmatic branching possible.
+        LOG_ERROR("config load failed: {}", err);
+        std::exit(1); // only option: cannot distinguish retriable from fatal
+    }
 }
 </code></pre>
 <p>With <code>std::expected&lt;ServiceConfig, ConfigError&gt;</code>, the caller can branch on <code>ConfigErrorCode::file_not_found</code> versus <code>ConfigErrorCode::parse_error</code>, choose different recovery strategies, and still access a human-readable message for logging. The type system carries the decision-relevant information rather than burying it in a string.</p>
@@ -949,19 +949,19 @@ void startup() {
 <p>One of the most common production failures is logging plus partial status plus occasional throwing, all in the same subsystem.</p>
 <pre><code class="language-cpp">// Anti-pattern: side effects and transport are mixed.
 bool refresh_profile(Cache&amp; cache, DbClient&amp; db, UserId user_id) {
-	try {
-		auto row = db.fetch_profile(user_id);
-		if (!row) {
-			LOG_ERROR("profile not found for {}", user_id);
-			return false;
-		}
+    try {
+        auto row = db.fetch_profile(user_id);
+        if (!row) {
+            LOG_ERROR("profile not found for {}", user_id);
+            return false;
+        }
 
-		cache.put(user_id, to_profile(*row));
-		return true;
-	} catch (const DbTimeout&amp; e) {
-		LOG_WARNING("db timeout: {}", e.what());
-		throw; // RISK: some failures logged here, some rethrown, signature hides both
-	}
+        cache.put(user_id, to_profile(*row));
+        return true;
+    } catch (const DbTimeout&amp; e) {
+        LOG_WARNING("db timeout: {}", e.what());
+        throw; // RISK: some failures logged here, some rethrown, signature hides both
+    }
 }
 </code></pre>
 <p>This function is expensive to use because the caller does not know what <code>false</code> means, which failures were already logged, or whether it still needs to add context. If several layers follow this pattern, incidents become noisy and under-explained at the same time.</p>
@@ -970,23 +970,23 @@ bool refresh_profile(Cache&amp; cache, DbClient&amp; db, UserId user_id) {
 <p>A subtler variant of the side-effect problem is code that converts failures into default values without any signal to the caller.</p>
 <pre><code class="language-cpp">// Anti-pattern: failure becomes a silent default.
 int get_retry_limit(const Config&amp; cfg) {
-	auto val = cfg.get_int("retry_limit");
-	if (!val) {
-		return 3; // silent fallback -- no log, no metric, no trace
-	}
-	return *val;
+    auto val = cfg.get_int("retry_limit");
+    if (!val) {
+        return 3; // silent fallback -- no log, no metric, no trace
+    }
+    return *val;
 }
 </code></pre>
 <p>This is seductive because the code never crashes. But when the configuration file has a typo (<code>retry_limt</code> instead of <code>retry_limit</code>), the system silently uses a hardcoded default. During an incident, operators change the configuration expecting behavior to update, and nothing happens. The bug is invisible precisely because the error was swallowed.</p>
 <p>The better approach makes the default explicit and the fallback observable:</p>
 <pre><code class="language-cpp">auto get_retry_limit(const Config&amp; cfg) -&gt; std::uint32_t {
-	constexpr std::uint32_t default_limit = 3;
-	auto val = cfg.get_uint("retry_limit");
-	if (!val) {
-		LOG_INFO("retry_limit not configured, using default={}", default_limit);
-		return default_limit;
-	}
-	return *val;
+    constexpr std::uint32_t default_limit = 3;
+    auto val = cfg.get_uint("retry_limit");
+    if (!val) {
+        LOG_INFO("retry_limit not configured, using default={}", default_limit);
+        return default_limit;
+    }
+    return *val;
 }
 </code></pre>
 <p>Or, if the caller should decide whether a missing value is acceptable, return the <code>expected</code> or <code>optional</code> directly and let the boundary make the policy choice.</p>
@@ -995,21 +995,21 @@ int get_retry_limit(const Config&amp; cfg) {
 <p>A storage adapter may receive driver exceptions, status codes, retry hints, or platform errors. The rest of the system usually does not want those details directly. It wants decision-relevant categories and maybe enough attached context for diagnostics.</p>
 <p>That means translation should happen close to the unstable dependency, not in business logic three layers away.</p>
 <pre><code class="language-cpp">auto AccountRepository::load(AccountId id)
-	-&gt; std::expected&lt;AccountSnapshot, AccountLoadError&gt;
+    -&gt; std::expected&lt;AccountSnapshot, AccountLoadError&gt;
 {
-	try {
-		auto row = client_.fetch_account(id);
-		if (!row) {
-			return std::unexpected(AccountLoadError::not_found(id));
-		}
-		return to_snapshot(*row);
-	} catch (const DbTimeout&amp; e) {
-		return std::unexpected(AccountLoadError::temporarily_unavailable(
-			id, e.what()));
-	} catch (const DbProtocolError&amp; e) {
-		return std::unexpected(AccountLoadError::backend_fault(
-			id, e.what()));
-	}
+    try {
+        auto row = client_.fetch_account(id);
+        if (!row) {
+            return std::unexpected(AccountLoadError::not_found(id));
+        }
+        return to_snapshot(*row);
+    } catch (const DbTimeout&amp; e) {
+        return std::unexpected(AccountLoadError::temporarily_unavailable(
+            id, e.what()));
+    } catch (const DbProtocolError&amp; e) {
+        return std::unexpected(AccountLoadError::backend_fault(
+            id, e.what()));
+    }
 }
 </code></pre>
 <p>This does not erase useful information. It packages it in a form the caller can act on. Business logic can now distinguish not-found from temporary unavailability without learning the storage client’s failure taxonomy.</p>
@@ -1081,7 +1081,7 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <p>Many bad C++ APIs come from treating the signature as the smallest set of types that compiles. That approach ignores the fact that parameter and return choices are documentation with teeth.</p>
 <p>Take a parser boundary.</p>
 <pre><code class="language-cpp">auto parse_frame(std::span&lt;const std::byte&gt; bytes)
-	-&gt; std::expected&lt;Frame, ParseError&gt;;
+    -&gt; std::expected&lt;Frame, ParseError&gt;;
 </code></pre>
 <p>This single line communicates several things immediately.</p>
 <ul>
@@ -1110,32 +1110,32 @@ parse_request(std::string_view raw);
 <p>When a borrowed parameter outlives its source, the result is undefined behavior that often manifests as intermittent corruption rather than a clean crash:</p>
 <pre><code class="language-cpp">class Logger {
 public:
-	void set_prefix(std::string_view prefix) {
-		prefix_ = prefix; // BUG: stores a view, not a copy
-	}
+    void set_prefix(std::string_view prefix) {
+        prefix_ = prefix; // BUG: stores a view, not a copy
+    }
 
-	void log(std::string_view message) {
-		fmt::print("[{}] {}\n", prefix_, message); // reads dangling view
-	}
+    void log(std::string_view message) {
+        fmt::print("[{}] {}\n", prefix_, message); // reads dangling view
+    }
 
 private:
-	std::string_view prefix_; // non-owning -- lifetime depends on caller
+    std::string_view prefix_; // non-owning -- lifetime depends on caller
 };
 
 void configure_logger(Logger&amp; logger) {
-	std::string name = build_service_name();
-	logger.set_prefix(name); // name is destroyed at end of scope
+    std::string name = build_service_name();
+    logger.set_prefix(name); // name is destroyed at end of scope
 } // name destroyed here -- logger.prefix_ is now dangling
 </code></pre>
 <p>The fix is straightforward: if the member must outlive the call, it must own its data.</p>
 <pre><code class="language-cpp">class Logger {
 public:
-	void set_prefix(std::string prefix) { // takes ownership by value
-		prefix_ = std::move(prefix);
-	}
-	// ...
+    void set_prefix(std::string prefix) { // takes ownership by value
+        prefix_ = std::move(prefix);
+    }
+    // ...
 private:
-	std::string prefix_; // owning -- no lifetime dependency on caller
+    std::string prefix_; // owning -- no lifetime dependency on caller
 };
 </code></pre>
 <p>That is why a useful review heuristic is simple: if the parameter type says borrow, all retention must be visible in the implementation as an explicit copy or transformation to an owning type.</p>
@@ -1144,11 +1144,11 @@ private:
 <p>Consider a request object that stores a tenant name.</p>
 <pre><code class="language-cpp">class RequestContext {
 public:
-	explicit RequestContext(std::string tenant)
-		: tenant_(std::move(tenant)) {}
+    explicit RequestContext(std::string tenant)
+        : tenant_(std::move(tenant)) {}
 
 private:
-	std::string tenant_;
+    std::string tenant_;
 };
 </code></pre>
 <p>This constructor is often better than both <code>const std::string&amp;</code> and <code>std::string_view</code>.</p>
@@ -1164,22 +1164,22 @@ private:
 <p><strong>Unnecessary copy from <code>const std::string&amp;</code> when ownership is needed:</strong></p>
 <pre><code class="language-cpp">class Registry {
 public:
-	void register_name(const std::string&amp; name) {
-		names_.push_back(name); // always copies, even if caller passed a temporary
-	}
+    void register_name(const std::string&amp; name) {
+        names_.push_back(name); // always copies, even if caller passed a temporary
+    }
 private:
-	std::vector&lt;std::string&gt; names_;
+    std::vector&lt;std::string&gt; names_;
 };
 
 // Caller:
 registry.register_name(build_name()); // builds a temporary string, copies it,
-									  // then destroys the temporary. The move
-									  // that pass-by-value would have enabled
-									  // is lost.
+                                      // then destroys the temporary. The move
+                                      // that pass-by-value would have enabled
+                                      // is lost.
 </code></pre>
 <p>With pass-by-value-and-move, the temporary is moved directly into the container at zero copy cost:</p>
 <pre><code class="language-cpp">void register_name(std::string name) {
-	names_.push_back(std::move(name)); // rvalue callers: 1 move. lvalue callers: 1 copy + 1 move.
+    names_.push_back(std::move(name)); // rvalue callers: 1 move. lvalue callers: 1 copy + 1 move.
 }
 </code></pre>
 <p>The example project’s error module applies the same pattern. In <code>examples/web-api/src/modules/error.cppm</code>, <code>make_error</code> takes a <code>std::string</code> by value and moves it into the error object:</p>
@@ -1228,8 +1228,8 @@ auto avg = average(readings);
 <p>This kind of API survives in many codebases because it seems flexible.</p>
 <pre><code class="language-cpp">// Anti-pattern: signature hides ownership, failure, and buffer contract.
 bool encode_record(const Record&amp; record,
-			   std::vector&lt;std::byte&gt;&amp; output,
-			   std::string* error_message = nullptr);
+               std::vector&lt;std::byte&gt;&amp; output,
+               std::string* error_message = nullptr);
 </code></pre>
 <p>This one function now carries several hidden rules.</p>
 <ul>
@@ -1241,11 +1241,11 @@ bool encode_record(const Record&amp; record,
 <p>Nothing in the signature answers those questions cleanly.</p>
 <p>A stronger API usually splits the semantics.</p>
 <pre><code class="language-cpp">auto encode_record(const Record&amp; record)
-	-&gt; std::expected&lt;std::vector&lt;std::byte&gt;, EncodeError&gt;;
+    -&gt; std::expected&lt;std::vector&lt;std::byte&gt;, EncodeError&gt;;
 
 auto append_encoded_record(const Record&amp; record,
-				   ByteAppender&amp; output)
-	-&gt; std::expected&lt;void, EncodeError&gt;;
+                   ByteAppender&amp; output)
+    -&gt; std::expected&lt;void, EncodeError&gt;;
 </code></pre>
 <p>Now the caller chooses between owned result production and append-style mutation, and the failure contract is explicit. The two different operations no longer pretend to be one generic “flexible” interface.</p>
 <h2 id="factories-and-acquisition-functions-must-state-ownership-up-front"><a class="header" href="#factories-and-acquisition-functions-must-state-ownership-up-front">Factories and Acquisition Functions Must State Ownership Up Front</a></h2>
@@ -1256,23 +1256,23 @@ auto append_encoded_record(const Record&amp; record,
 Widget* create_widget(const WidgetConfig&amp; cfg);
 
 void setup() {
-	auto* w = create_widget(cfg);
-	// Does the caller own w? Does a global registry own it?
-	// Must the caller call delete? delete[]? A custom deallocator?
-	// Nothing in the signature answers these questions.
-	use(w);
-	// If the caller guesses wrong, the result is a leak or a double-free.
+    auto* w = create_widget(cfg);
+    // Does the caller own w? Does a global registry own it?
+    // Must the caller call delete? delete[]? A custom deallocator?
+    // Nothing in the signature answers these questions.
+    use(w);
+    // If the caller guesses wrong, the result is a leak or a double-free.
 }
 </code></pre>
 <pre><code class="language-cpp">// Clear: unique_ptr states exclusive caller ownership unambiguously.
 auto create_widget(const WidgetConfig&amp; cfg)
-	-&gt; std::expected&lt;std::unique_ptr&lt;Widget&gt;, WidgetError&gt;;
+    -&gt; std::expected&lt;std::unique_ptr&lt;Widget&gt;, WidgetError&gt;;
 
 void setup() {
-	auto result = create_widget(cfg);
-	if (!result) { /* handle error */ }
-	auto widget = std::move(*result); // ownership transferred, no ambiguity
-	// widget is destroyed automatically when it leaves scope
+    auto result = create_widget(cfg);
+    if (!result) { /* handle error */ }
+    auto widget = std::move(*result); // ownership transferred, no ambiguity
+    // widget is destroyed automatically when it leaves scope
 }
 </code></pre>
 <p>The example project shows a value-oriented variant of this pattern. In <code>examples/web-api/src/modules/task.cppm</code>, <code>Task::validate</code> is a factory-style function that takes a <code>Task</code> by value and returns <code>Result&lt;Task&gt;</code> (an alias for <code>std::expected&lt;Task, Error&gt;</code>):</p>
@@ -1322,14 +1322,14 @@ void setup() {
 <p><code>std::string_view</code> and <code>std::span</code> are the most important everyday design types in modern C++ because they separate access from ownership. That sounds small. It is not. Once a codebase adopts borrowing types consistently, function signatures stop implying allocations they do not need and stop pretending to own data they merely inspect.</p>
 <p>Consider a telemetry ingestion layer that parses line-based text records and binary attribute blobs:</p>
 <pre><code class="language-cpp">struct MetricRecord {
-	std::string name;
-	std::int64_t value;
-	std::vector&lt;std::byte&gt; attributes;
+    std::string name;
+    std::int64_t value;
+    std::vector&lt;std::byte&gt; attributes;
 };
 
 auto parse_metric_line(std::string_view line,
-					   std::span&lt;const std::byte&gt; attribute_bytes)
-	-&gt; std::expected&lt;MetricRecord, ParseError&gt;;
+                       std::span&lt;const std::byte&gt; attribute_bytes)
+    -&gt; std::expected&lt;MetricRecord, ParseError&gt;;
 </code></pre>
 <p>This signature says several important things immediately.</p>
 <ul>
@@ -1356,12 +1356,12 @@ auto parse_metric_line(const std::string&amp; line,
 <p>The failure mode is storing the borrow when the lifetime guarantee was local.</p>
 <pre><code class="language-cpp">class RequestContext {
 public:
-	void set_tenant(std::string_view tenant) {
-		tenant_ = tenant; // BUG: borrowed view may outlive caller storage
-	}
+    void set_tenant(std::string_view tenant) {
+        tenant_ = tenant; // BUG: borrowed view may outlive caller storage
+    }
 
 private:
-	std::string_view tenant_;
+    std::string_view tenant_;
 };
 </code></pre>
 <p>This is not a reason to avoid <code>std::string_view</code>. It is a reason to use it only for parameters, local algorithm plumbing, and return types whose lifetime contract is obvious and reviewable. If the object needs to keep the data, store <code>std::string</code>. If a subsystem needs stable binary ownership, store a container or dedicated buffer type.</p>
@@ -1489,22 +1489,22 @@ return result_to_response(result, 201);
 <p>Consider a batching helper that writes already-serialized records to some sink:</p>
 <pre><code class="language-cpp">template &lt;typename Sink&gt;
 concept ByteSink = requires(Sink sink,
-							std::span&lt;const std::byte&gt; bytes) {
-	{ sink.write(bytes) } -&gt; std::same_as&lt;std::expected&lt;void, WriteError&gt;&gt;;
-	{ sink.flush() } -&gt; std::same_as&lt;std::expected&lt;void, WriteError&gt;&gt;;
+                            std::span&lt;const std::byte&gt; bytes) {
+    { sink.write(bytes) } -&gt; std::same_as&lt;std::expected&lt;void, WriteError&gt;&gt;;
+    { sink.flush() } -&gt; std::same_as&lt;std::expected&lt;void, WriteError&gt;&gt;;
 };
 
 template &lt;ByteSink Sink&gt;
 auto flush_batch(Sink&amp; sink,
-				 std::span&lt;const EncodedRecord&gt; batch)
-	-&gt; std::expected&lt;void, WriteError&gt;
+                 std::span&lt;const EncodedRecord&gt; batch)
+    -&gt; std::expected&lt;void, WriteError&gt;
 {
-	for (const auto&amp; record : batch) {
-		if (auto result = sink.write(record.bytes); !result) {
-			return std::unexpected(result.error());
-		}
-	}
-	return sink.flush();
+    for (const auto&amp; record : batch) {
+        if (auto result = sink.write(record.bytes); !result) {
+            return std::unexpected(result.error());
+        }
+    }
+    return sink.flush();
 }
 </code></pre>
 <p>This does several things well.</p>
@@ -1517,10 +1517,10 @@ auto flush_batch(Sink&amp; sink,
 <p>The alternative is the classic unconstrained template:</p>
 <pre><code class="language-cpp">template &lt;typename Sink&gt;
 auto flush_batch(Sink&amp; sink, const auto&amp; batch) {
-	for (const auto&amp; record : batch) {
-		sink.push(record.data(), record.size()); // RISK: hidden, undocumented assumptions
-	}
-	sink.commit();
+    for (const auto&amp; record : batch) {
+        sink.push(record.data(), record.size()); // RISK: hidden, undocumented assumptions
+    }
+    sink.commit();
 }
 </code></pre>
 <p>This version looks shorter. It is worse in every production-relevant way. The assumptions are unstated. The error contract is unclear. The required record shape is accidental. A mismatch produces compiler noise at the use site rather than a crisp statement of the interface.</p>
@@ -1676,17 +1676,17 @@ for (auto it = records.begin(); it != records.end(); ++it) {
 <p>This version works, but the filtering logic and the transformation logic are fused into a single loop body. The reader must parse the <code>if</code> to understand what is kept and parse the body to understand what is produced. In more complex cases, these loops accumulate nested conditions, early <code>continue</code> statements, index arithmetic, and manual bookkeeping that obscure the data flow. Off-by-one errors in index-based variants (<code>for (size_t i = 0; i &lt; records.size(); ++i)</code>) are a persistent source of bugs, especially when the loop body mutates the container or uses the index for more than one purpose.</p>
 <p>The range version separates the concerns structurally:</p>
 <pre><code class="language-cpp">auto export_rows = records
-	| std::views::filter([](const LogRecord&amp; r) {
-		  return r.severity &gt;= Severity::warning &amp;&amp; !r.redacted;
-	  })
-	| std::views::transform([](const LogRecord&amp; r) {
-		  return ExportRow{
-			  .timestamp = r.timestamp,
-			  .service = r.service,
-			  .message = r.message,
-		  };
-	  })
-	| std::ranges::to&lt;std::vector&gt;();
+    | std::views::filter([](const LogRecord&amp; r) {
+          return r.severity &gt;= Severity::warning &amp;&amp; !r.redacted;
+      })
+    | std::views::transform([](const LogRecord&amp; r) {
+          return ExportRow{
+              .timestamp = r.timestamp,
+              .service = r.service,
+              .message = r.message,
+          };
+      })
+    | std::ranges::to&lt;std::vector&gt;();
 </code></pre>
 <p>This is good range code because the pipeline is the business logic. There is no tricky mutation, no lifetime ambiguity in the source, and a clear materialization point at the end. The intermediate storage never existed conceptually, so not allocating it improves both clarity and cost.</p>
 <p>Now compare that with a loop that updates shared counters, emits metrics, mutates records in place, and conditionally retries downstream writes. A pipeline there often hides the part that matters most: sequencing and side effects. Range syntax is not a readability win when the computation is stateful and effect-heavy.</p>
@@ -1717,10 +1717,10 @@ records.erase(
 <p>The hardest production bug class with ranges is not algorithmic. It is lifetime. Views are often non-owning, and lazy pipelines delay work until iteration. That means the place where a view is constructed and the place where its bug becomes visible may be far apart.</p>
 <p>Consider an anti-pattern that shows up in request processing code:</p>
 <pre><code class="language-cpp">auto tenant_ids() {
-	return load_tenants()
-		| std::views::transform([](const Tenant&amp; t) {
-			  return std::string_view{t.id};
-		  }); // BUG: returned view depends on destroyed temporary container
+    return load_tenants()
+        | std::views::transform([](const Tenant&amp; t) {
+              return std::string_view{t.id};
+          }); // BUG: returned view depends on destroyed temporary container
 }
 </code></pre>
 <p>The code looks tidy. It is wrong. <code>load_tenants()</code> returns an owning container temporary. The view pipeline borrows from that container. Returning the view returns a delayed lifetime bug.</p>
@@ -1940,31 +1940,31 @@ constexpr auto crc_table = build_crc_table();
 <p><code>consteval</code> is stronger than <code>constexpr</code>: it requires evaluation at compile time. That is useful when accepting runtime fallback would hide a configuration mistake you never want in production.</p>
 <p>Imagine a wire protocol subsystem with a fixed set of message descriptors that must have unique opcodes and bounded payload sizes. Those constraints are not dynamic business logic. They are part of the static shape of the program. Catching a duplicate opcode at compile time is materially better than discovering it during startup or, worse, through a routing bug in integration.</p>
 <pre><code class="language-cpp">struct MessageDescriptor {
-	std::uint16_t opcode;
-	std::size_t max_payload;
+    std::uint16_t opcode;
+    std::size_t max_payload;
 };
 
 template &lt;std::size_t N&gt;
 consteval auto validate_descriptors(std::array&lt;MessageDescriptor, N&gt; table)
-	-&gt; std::array&lt;MessageDescriptor, N&gt;
+    -&gt; std::array&lt;MessageDescriptor, N&gt;
 {
-	for (std::size_t i = 0; i &lt; N; ++i) {
-		if (table[i].max_payload &gt; 64 * 1024) {
-			throw "payload limit exceeded";
-		}
-		for (std::size_t j = i + 1; j &lt; N; ++j) {
-			if (table[i].opcode == table[j].opcode) {
-				throw "duplicate opcode";
-			}
-		}
-	}
-	return table;
+    for (std::size_t i = 0; i &lt; N; ++i) {
+        if (table[i].max_payload &gt; 64 * 1024) {
+            throw "payload limit exceeded";
+        }
+        for (std::size_t j = i + 1; j &lt; N; ++j) {
+            if (table[i].opcode == table[j].opcode) {
+                throw "duplicate opcode";
+            }
+        }
+    }
+    return table;
 }
 
 constexpr auto descriptors = validate_descriptors(std::array{
-	MessageDescriptor{0x10, 1024},
-	MessageDescriptor{0x11, 4096},
-	MessageDescriptor{0x12, 512},
+    MessageDescriptor{0x10, 1024},
+    MessageDescriptor{0x11, 4096},
+    MessageDescriptor{0x12, 512},
 });
 </code></pre>
 <p>The exact error text and mechanism can be refined, but the design point is solid. These descriptors are static program structure. Rejecting an invalid table during compilation is worth the cost.</p>
@@ -2075,17 +2075,17 @@ void serialize(const T&amp; val, Buffer&amp; buf) {
 <p>When implementation detail names the contract, the dependency arrow is already wrong.</p>
 <pre><code class="language-cpp">// Anti-pattern: domain code now depends on storage representation.
 struct AccountRow {
-	std::string id;
-	std::int64_t cents_available;
-	bool is_frozen;
-	std::string fraud_flag;
+    std::string id;
+    std::int64_t cents_available;
+    bool is_frozen;
+    std::string fraud_flag;
 };
 
 class AccountsTable {
 public:
-	virtual std::expected&lt;AccountRow, DbError&gt;
-	fetch_by_id(std::string_view id) = 0;
-	virtual ~AccountsTable() = default;
+    virtual std::expected&lt;AccountRow, DbError&gt;
+    fetch_by_id(std::string_view id) = 0;
+    virtual ~AccountsTable() = default;
 };
 
 std::expected&lt;PaymentDecision, PaymentError&gt;
@@ -2094,16 +2094,16 @@ authorize_payment(AccountsTable&amp; table, const PaymentRequest&amp; request);
 <p>This looks testable because it uses an abstract base class. It is still the wrong seam. The payment workflow should not know that available credit is stored as cents next to a fraud flag string loaded from a table row. The abstraction preserved the dependency but did not improve its direction.</p>
 <p>A better port is named by the workflow and returns the minimum stable facts the workflow needs.</p>
 <pre><code class="language-cpp">struct CreditState {
-	Money available;
-	bool frozen;
-	RiskLevel risk;
+    Money available;
+    bool frozen;
+    RiskLevel risk;
 };
 
 class CreditPolicyPort {
 public:
-	virtual std::expected&lt;CreditState, PaymentError&gt;
-	load_credit_state(AccountId account) = 0;
-	virtual ~CreditPolicyPort() = default;
+    virtual std::expected&lt;CreditState, PaymentError&gt;
+    load_credit_state(AccountId account) = 0;
+    virtual ~CreditPolicyPort() = default;
 };
 
 std::expected&lt;PaymentDecision, PaymentError&gt;
@@ -2116,40 +2116,40 @@ authorize_payment(CreditPolicyPort&amp; credit, const PaymentRequest&amp; reques
 // metrics, and configuration concerns in one surface.
 class UserService {
 public:
-	virtual std::expected&lt;UserProfile, ServiceError&gt;
-	get_profile(UserId id) = 0;
+    virtual std::expected&lt;UserProfile, ServiceError&gt;
+    get_profile(UserId id) = 0;
 
-	virtual void update_profile(UserId id, const ProfilePatch&amp; patch) = 0;
+    virtual void update_profile(UserId id, const ProfilePatch&amp; patch) = 0;
 
-	virtual void ban_user(UserId id, std::string_view reason) = 0;
+    virtual void ban_user(UserId id, std::string_view reason) = 0;
 
-	virtual std::vector&lt;AuditEntry&gt;
-	get_audit_log(UserId id, TimeRange range) = 0;
+    virtual std::vector&lt;AuditEntry&gt;
+    get_audit_log(UserId id, TimeRange range) = 0;
 
-	virtual void flush_cache() = 0;
+    virtual void flush_cache() = 0;
 
-	virtual MetricsSnapshot get_metrics() const = 0;
+    virtual MetricsSnapshot get_metrics() const = 0;
 
-	virtual void set_rate_limit(RateLimitConfig config) = 0;
+    virtual void set_rate_limit(RateLimitConfig config) = 0;
 
-	virtual ~UserService() = default;
+    virtual ~UserService() = default;
 };
 </code></pre>
 <p>This interface has at least four unrelated axes of change: user data access, moderation policy, operational observability, and runtime configuration. A caller who only needs to read a profile now transitively depends on audit, caching, metrics, and rate-limiting types. Test doubles must implement seven methods to fake one. Adding a new moderation action forces recompilation of read-only consumers. The interface is not flexible. It is a dependency sink that makes every change expensive and every test fragile.</p>
 <p>The fix is to split along responsibility boundaries:</p>
 <pre><code class="language-cpp">class UserProfileQuery {
 public:
-	virtual std::expected&lt;UserProfile, ServiceError&gt;
-	get_profile(UserId id) = 0;
-	virtual ~UserProfileQuery() = default;
+    virtual std::expected&lt;UserProfile, ServiceError&gt;
+    get_profile(UserId id) = 0;
+    virtual ~UserProfileQuery() = default;
 };
 
 class ModerationActions {
 public:
-	virtual void ban_user(UserId id, std::string_view reason) = 0;
-	virtual std::vector&lt;AuditEntry&gt;
-	get_audit_log(UserId id, TimeRange range) = 0;
-	virtual ~ModerationActions() = default;
+    virtual void ban_user(UserId id, std::string_view reason) = 0;
+    virtual std::vector&lt;AuditEntry&gt;
+    get_audit_log(UserId id, TimeRange range) = 0;
+    virtual ~ModerationActions() = default;
 };
 </code></pre>
 <p>Now read-only consumers depend only on <code>UserProfileQuery</code>, moderation tools depend on <code>ModerationActions</code>, and operational concerns live in yet another interface. Each can evolve independently. Test doubles are trivial.</p>
@@ -2160,23 +2160,23 @@ public:
 
 class RetryConfigProvider {
 public:
-	virtual nlohmann::json load_retry_config() = 0;
-	virtual ~RetryConfigProvider() = default;
+    virtual nlohmann::json load_retry_config() = 0;
+    virtual ~RetryConfigProvider() = default;
 };
 </code></pre>
 <p>Every translation unit that includes this header now depends on the JSON library, whether or not it cares about JSON. Changing to TOML, YAML, or a binary config format becomes a breaking change across the entire codebase. The JSON library’s compile time, macro definitions, and transitive includes spread into unrelated components. Worse, callers must navigate a JSON tree to extract retry parameters—initial backoff, max backoff, max attempts—scattering implicit schema knowledge throughout the codebase.</p>
 <p>The fix is to return domain-meaningful types:</p>
 <pre><code class="language-cpp">struct RetryConfig {
-	std::chrono::milliseconds initial_backoff;
-	std::chrono::milliseconds max_backoff;
-	std::uint32_t max_attempts;
+    std::chrono::milliseconds initial_backoff;
+    std::chrono::milliseconds max_backoff;
+    std::uint32_t max_attempts;
 };
 
 class RetryConfigProvider {
 public:
-	virtual std::expected&lt;RetryConfig, ConfigError&gt;
-	load_retry_config() = 0;
-	virtual ~RetryConfigProvider() = default;
+    virtual std::expected&lt;RetryConfig, ConfigError&gt;
+    load_retry_config() = 0;
+    virtual ~RetryConfigProvider() = default;
 };
 </code></pre>
 <p>Now the JSON dependency stays inside the adapter implementation. Consumers work with typed, validated values. The interface communicates domain meaning, not serialization format.</p>
@@ -2186,13 +2186,13 @@ public:
 // even though this is supposed to abstract away storage.
 class DataStore {
 public:
-	virtual std::expected&lt;RowSet, DbError&gt;
-	execute_query(std::string_view sql) = 0;
+    virtual std::expected&lt;RowSet, DbError&gt;
+    execute_query(std::string_view sql) = 0;
 
-	virtual std::expected&lt;std::size_t, DbError&gt;
-	execute_update(std::string_view sql) = 0;
+    virtual std::expected&lt;std::size_t, DbError&gt;
+    execute_update(std::string_view sql) = 0;
 
-	virtual ~DataStore() = default;
+    virtual ~DataStore() = default;
 };
 </code></pre>
 <p>This interface claims to abstract storage, but it exposes SQL as a string protocol. Callers must know the schema, construct correct SQL, and parse <code>RowSet</code> results. The abstraction prevents neither SQL injection nor schema coupling. It is a pass-through that adds indirection without reducing dependency.</p>
@@ -2201,8 +2201,8 @@ public:
 // or control what gets loaded.
 class OrderRepository {
 public:
-	virtual std::vector&lt;Order&gt; get_all_orders() = 0;
-	virtual ~OrderRepository() = default;
+    virtual std::vector&lt;Order&gt; get_all_orders() = 0;
+    virtual ~OrderRepository() = default;
 };
 </code></pre>
 <p>The right abstraction level matches the operations the caller actually performs, using domain vocabulary and offering enough control to be efficient.</p>
@@ -2312,14 +2312,14 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <pre><code class="language-cpp">// Anti-pattern: a growing base class that every derived type must satisfy.
 class Widget {
 public:
-	virtual void draw(Canvas&amp; c) = 0;
-	virtual void handle_input(const InputEvent&amp; e) = 0;
-	virtual Size preferred_size() const = 0;
-	virtual void set_theme(const Theme&amp; t) = 0;
-	virtual void serialize(Archive&amp; ar) = 0;    // added in v2
-	virtual void animate(Duration dt) = 0;       // added in v3
-	virtual AccessibilityInfo accessibility() = 0; // added in v4
-	virtual ~Widget() = default;
+    virtual void draw(Canvas&amp; c) = 0;
+    virtual void handle_input(const InputEvent&amp; e) = 0;
+    virtual Size preferred_size() const = 0;
+    virtual void set_theme(const Theme&amp; t) = 0;
+    virtual void serialize(Archive&amp; ar) = 0;    // added in v2
+    virtual void animate(Duration dt) = 0;       // added in v3
+    virtual AccessibilityInfo accessibility() = 0; // added in v4
+    virtual ~Widget() = default;
 };
 </code></pre>
 <p>Every new virtual method forces every derived class to implement it or inherit a possibly wrong default. Classes that only need drawing must still address input, serialization, animation, and accessibility. Testing a simple leaf widget requires constructing <code>Canvas</code>, <code>InputEvent</code>, <code>Theme</code>, <code>Archive</code>, and <code>AccessibilityInfo</code> objects. The base class becomes a change amplifier: a single addition to <code>Widget</code> triggers recompilation and potential modification of every derived class across the codebase.</p>
@@ -2328,28 +2328,28 @@ public:
 <p>Multiple inheritance of interface hierarchies introduces diamond problems that <code>virtual</code> inheritance only partially addresses.</p>
 <pre><code class="language-cpp">class Readable {
 public:
-	virtual std::expected&lt;std::size_t, IoError&gt;
-	read(std::span&lt;std::byte&gt; buffer) = 0;
-	virtual void close() = 0;  // close the read side
-	virtual ~Readable() = default;
+    virtual std::expected&lt;std::size_t, IoError&gt;
+    read(std::span&lt;std::byte&gt; buffer) = 0;
+    virtual void close() = 0;  // close the read side
+    virtual ~Readable() = default;
 };
 
 class Writable {
 public:
-	virtual std::expected&lt;std::size_t, IoError&gt;
-	write(std::span&lt;const std::byte&gt; data) = 0;
-	virtual void close() = 0;  // close the write side
-	virtual ~Writable() = default;
+    virtual std::expected&lt;std::size_t, IoError&gt;
+    write(std::span&lt;const std::byte&gt; data) = 0;
+    virtual void close() = 0;  // close the write side
+    virtual ~Writable() = default;
 };
 
 // Diamond: what does close() mean here? Read side? Write side? Both?
 class ReadWriteStream : public virtual Readable, public virtual Writable {
 public:
-	// Single close() must now serve two different semantic contracts.
-	// Callers holding a Readable* expect close() to close the read side.
-	// Callers holding a Writable* expect close() to close the write side.
-	// There is no way to satisfy both through one override.
-	void close() override { /* ??? */ }
+    // Single close() must now serve two different semantic contracts.
+    // Callers holding a Readable* expect close() to close the read side.
+    // Callers holding a Writable* expect close() to close the write side.
+    // There is no way to satisfy both through one override.
+    void close() override { /* ??? */ }
 };
 </code></pre>
 <p>Virtual inheritance solves the layout duplication but not the semantic conflict. The result is code that compiles but whose behavior depends on which base pointer the caller holds. This ambiguity is structural. It does not go away with more careful implementation.</p>
@@ -2361,17 +2361,17 @@ using DrawAction = std::move_only_function&lt;void(Canvas&amp;)&gt;;
 using InputHandler = std::move_only_function&lt;bool(const InputEvent&amp;)&gt;;
 
 struct WidgetBehavior {
-	DrawAction draw;
-	InputHandler handle_input;
+    DrawAction draw;
+    InputHandler handle_input;
 };
 
 // A simple widget only provides what it needs.
 // No obligation to implement serialize, animate, or accessibility.
 WidgetBehavior make_label(std::string text) {
-	return {
-		.draw = [t = std::move(text)](Canvas&amp; c) { c.draw_text(t); },
-		.handle_input = [](const InputEvent&amp;) { return false; }
-	};
+    return {
+        .draw = [t = std::move(text)](Canvas&amp; c) { c.draw_text(t); },
+        .handle_input = [](const InputEvent&amp;) { return false; }
+    };
 }
 </code></pre>
 <p>There is no base class to grow. Adding animation support does not force label widgets to change. Testing <code>draw</code> does not require constructing an <code>InputEvent</code>. Each concern is independently composable. The cost is that you lose the named-object-protocol clarity of a class hierarchy, which may matter if the protocol is genuinely stable and rich. The tradeoff is worth evaluating case by case.</p>
@@ -2406,14 +2406,14 @@ chain(R&amp;&amp; middlewares, http::Handler base) {
 <p><code>std::function</code> requires its target to be copyable. This seems harmless until real callback state enters the picture.</p>
 <pre><code class="language-cpp">// This will not compile. std::function requires CopyConstructible.
 auto handler = std::function&lt;void()&gt;{
-	[conn = std::make_unique&lt;DbConnection&gt;()](){ conn-&gt;heartbeat(); }
+    [conn = std::make_unique&lt;DbConnection&gt;()](){ conn-&gt;heartbeat(); }
 };
 </code></pre>
 <p>Teams work around this by wrapping unique pointers in shared pointers, adding reference counting and shared mutation to code that was naturally single-owner. The workaround compiles but weakens the ownership model.</p>
 <pre><code class="language-cpp">// Workaround: shared_ptr "fixes" compilation but lies about ownership.
 auto conn = std::make_shared&lt;DbConnection&gt;();
 auto handler = std::function&lt;void()&gt;{
-	[conn]() { conn-&gt;heartbeat(); }
+    [conn]() { conn-&gt;heartbeat(); }
 };
 // Now conn is shared. Who shuts it down? When? The ownership story is gone.
 </code></pre>
@@ -2438,9 +2438,9 @@ auto handler = std::function&lt;void()&gt;{
 <p>A completion path that fires exactly once is often better modeled as move-only from the start. This aligns the type with reality and prevents accidental sharing of stateful handlers.</p>
 <pre><code class="language-cpp">class TimerQueue {
 public:
-	using Task = std::move_only_function&lt;void() noexcept&gt;;
+    using Task = std::move_only_function&lt;void() noexcept&gt;;
 
-	void schedule_after(std::chrono::milliseconds delay, Task task);
+    void schedule_after(std::chrono::milliseconds delay, Task task);
 };
 </code></pre>
 <p>This signature says something important. The queue takes ownership, may run later, and expects the task not to throw across the scheduler boundary. That is much more precise than a generic <code>std::function&lt;void()&gt;</code> parameter.</p>
@@ -2449,14 +2449,14 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: ambiguous retention and capture lifetime.
 class EventSource {
 public:
-	void on_message(std::function&lt;void(std::string_view)&gt; handler);
+    void on_message(std::function&lt;void(std::string_view)&gt; handler);
 };
 
 void wire(EventSource&amp; source, Session&amp; session) {
-	source.on_message([&amp;session](std::string_view payload) {
-		session.record(payload);
-	});
-	// RISK: if EventSource stores the handler past Session lifetime, this dangles.
+    source.on_message([&amp;session](std::string_view payload) {
+        session.record(payload);
+    });
+    // RISK: if EventSource stores the handler past Session lifetime, this dangles.
 }
 </code></pre>
 <p>The problem is not only the reference capture. The problem is that the API failed to state whether the handler is borrowed for one operation, stored until unregistration, invoked concurrently, or called during destruction. The abstraction chose generality over a usable contract.</p>
@@ -2616,20 +2616,20 @@ import webapi.task;
 <p><strong>Adding a private member changes class size.</strong> A consumer compiled against v1 of a library allocates objects based on <code>sizeof(Widget)</code> at their compile time. If v2 adds a private member, the library’s methods now write past what the consumer allocated. The result is silent memory corruption, not a linker error.</p>
 <pre><code class="language-cpp">// v1: shipped in libwidget.so
 class EXPORT Widget {
-	int x_;
-	int y_;
+    int x_;
+    int y_;
 public:
-	void move(int dx, int dy);  // accesses x_, y_
+    void move(int dx, int dy);  // accesses x_, y_
 };
 // sizeof(Widget) == 8 for the consumer
 
 // v2: added a z-index member
 class EXPORT Widget {
-	int x_;
-	int y_;
-	int z_;  // sizeof(Widget) is now 12
+    int x_;
+    int y_;
+    int z_;  // sizeof(Widget) is now 12
 public:
-	void move(int dx, int dy);  // same signature, same symbol
+    void move(int dx, int dy);  // same signature, same symbol
 };
 // Consumer still allocates 8 bytes. Library writes 12. Corruption.
 </code></pre>
@@ -2656,8 +2656,8 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: fragile ABI surface for a shared library.
 class EXPORT Session {
 public:
-	virtual std::string send(const std::string&amp; request) = 0;
-	virtual ~Session() = default;
+    virtual std::string send(const std::string&amp; request) = 0;
+    virtual ~Session() = default;
 };
 
 std::unique_ptr&lt;Session&gt; create_session();
@@ -2668,21 +2668,21 @@ std::unique_ptr&lt;Session&gt; create_session();
 <pre><code class="language-cpp">struct session_v1;
 
 struct request_buffer {
-	const std::byte* data;
-	std::size_t size;
+    const std::byte* data;
+    std::size_t size;
 };
 
 struct response_buffer {
-	const std::byte* data;
-	std::size_t size;
+    const std::byte* data;
+    std::size_t size;
 };
 
 struct session_api_v1 {
-	std::uint32_t struct_size;
-	session_v1* (*create)() noexcept;
-	void (*destroy)(session_v1*) noexcept;
-	status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
-	void (*release_response)(response_buffer*) noexcept;
+    std::uint32_t struct_size;
+    session_v1* (*create)() noexcept;
+    void (*destroy)(session_v1*) noexcept;
+    status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
+    void (*release_response)(response_buffer*) noexcept;
 };
 </code></pre>
 <p>This is less pretty and much more honest. The boundary names allocation ownership, versioning surface, and error transport explicitly. Internally, the implementation can still use <code>std::expected</code>, <code>std::pmr</code>, coroutines, modules, and any C++23 technique that stays behind the wall.</p>
@@ -2715,16 +2715,16 @@ struct session_api_v1 {
 <pre><code class="language-cpp">// Anti-pattern: cross-boundary allocation mismatch.
 // Library (built with MSVC debug runtime, uses debug heap):
 EXPORT char* get_name() {
-	char* buf = new char[64];
-	std::strcpy(buf, "session-001");
-	return buf;
+    char* buf = new char[64];
+    std::strcpy(buf, "session-001");
+    return buf;
 }
 
 // Consumer (built with MSVC release runtime, uses release heap):
 void use_library() {
-	char* name = get_name();
-	// ...
-	delete[] name;  // CRASH: freeing debug-heap memory on release heap
+    char* name = get_name();
+    // ...
+    delete[] name;  // CRASH: freeing debug-heap memory on release heap
 }
 </code></pre>
 <p>The fix is to never let allocation and deallocation cross the boundary. The library that allocates must also provide the deallocation function, or the boundary must use caller-provided buffers.</p>
@@ -2785,23 +2785,23 @@ EXPORT status_code get_name(char* buffer, std::size_t buffer_size);
 <p>Before discussing which primitives to use, it is worth seeing what happens when they are absent. The following code has a data race, which is undefined behavior in C++.</p>
 <pre><code class="language-cpp">// BUG: data race — two threads read and write counter without synchronization.
 struct metrics {
-	int request_count = 0;
-	int error_count = 0;
+    int request_count = 0;
+    int error_count = 0;
 };
 
 metrics g_metrics;
 
 void record_request(bool success) {
-	++g_metrics.request_count;            // unsynchronized read-modify-write
-	if (!success) ++g_metrics.error_count; // same
+    ++g_metrics.request_count;            // unsynchronized read-modify-write
+    if (!success) ++g_metrics.error_count; // same
 }
 </code></pre>
 <p>This is not merely a correctness risk; it is undefined behavior per the standard. The compiler and hardware are free to reorder, tear, or elide these operations. In practice, counters may lose updates, report impossible values, or corrupt adjacent memory on architectures with non-atomic word stores. Sanitizers will flag this immediately, but sanitizers are not always running in production.</p>
 <p>A subtler variant involves multi-field invariants:</p>
 <pre><code class="language-cpp">// BUG: readers can observe state_ == READY while payload_ is half-written.
 struct shared_result {
-	std::string payload_;
-	enum { EMPTY, READY } state_ = EMPTY;
+    std::string payload_;
+    enum { EMPTY, READY } state_ = EMPTY;
 };
 
 // Writer thread:
@@ -2810,7 +2810,7 @@ result.state_ = READY;              // may be reordered before payload_ write
 
 // Reader thread:
 if (result.state_ == READY)
-	process(result.payload_);        // may see partially constructed string
+    process(result.payload_);        // may see partially constructed string
 </code></pre>
 <p>Even if <code>state_</code> were atomic, the write to <code>payload_</code> could be reordered past it without an appropriate memory order. The lesson: data races are not just about single variables. They are about the visibility ordering of related mutations.</p>
 <h2 id="raw-mutex-misuse-vs-scoped-guards"><a class="header" href="#raw-mutex-misuse-vs-scoped-guards">Raw Mutex Misuse vs. Scoped Guards</a></h2>
@@ -2820,52 +2820,52 @@ std::mutex mtx;
 std::vector&lt;int&gt; data;
 
 void push(int value) {
-	mtx.lock();
-	data.push_back(value); // may throw (allocation failure)
-	mtx.unlock();          // never reached if push_back throws — deadlock on next access
+    mtx.lock();
+    data.push_back(value); // may throw (allocation failure)
+    mtx.unlock();          // never reached if push_back throws — deadlock on next access
 }
 </code></pre>
 <p>If <code>push_back</code> throws, <code>unlock()</code> is skipped. Every subsequent thread that tries to acquire <code>mtx</code> will block forever. This is not hypothetical; allocation failure under memory pressure or a throwing copy constructor will trigger it.</p>
 <p>The fix is mechanical: use RAII guards.</p>
 <pre><code class="language-cpp">void push(int value) {
-	std::scoped_lock lock(mtx);
-	data.push_back(value); // if this throws, ~scoped_lock releases the mutex
+    std::scoped_lock lock(mtx);
+    data.push_back(value); // if this throws, ~scoped_lock releases the mutex
 }
 </code></pre>
 <p><code>std::scoped_lock</code> handles single and multiple mutexes with deadlock avoidance. <code>std::unique_lock</code> adds the ability to defer locking, transfer ownership, and use condition variables. Prefer <code>scoped_lock</code> unless you need the extra flexibility.</p>
 <pre><code class="language-cpp">// unique_lock: needed when the lock must be released before scope exit.
 void transfer_expired(registry&amp; reg, std::vector&lt;session&gt;&amp; out) {
-	std::unique_lock lock(reg.mutex_);
-	auto expired = reg.extract_expired(); // modifies registry under lock
-	lock.unlock();                        // release before expensive cleanup
-	for (auto&amp; s : expired)
-		s.close_socket();                 // no lock held — safe to block
-	// out is caller-owned, no synchronization needed
-	out.insert(out.end(),
-		std::make_move_iterator(expired.begin()),
-		std::make_move_iterator(expired.end()));
+    std::unique_lock lock(reg.mutex_);
+    auto expired = reg.extract_expired(); // modifies registry under lock
+    lock.unlock();                        // release before expensive cleanup
+    for (auto&amp; s : expired)
+        s.close_socket();                 // no lock held — safe to block
+    // out is caller-owned, no synchronization needed
+    out.insert(out.end(),
+        std::make_move_iterator(expired.begin()),
+        std::make_move_iterator(expired.end()));
 }
 </code></pre>
 <h2 id="deadlock-from-inconsistent-lock-ordering"><a class="header" href="#deadlock-from-inconsistent-lock-ordering">Deadlock from Inconsistent Lock Ordering</a></h2>
 <p>When code acquires multiple mutexes, inconsistent ordering is the classic deadlock source.</p>
 <pre><code class="language-cpp">// BUG: deadlock if thread 1 calls transfer(a, b) while thread 2 calls transfer(b, a).
 struct account {
-	std::mutex mtx;
-	int balance = 0;
+    std::mutex mtx;
+    int balance = 0;
 };
 
 void transfer(account&amp; from, account&amp; to, int amount) {
-	std::lock_guard lock_from(from.mtx); // locks 'from' first
-	std::lock_guard lock_to(to.mtx);     // then 'to' — opposite order on another thread
-	from.balance -= amount;
-	to.balance += amount;
+    std::lock_guard lock_from(from.mtx); // locks 'from' first
+    std::lock_guard lock_to(to.mtx);     // then 'to' — opposite order on another thread
+    from.balance -= amount;
+    to.balance += amount;
 }
 </code></pre>
 <p>Thread 1 locks <code>a.mtx</code> and waits for <code>b.mtx</code>. Thread 2 locks <code>b.mtx</code> and waits for <code>a.mtx</code>. Neither can proceed. <code>std::scoped_lock</code> solves this by using <code>std::lock</code> internally to acquire both mutexes with deadlock avoidance:</p>
 <pre><code class="language-cpp">void transfer(account&amp; from, account&amp; to, int amount) {
-	std::scoped_lock lock(from.mtx, to.mtx); // deadlock-free acquisition
-	from.balance -= amount;
-	to.balance += amount;
+    std::scoped_lock lock(from.mtx, to.mtx); // deadlock-free acquisition
+    from.balance -= amount;
+    to.balance += amount;
 }
 </code></pre>
 <p>This is not just a convenience. It is a correctness boundary. Any design requiring multiple mutexes should either use <code>std::scoped_lock</code> for simultaneous acquisition or enforce a documented total ordering on locks. Ad hoc ordering disciplines rarely survive refactoring.</p>
@@ -2873,17 +2873,17 @@ void transfer(account&amp; from, account&amp; to, int amount) {
 <p>Contention is not just about correctness. Excessive locking serializes work that could run in parallel.</p>
 <pre><code class="language-cpp">// Over-synchronized: every stat update contends on one lock.
 class request_stats {
-	std::mutex mtx_;
-	uint64_t total_requests_ = 0;
-	uint64_t total_bytes_ = 0;
-	uint64_t error_count_ = 0;
+    std::mutex mtx_;
+    uint64_t total_requests_ = 0;
+    uint64_t total_bytes_ = 0;
+    uint64_t error_count_ = 0;
 public:
-	void record(uint64_t bytes, bool error) {
-		std::scoped_lock lock(mtx_);
-		++total_requests_;
-		total_bytes_ += bytes;
-		if (error) ++error_count_;
-	}
+    void record(uint64_t bytes, bool error) {
+        std::scoped_lock lock(mtx_);
+        ++total_requests_;
+        total_bytes_ += bytes;
+        if (error) ++error_count_;
+    }
 };
 </code></pre>
 <p>On a 64-core machine handling millions of requests per second, every thread serializes on one cache line. Lock acquisition, cache-line bouncing, and scheduler wakeups dominate. The better design depends on tolerances:</p>
@@ -2903,30 +2903,30 @@ public:
 <pre><code class="language-cpp">// Anti-pattern: one mutex protects unrelated invariants and long operations.
 class session_registry {
 public:
-	std::optional&lt;session_info&gt; find(session_id id) {
-		std::scoped_lock lock(mutex_);
-		auto it = sessions_.find(id);
-		if (it == sessions_.end()) {
-			return std::nullopt;
-		}
-		return it-&gt;second;
-	}
+    std::optional&lt;session_info&gt; find(session_id id) {
+        std::scoped_lock lock(mutex_);
+        auto it = sessions_.find(id);
+        if (it == sessions_.end()) {
+            return std::nullopt;
+        }
+        return it-&gt;second;
+    }
 
-	void expire_idle_sessions(std::chrono::steady_clock::time_point now) {
-		std::scoped_lock lock(mutex_);
-		for (auto it = sessions_.begin(); it != sessions_.end();) {
-			if (it-&gt;second.expires_at &lt;= now) {
-				close_socket(it-&gt;second.socket); // RISK: blocking work under the lock.
-				it = sessions_.erase(it);
-			} else {
-				++it;
-			}
-		}
-	}
+    void expire_idle_sessions(std::chrono::steady_clock::time_point now) {
+        std::scoped_lock lock(mutex_);
+        for (auto it = sessions_.begin(); it != sessions_.end();) {
+            if (it-&gt;second.expires_at &lt;= now) {
+                close_socket(it-&gt;second.socket); // RISK: blocking work under the lock.
+                it = sessions_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 
 private:
-	std::mutex mutex_;
-	std::unordered_map&lt;session_id, session_info&gt; sessions_;
+    std::mutex mutex_;
+    std::unordered_map&lt;session_id, session_info&gt; sessions_;
 };
 </code></pre>
 <p>This object may survive early testing because it is locally simple. It fails later because unrelated work now shares one queueing point. A read blocks on cleanup. Cleanup holds the mutex while doing I/O. Future features will add metrics, callbacks, and logging inside the same critical section because the lock already exists.</p>
@@ -3070,33 +3070,33 @@ public:
 <p>To appreciate coroutine design tradeoffs, see what they displace. Pre-coroutine asynchronous code relies on continuation-passing style, where each step chains a callback into the next. A simple “fetch, validate, store” sequence looks like this:</p>
 <pre><code class="language-cpp">// Continuation-passing style — correct but unreadable at scale.
 void handle_request(request req, std::function&lt;void(response)&gt; done) {
-	fetch_profile(req.user_id, [req, done](std::expected&lt;profile, error&gt; prof) {
-		if (!prof) { done(error_response(prof.error())); return; }
-		validate_access(prof-&gt;role, req.resource,
-			[req, prof = *prof, done](std::expected&lt;bool, error&gt; ok) {
-				if (!ok || !*ok) { done(denied_response()); return; }
-				store_audit_log(req, prof,
-					[req, prof, done](std::expected&lt;void, error&gt; result) {
-						if (!result) { done(error_response(result.error())); return; }
-						done(success_response(prof));
-					});
-			});
-	});
+    fetch_profile(req.user_id, [req, done](std::expected&lt;profile, error&gt; prof) {
+        if (!prof) { done(error_response(prof.error())); return; }
+        validate_access(prof-&gt;role, req.resource,
+            [req, prof = *prof, done](std::expected&lt;bool, error&gt; ok) {
+                if (!ok || !*ok) { done(denied_response()); return; }
+                store_audit_log(req, prof,
+                    [req, prof, done](std::expected&lt;void, error&gt; result) {
+                        if (!result) { done(error_response(result.error())); return; }
+                        done(success_response(prof));
+                    });
+            });
+    });
 }
 </code></pre>
 <p>Every step nests deeper. Error handling is duplicated at each level. Lifetime of captured values must be managed manually — capture by value inflates copies, capture by reference invites dangling. Adding timeout, cancellation, or retry logic multiplies the nesting further. This is not a strawman; it is the shape of real pre-coroutine async C++ in production codebases.</p>
 <p>The coroutine equivalent:</p>
 <pre><code class="language-cpp">task&lt;response&gt; handle_request(request req) {
-	auto prof = co_await fetch_profile(req.user_id);
-	if (!prof) co_return error_response(prof.error());
+    auto prof = co_await fetch_profile(req.user_id);
+    if (!prof) co_return error_response(prof.error());
 
-	auto ok = co_await validate_access(prof-&gt;role, req.resource);
-	if (!ok || !*ok) co_return denied_response();
+    auto ok = co_await validate_access(prof-&gt;role, req.resource);
+    if (!ok || !*ok) co_return denied_response();
 
-	auto result = co_await store_audit_log(req, *prof);
-	if (!result) co_return error_response(result.error());
+    auto result = co_await store_audit_log(req, *prof);
+    if (!result) co_return error_response(result.error());
 
-	co_return success_response(*prof);
+    co_return success_response(*prof);
 }
 </code></pre>
 <p>Sequential reading, single error path per step, no nesting. The improvement is real. But the state machine did not vanish — it moved into the coroutine frame. The rest of this chapter is about what that means for ownership and lifetime.</p>
@@ -3121,21 +3121,21 @@ void handle_request(request req, std::function&lt;void(response)&gt; done) {
 <h2 id="anti-pattern-borrowed-request-state-survives-suspension"><a class="header" href="#anti-pattern-borrowed-request-state-survives-suspension">Anti-pattern: Borrowed Request State Survives Suspension</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: borrowed data may dangle after suspension.
 task&lt;parsed_request&gt; parse_and_authorize(
-	std::string_view body,
-	const auth_context&amp; auth) {
+    std::string_view body,
+    const auth_context&amp; auth) {
 
-	auto token = co_await fetch_access_token(auth.user_id());
-	co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
+    auto token = co_await fetch_access_token(auth.user_id());
+    co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
 }
 </code></pre>
 <p>This code looks efficient because it avoids a copy. It is only correct if the caller guarantees that <code>body</code> remains valid until the coroutine completes. In service code that often means until network I/O, authentication lookup, retries, and timeout handling have all finished. That is not a small promise. It is usually the wrong one.</p>
 <p>The safer default is to move ownership into the coroutine when the data is needed after suspension.</p>
 <pre><code class="language-cpp">task&lt;parsed_request&gt; parse_and_authorize(
-	std::string body,
-	auth_context auth) {
+    std::string body,
+    auth_context auth) {
 
-	auto token = co_await fetch_access_token(auth.user_id());
-	co_return parse_request(body, token);
+    auto token = co_await fetch_access_token(auth.user_id());
+    co_return parse_request(body, token);
 }
 </code></pre>
 <p>The copy or move is visible and reviewable. The coroutine frame now owns what it needs. If that allocation cost matters, measure it and redesign around message boundaries or storage reuse. Do not silently borrow across time.</p>
@@ -3144,10 +3144,10 @@ task&lt;parsed_request&gt; parse_and_authorize(
 <h3 id="dangling-reference-to-a-callers-local"><a class="header" href="#dangling-reference-to-a-callers-local">Dangling reference to a caller’s local</a></h3>
 <pre><code class="language-cpp">// BUG: coroutine captures a reference to a local that dies when the caller returns.
 task&lt;void&gt; start_processing(dispatcher&amp; d) {
-	std::vector&lt;record&gt; batch = build_batch();
-	co_await d.schedule([&amp;batch] {     // lambda captures batch by reference
-		process(batch);                // batch may be destroyed if start_processing
-	});                                // is suspended and its caller exits
+    std::vector&lt;record&gt; batch = build_batch();
+    co_await d.schedule([&amp;batch] {     // lambda captures batch by reference
+        process(batch);                // batch may be destroyed if start_processing
+    });                                // is suspended and its caller exits
 }
 </code></pre>
 <p>When <code>start_processing</code> suspends at <code>co_await</code>, the coroutine frame keeps <code>batch</code> alive — but only if the frame itself is alive. If the task is detached or the parent scope exits, the frame is destroyed, and the lambda’s reference dangles. The fix: capture by value, or ensure the parent scope outlives the scheduled work through structured ownership.</p>
@@ -3156,20 +3156,20 @@ task&lt;void&gt; start_processing(dispatcher&amp; d) {
 task&lt;void&gt; log_message(std::string_view msg);
 
 void caller() {
-	log_message("request started"s + request_id()); // temporary std::string
-	// temporary is destroyed here, before the coroutine even begins if lazy-start
+    log_message("request started"s + request_id()); // temporary std::string
+    // temporary is destroyed here, before the coroutine even begins if lazy-start
 }
 </code></pre>
 <p>With a lazy-start coroutine, the temporary <code>std::string</code> is destroyed at the semicolon, but the coroutine has not yet executed. Even with eager-start coroutines, if the frame stores <code>msg</code> as a <code>string_view</code>, it points to freed memory after the first suspension. The solution is to accept <code>std::string</code> by value in the coroutine signature so the frame owns a copy.</p>
 <h3 id="the-this-pointer-across-suspension"><a class="header" href="#the-this-pointer-across-suspension">The <code>this</code> pointer across suspension</a></h3>
 <pre><code class="language-cpp">// BUG: 'this' may dangle if the object is moved or destroyed while suspended.
 class connection {
-	std::string peer_addr_;
+    std::string peer_addr_;
 public:
-	task&lt;void&gt; run() {
-		auto data = co_await read_socket();    // suspended here
-		log("received from " + peer_addr_);    // 'this' may be invalid
-	}
+    task&lt;void&gt; run() {
+        auto data = co_await read_socket();    // suspended here
+        log("received from " + peer_addr_);    // 'this' may be invalid
+    }
 };
 </code></pre>
 <p>If a <code>connection</code> object is moved into another container, or destroyed while <code>run()</code> is suspended, <code>this</code> becomes invalid at resumption. Member coroutines are safe only when the object’s lifetime is guaranteed to exceed the coroutine’s. In practice, this often means the coroutine should take a <code>shared_ptr&lt;connection&gt;</code> or the owning scope must be structured to prevent destruction during suspension.</p>
@@ -3269,44 +3269,44 @@ public:
 <h3 id="resource-leaks-from-ownerless-work"><a class="header" href="#resource-leaks-from-ownerless-work">Resource leaks from ownerless work</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: detached task leaks a database connection on cancellation.
 void on_request(request req) {
-	std::jthread([req = std::move(req)] {
-		auto conn = db_pool.acquire();        // acquired, never returned on some paths
-		auto result = conn.execute(req.query);
-		send_response(req.client, result);
-	}).detach(); // no owner, no cancellation, no cleanup guarantee
+    std::jthread([req = std::move(req)] {
+        auto conn = db_pool.acquire();        // acquired, never returned on some paths
+        auto result = conn.execute(req.query);
+        send_response(req.client, result);
+    }).detach(); // no owner, no cancellation, no cleanup guarantee
 }
 </code></pre>
 <p>If the process begins shutting down, detached threads do not receive stop requests. The database connection is not returned to the pool. Multiply this by thousands of in-flight requests during a rolling deployment: the database sees connection exhaustion, and the old process hangs in <code>std::thread</code> destructor calls or, worse, exits while threads still reference destroyed globals.</p>
 <h3 id="unobserved-exceptions-vanish-silently"><a class="header" href="#unobserved-exceptions-vanish-silently">Unobserved exceptions vanish silently</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: exception in detached task is never observed.
 void start_background_sync() {
-	auto handle = std::async(std::launch::async, [] {
-		auto data = fetch_remote_config(); // throws on network error
-		apply_config(data);
-	});
-	// handle is destroyed here — std::async's destructor blocks,
-	// but if this were a custom fire-and-forget task, the exception
-	// would be silently swallowed.
+    auto handle = std::async(std::launch::async, [] {
+        auto data = fetch_remote_config(); // throws on network error
+        apply_config(data);
+    });
+    // handle is destroyed here — std::async's destructor blocks,
+    // but if this were a custom fire-and-forget task, the exception
+    // would be silently swallowed.
 }
 </code></pre>
 <p>With <code>std::async</code>, the destructor blocks (which may be its own surprise). But with most custom task types that support detach, destroying the handle without observing the result means exceptions evaporate. The system continues with stale configuration, and the failure appears only as a mysterious behavioral regression hours later.</p>
 <h3 id="shutdown-hangs-from-orphaned-work"><a class="header" href="#shutdown-hangs-from-orphaned-work">Shutdown hangs from orphaned work</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: shutdown cannot complete because background tasks were never tracked.
 class ingestion_service {
-	void ingest(message msg) {
-		// "just kick off enrichment in the background"
-		pool_.submit([msg = std::move(msg), this] {
-			auto enriched = enrich(msg);       // calls external service, may block
-			store_.write(enriched);
-		});
-	}
+    void ingest(message msg) {
+        // "just kick off enrichment in the background"
+        pool_.submit([msg = std::move(msg), this] {
+            auto enriched = enrich(msg);       // calls external service, may block
+            store_.write(enriched);
+        });
+    }
 
-	void shutdown() {
-		store_.close();    // closes storage
-		pool_.shutdown();  // waits for in-flight tasks
-		// BUG: in-flight tasks may call store_.write() after store_ is closed
-		// BUG: enrich() may block indefinitely — pool shutdown hangs
-	}
+    void shutdown() {
+        store_.close();    // closes storage
+        pool_.shutdown();  // waits for in-flight tasks
+        // BUG: in-flight tasks may call store_.write() after store_ is closed
+        // BUG: enrich() may block indefinitely — pool shutdown hangs
+    }
 };
 </code></pre>
 <p>The pool has tasks, but the service has no model of what those tasks need or how to cancel them. Shutdown either hangs (waiting for a blocked external call) or races (closing dependencies while tasks still use them). In production, this turns a clean restart into a process kill, which turns into data loss.</p>
@@ -3314,11 +3314,11 @@ class ingestion_service {
 <p>The structured answer to all three problems is the same principle: the scope that creates work owns its completion.</p>
 <pre><code class="language-cpp">// Structured: parent scope owns child tasks, propagates cancellation, awaits completion.
 task&lt;void&gt; on_request(request req, std::stop_token stop) {
-	auto conn = co_await db_pool.acquire(stop);  // respects cancellation
-	auto result = co_await conn.execute(req.query, stop);
-	co_await send_response(req.client, result);
-	// conn returned to pool when coroutine frame is destroyed
-	// if stop is triggered, co_await points observe it and unwind cleanly
+    auto conn = co_await db_pool.acquire(stop);  // respects cancellation
+    auto result = co_await conn.execute(req.query, stop);
+    co_await send_response(req.client, result);
+    // conn returned to pool when coroutine frame is destroyed
+    // if stop is triggered, co_await points observe it and unwind cleanly
 }
 </code></pre>
 <p>The parent request scope can cancel the token on client disconnect or deadline. The coroutine’s awaitables check the token at each suspension point. Resources are released through normal RAII. No work outlives its owner. The contrast with fire-and-forget is not style; it is the difference between a system that can shut down and one that cannot.</p>
@@ -3348,15 +3348,15 @@ task&lt;void&gt; on_request(request req, std::stop_token stop) {
 <h2 id="anti-pattern-fan-out-without-bounded-ownership"><a class="header" href="#anti-pattern-fan-out-without-bounded-ownership">Anti-pattern: Fan-Out Without Bounded Ownership</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: child work outlives the request and overload has no admission limit.
 task&lt;aggregate_reply&gt; handle_request(request req) {
-	auto a = fetch_profile(req.user_id);
-	auto b = fetch_inventory(req.item_id);
-	auto c = fetch_pricing(req.item_id);
+    auto a = fetch_profile(req.user_id);
+    auto b = fetch_inventory(req.item_id);
+    auto c = fetch_pricing(req.item_id);
 
-	co_return aggregate_reply{
-		co_await a,
-		co_await b,
-		co_await c,
-	};
+    co_return aggregate_reply{
+        co_await a,
+        co_await b,
+        co_await c,
+    };
 }
 </code></pre>
 <p>This code is tidy and underspecified.</p>
@@ -3492,14 +3492,14 @@ extern "C" void signal_handler(int /*sig*/) {
 
 // Contiguous: hardware prefetcher has a good day.
 std::int64_t sum_vector(const std::vector&lt;int&gt;&amp; v) {
-	return std::accumulate(v.begin(), v.end(), std::int64_t{0});
+    return std::accumulate(v.begin(), v.end(), std::int64_t{0});
 }
 
 // Scattered: every node is a pointer chase.  Each dereference is
 // a potential cache miss if nodes were allocated at different times
 // and landed on different cache lines or pages.
 std::int64_t sum_list(const std::list&lt;int&gt;&amp; l) {
-	return std::accumulate(l.begin(), l.end(), std::int64_t{0});
+    return std::accumulate(l.begin(), l.end(), std::int64_t{0});
 }
 </code></pre>
 <p>On typical hardware with one million elements, the vector version runs 10-50x faster than the list version for pure traversal. The list carries per-node overhead (two pointers per element on most implementations, plus allocator metadata), but the dominant cost is not space – it is that advancing to the next node requires loading a pointer whose target address the prefetcher cannot predict. Every step risks a last-level-cache miss at 50-100 ns each, while the vector scan hits L1 or L2 almost every time because the hardware prefetcher recognizes the sequential pattern.</p>
@@ -3523,56 +3523,56 @@ std::int64_t sum_list(const std::list&lt;int&gt;&amp; l) {
 // fields of a single tick (e.g., serializing one record, looking
 // up a specific event).
 struct Tick {
-	std::int64_t timestamp_ns;
-	std::int32_t instrument_id;
-	double bid;
-	double ask;
-	char exchange[8];       // cold: rarely used in hot aggregation
-	std::uint32_t seq_no;   // cold
-	std::uint16_t flags;    // cold
-	// sizeof(Tick) ~ 48 bytes with padding on most ABIs
+    std::int64_t timestamp_ns;
+    std::int32_t instrument_id;
+    double bid;
+    double ask;
+    char exchange[8];       // cold: rarely used in hot aggregation
+    std::uint32_t seq_no;   // cold
+    std::uint16_t flags;    // cold
+    // sizeof(Tick) ~ 48 bytes with padding on most ABIs
 };
 
 double mid_price_sum_aos(std::span&lt;const Tick&gt; ticks) {
-	double total = 0.0;
-	for (const auto&amp; t : ticks) {
-		// Each iteration loads a full 48-byte Tick, but only
-		// reads bid and ask (16 bytes).  The remaining 32 bytes
-		// pollute cache lines and reduce effective bandwidth.
-		total += (t.bid + t.ask) * 0.5;
-	}
-	return total;
+    double total = 0.0;
+    for (const auto&amp; t : ticks) {
+        // Each iteration loads a full 48-byte Tick, but only
+        // reads bid and ask (16 bytes).  The remaining 32 bytes
+        // pollute cache lines and reduce effective bandwidth.
+        total += (t.bid + t.ask) * 0.5;
+    }
+    return total;
 }
 </code></pre>
 <pre><code class="language-cpp">// Structure of Arrays (SoA): columnar layout.
 // Each field lives in its own contiguous array.
 struct TickColumns {
-	std::vector&lt;std::int64_t&gt; timestamp_ns;
-	std::vector&lt;std::int32_t&gt; instrument_id;
-	std::vector&lt;double&gt; bid;
-	std::vector&lt;double&gt; ask;
-	std::vector&lt;std::array&lt;char, 8&gt;&gt; exchange;
-	std::vector&lt;std::uint32_t&gt; seq_no;
-	std::vector&lt;std::uint16_t&gt; flags;
+    std::vector&lt;std::int64_t&gt; timestamp_ns;
+    std::vector&lt;std::int32_t&gt; instrument_id;
+    std::vector&lt;double&gt; bid;
+    std::vector&lt;double&gt; ask;
+    std::vector&lt;std::array&lt;char, 8&gt;&gt; exchange;
+    std::vector&lt;std::uint32_t&gt; seq_no;
+    std::vector&lt;std::uint16_t&gt; flags;
 
-	void append(std::int64_t ts, std::int32_t id, double b, double a) {
-		timestamp_ns.push_back(ts);
-		instrument_id.push_back(id);
-		bid.push_back(b);
-		ask.push_back(a);
-		// ...other columns omitted for brevity
-	}
+    void append(std::int64_t ts, std::int32_t id, double b, double a) {
+        timestamp_ns.push_back(ts);
+        instrument_id.push_back(id);
+        bid.push_back(b);
+        ask.push_back(a);
+        // ...other columns omitted for brevity
+    }
 };
 
 double mid_price_sum_soa(const TickColumns&amp; ticks) {
-	double total = 0.0;
-	// Only bid[] and ask[] are touched.  Each cache line is 100%
-	// useful payload.  The compiler can auto-vectorize this loop,
-	// and the prefetcher has two clean sequential streams.
-	for (std::size_t i = 0; i != ticks.bid.size(); ++i) {
-		total += (ticks.bid[i] + ticks.ask[i]) * 0.5;
-	}
-	return total;
+    double total = 0.0;
+    // Only bid[] and ask[] are touched.  Each cache line is 100%
+    // useful payload.  The compiler can auto-vectorize this loop,
+    // and the prefetcher has two clean sequential streams.
+    for (std::size_t i = 0; i != ticks.bid.size(); ++i) {
+        total += (ticks.bid[i] + ticks.ask[i]) * 0.5;
+    }
+    return total;
 }
 </code></pre>
 <p>With one million ticks, the SoA version typically runs 2-4x faster for columnar aggregation on modern x86 hardware. The reason is bandwidth efficiency: the AoS loop loads roughly 48 bytes per element but uses only 16, wasting two thirds of every cache line fetch. The SoA loop touches only the two 8-byte arrays it needs, and both are perfectly sequential. The compiler is also far more likely to emit SIMD instructions for the SoA version because there is no interleaving stride to complicate vectorization.</p>
@@ -3596,59 +3596,59 @@ double mid_price_sum_soa(const TickColumns&amp; ticks) {
 <pre><code class="language-cpp">// A naive priority queue built from scattered heap nodes.
 // Each node is individually allocated and linked by pointer.
 struct Job {
-	int priority;
-	std::string description;  // may allocate on heap
-	Job* next;
+    int priority;
+    std::string description;  // may allocate on heap
+    Job* next;
 };
 
 class NaivePriorityQueue {
-	Job* head_ = nullptr;
+    Job* head_ = nullptr;
 public:
-	void insert(int priority, std::string desc) {
-		auto* node = new Job{priority, std::move(desc), nullptr};
-		// Sorted insert: walk the list to find position.
-		// Each step dereferences a pointer to a random heap location.
-		Job** pos = &amp;head_;
-		while (*pos &amp;&amp; (*pos)-&gt;priority &lt;= priority)
-			pos = &amp;(*pos)-&gt;next;
-		node-&gt;next = *pos;
-		*pos = node;
-	}
+    void insert(int priority, std::string desc) {
+        auto* node = new Job{priority, std::move(desc), nullptr};
+        // Sorted insert: walk the list to find position.
+        // Each step dereferences a pointer to a random heap location.
+        Job** pos = &amp;head_;
+        while (*pos &amp;&amp; (*pos)-&gt;priority &lt;= priority)
+            pos = &amp;(*pos)-&gt;next;
+        node-&gt;next = *pos;
+        *pos = node;
+    }
 
-	// Find highest-priority job.  Cheap -- it is at the head.
-	// But any operation that scans (e.g., "remove by description",
-	// "count jobs above threshold") pointer-chases through
-	// potentially thousands of cold cache lines.
-	Job* top() const { return head_; }
+    // Find highest-priority job.  Cheap -- it is at the head.
+    // But any operation that scans (e.g., "remove by description",
+    // "count jobs above threshold") pointer-chases through
+    // potentially thousands of cold cache lines.
+    Job* top() const { return head_; }
 
-	~NaivePriorityQueue() {
-		while (head_) { auto* n = head_; head_ = head_-&gt;next; delete n; }
-	}
+    ~NaivePriorityQueue() {
+        while (head_) { auto* n = head_; head_ = head_-&gt;next; delete n; }
+    }
 };
 </code></pre>
 <p>Compare with the cache-friendly alternative that stores the same data contiguously:</p>
 <pre><code class="language-cpp">struct Job {
-	int priority;
-	std::string description;
+    int priority;
+    std::string description;
 };
 
 class FlatPriorityQueue {
-	std::vector&lt;Job&gt; jobs_;
+    std::vector&lt;Job&gt; jobs_;
 public:
-	void insert(int priority, std::string desc) {
-		jobs_.push_back({priority, std::move(desc)});
-		// Could maintain sorted order with std::lower_bound + insert,
-		// or just push_back and sort/partial_sort when needed.
-	}
+    void insert(int priority, std::string desc) {
+        jobs_.push_back({priority, std::move(desc)});
+        // Could maintain sorted order with std::lower_bound + insert,
+        // or just push_back and sort/partial_sort when needed.
+    }
 
-	// Rebuild top in O(n) but with contiguous memory access.
-	// For scan-heavy workloads this dominates pointer-chasing.
-	const Job&amp; top() const {
-		return *std::min_element(jobs_.begin(), jobs_.end(),
-			[](const auto&amp; a, const auto&amp; b) {
-				return a.priority &lt; b.priority;
-			});
-	}
+    // Rebuild top in O(n) but with contiguous memory access.
+    // For scan-heavy workloads this dominates pointer-chasing.
+    const Job&amp; top() const {
+        return *std::min_element(jobs_.begin(), jobs_.end(),
+            [](const auto&amp; a, const auto&amp; b) {
+                return a.priority &lt; b.priority;
+            });
+    }
 };
 </code></pre>
 <p>The flat version may perform more comparisons for <code>top()</code>, but it does so while streaming through contiguous memory. In practice, for collections under a few thousand elements, the flat scan often beats the linked version’s O(1) head access combined with O(n) insert, because the insert in the linked version pays a cache miss per node visited. For larger collections, <code>std::priority_queue</code> (which wraps a contiguous heap in a <code>std::vector</code>) is the standard tool for exactly this reason.</p>
@@ -3703,49 +3703,49 @@ public:
 // a vector, and a map entry.  Under load this path may perform
 // 5-10 heap allocations per event.
 struct Event {
-	std::string type;
-	std::string payload;
-	std::vector&lt;std::string&gt; tags;
-	std::unordered_map&lt;std::string, std::string&gt; metadata;
+    std::string type;
+    std::string payload;
+    std::vector&lt;std::string&gt; tags;
+    std::unordered_map&lt;std::string, std::string&gt; metadata;
 };
 
 void process_batch_heavy(std::span&lt;const RawEvent&gt; raw,
                          std::vector&lt;Event&gt;&amp; out) {
-	for (const auto&amp; r : raw) {
-		Event e;
-		e.type = parse_type(r);         // allocates
-		e.payload = parse_payload(r);   // allocates
-		e.tags = parse_tags(r);         // allocates vector + each string
-		e.metadata = parse_meta(r);     // allocates map buckets + nodes
-		out.push_back(std::move(e));    // may reallocate out's buffer
-	}
+    for (const auto&amp; r : raw) {
+        Event e;
+        e.type = parse_type(r);         // allocates
+        e.payload = parse_payload(r);   // allocates
+        e.tags = parse_tags(r);         // allocates vector + each string
+        e.metadata = parse_meta(r);     // allocates map buckets + nodes
+        out.push_back(std::move(e));    // may reallocate out's buffer
+    }
 }
 </code></pre>
 <pre><code class="language-cpp">// Allocation-light: pre-sized arena, string views into stable
 // input buffer, fixed-capacity inline storage.
 struct EventView {
-	std::string_view type;
-	std::string_view payload;
-	// Use a small fixed-capacity container for tags.
-	// boost::static_vector or a similar stack-allocated small vector.
-	std::array&lt;std::string_view, 8&gt; tags;
-	std::uint8_t tag_count = 0;
+    std::string_view type;
+    std::string_view payload;
+    // Use a small fixed-capacity container for tags.
+    // boost::static_vector or a similar stack-allocated small vector.
+    std::array&lt;std::string_view, 8&gt; tags;
+    std::uint8_t tag_count = 0;
 };
 
 void process_batch_light(std::string_view input_buffer,
                          std::span&lt;const RawEvent&gt; raw,
                          std::vector&lt;EventView&gt;&amp; out) {
-	out.clear();
-	out.reserve(raw.size());  // one allocation, amortized
-	for (const auto&amp; r : raw) {
-		EventView e;
-		e.type = parse_type_view(r, input_buffer);
-		e.payload = parse_payload_view(r, input_buffer);
-		e.tag_count = parse_tags_view(r, input_buffer, e.tags);
-		out.push_back(e);
-	}
-	// Zero heap allocations per event if input_buffer is stable
-	// and out has sufficient capacity.
+    out.clear();
+    out.reserve(raw.size());  // one allocation, amortized
+    for (const auto&amp; r : raw) {
+        EventView e;
+        e.type = parse_type_view(r, input_buffer);
+        e.payload = parse_payload_view(r, input_buffer);
+        e.tag_count = parse_tags_view(r, input_buffer, e.tags);
+        out.push_back(e);
+    }
+    // Zero heap allocations per event if input_buffer is stable
+    // and out has sufficient capacity.
 }
 </code></pre>
 <p>The light version imposes constraints: the input buffer must outlive the views, tags are bounded, and metadata is handled differently. Those constraints are the cost of avoiding allocations. Whether that cost is acceptable depends on the workload, but making it visible is the point.</p>
@@ -3756,12 +3756,12 @@ void process_batch_light(std::string_view input_buffer,
 <p>Objects that die together should often be allocated together. This is the core intuition behind arenas and monotonic resources: if a batch of data shares a lifetime boundary, paying for individual deallocation is wasted work. Request-local parse trees, temporary token buffers, graph search scratch state, and one-shot compilation metadata are classic examples.</p>
 <p>C++23 still relies on <code>std::pmr</code> for the standard vocabulary here. The value is not stylistic. It is architectural. Memory resources let you express that a family of objects belongs to a shared lifetime region without hard-wiring a custom allocator type through every template instantiation.</p>
 <pre><code class="language-cpp">struct RequestScratch {
-	std::pmr::monotonic_buffer_resource arena;
-	std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
-	std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt; headers{&amp;arena};
+    std::pmr::monotonic_buffer_resource arena;
+    std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
+    std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt; headers{&amp;arena};
 
-	explicit RequestScratch(std::span&lt;std::byte&gt; buffer)
-		: arena(buffer.data(), buffer.size()) {}
+    explicit RequestScratch(std::span&lt;std::byte&gt; buffer)
+        : arena(buffer.data(), buffer.size()) {}
 };
 </code></pre>
 <p>This design says something important: the strings and containers are not independent heap citizens. They are request-scoped scratch. That reduces allocation overhead and makes teardown a bulk operation.</p>
@@ -3775,11 +3775,11 @@ void process_batch_light(std::string_view input_buffer,
 // map internals go through the global allocator.  Under contention
 // from many threads, this serializes on allocator locks.
 void handle_request_standard(std::span&lt;const std::byte&gt; input) {
-	std::vector&lt;std::string&gt; tokens;
-	std::unordered_map&lt;std::string, std::string&gt; headers;
-	parse(input, tokens, headers);  // many small allocations
-	route(tokens, headers);
-	// Destruction: each string freed individually, each map node freed.
+    std::vector&lt;std::string&gt; tokens;
+    std::unordered_map&lt;std::string, std::string&gt; headers;
+    parse(input, tokens, headers);  // many small allocations
+    route(tokens, headers);
+    // Destruction: each string freed individually, each map node freed.
 }
 
 // PMR with stack buffer: small requests never touch the heap.
@@ -3787,22 +3787,22 @@ void handle_request_standard(std::span&lt;const std::byte&gt; input) {
 // If the request is large enough to exhaust it, it falls back to
 // the upstream resource (default: new/delete).
 void handle_request_pmr(std::span&lt;const std::byte&gt; input) {
-	std::array&lt;std::byte, 4096&gt; stack_buf;
-	std::pmr::monotonic_buffer_resource arena{
-		stack_buf.data(), stack_buf.size(),
-		std::pmr::null_memory_resource()
-		// null_memory_resource: fail loudly if buffer is exceeded.
-		// Replace with std::pmr::new_delete_resource() to allow
-		// fallback to heap for oversized requests.
-	};
+    std::array&lt;std::byte, 4096&gt; stack_buf;
+    std::pmr::monotonic_buffer_resource arena{
+        stack_buf.data(), stack_buf.size(),
+        std::pmr::null_memory_resource()
+        // null_memory_resource: fail loudly if buffer is exceeded.
+        // Replace with std::pmr::new_delete_resource() to allow
+        // fallback to heap for oversized requests.
+    };
 
-	std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
-	std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt;
-		headers{&amp;arena};
-	parse_pmr(input, tokens, headers);
-	route_pmr(tokens, headers);
-	// Destruction: arena destructor releases everything in one shot.
-	// No per-string, per-node deallocation calls.
+    std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
+    std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt;
+        headers{&amp;arena};
+    parse_pmr(input, tokens, headers);
+    route_pmr(tokens, headers);
+    // Destruction: arena destructor releases everything in one shot.
+    // No per-string, per-node deallocation calls.
 }
 </code></pre>
 <p>The pmr version eliminates all per-object deallocation calls and avoids global allocator contention entirely for requests that fit within the stack buffer. On a high-throughput server handling small requests, this can reduce allocator overhead by an order of magnitude. The tradeoff is that <code>std::pmr</code> containers carry an extra pointer to the memory resource (increasing <code>sizeof</code> slightly) and that the monotonic resource does not reclaim memory from individual deallocations – it only grows until the resource itself is destroyed. This is fine for request-scoped scratch; it is wrong for long-lived containers that grow and shrink over time.</p>
@@ -3821,28 +3821,28 @@ void handle_request_pmr(std::span&lt;const std::byte&gt; input) {
 void submit_work(std::shared_ptr&lt;Config&gt; cfg,
                  ThreadPool&amp; pool,
                  std::span&lt;const Request&gt; requests) {
-	for (const auto&amp; req : requests) {
-		// Copies cfg: atomic ref-count increment per task.
-		pool.enqueue([cfg, &amp;req] {
-			handle(req, *cfg);
-		});
-	}
-	// If 10,000 requests are enqueued, that is 10,000 atomic
-	// increments on submission and 10,000 atomic decrements
-	// on completion, all contending on the same cache line.
+    for (const auto&amp; req : requests) {
+        // Copies cfg: atomic ref-count increment per task.
+        pool.enqueue([cfg, &amp;req] {
+            handle(req, *cfg);
+        });
+    }
+    // If 10,000 requests are enqueued, that is 10,000 atomic
+    // increments on submission and 10,000 atomic decrements
+    // on completion, all contending on the same cache line.
 }
 </code></pre>
 <pre><code class="language-cpp">// Fix: cfg outlives all tasks, so pass a raw pointer or reference.
 void submit_work_fixed(const Config&amp; cfg,
                        ThreadPool&amp; pool,
                        std::span&lt;const Request&gt; requests) {
-	for (const auto&amp; req : requests) {
-		pool.enqueue([&amp;cfg, &amp;req] {
-			handle(req, cfg);
-		});
-	}
-	// Zero reference-counting overhead.  Caller guarantees
-	// cfg lives until all tasks complete.
+    for (const auto&amp; req : requests) {
+        pool.enqueue([&amp;cfg, &amp;req] {
+            handle(req, cfg);
+        });
+    }
+    // Zero reference-counting overhead.  Caller guarantees
+    // cfg lives until all tasks complete.
 }
 </code></pre>
 <p>The rule is not “never use <code>std::shared_ptr</code>.” It is: do not use shared ownership to avoid thinking about lifetime. When an object has a clear owner and borrowers, express that with a unique owner and references or views. Reserve <code>std::shared_ptr</code> for genuinely shared, non-deterministic lifetimes. And never pass <code>std::shared_ptr</code> by value when a <code>const&amp;</code> or raw reference suffices – each copy is an atomic round-trip you are paying for nothing.</p>
@@ -3953,26 +3953,26 @@ void submit_work_fixed(const Config&amp; cfg,
 <pre><code class="language-cpp">// BROKEN: the compiler may eliminate the entire loop because
 // 'total' is never observed.
 static void BM_bad_dce(benchmark::State&amp; state) {
-	std::vector&lt;double&gt; data(1'000'000, 1.0);
-	for (auto _ : state) {
-		double total = 0.0;
-		for (double d : data)
-			total += d * d;
-		// total is dead.  Optimizer removes the loop.
-		// Benchmark reports ~0 ns/iteration.
-	}
+    std::vector&lt;double&gt; data(1'000'000, 1.0);
+    for (auto _ : state) {
+        double total = 0.0;
+        for (double d : data)
+            total += d * d;
+        // total is dead.  Optimizer removes the loop.
+        // Benchmark reports ~0 ns/iteration.
+    }
 }
 </code></pre>
 <pre><code class="language-cpp">// FIXED: benchmark::DoNotOptimize prevents the compiler from
 // proving the result is unused.
 static void BM_good_dce(benchmark::State&amp; state) {
-	std::vector&lt;double&gt; data(1'000'000, 1.0);
-	for (auto _ : state) {
-		double total = 0.0;
-		for (double d : data)
-			total += d * d;
-		benchmark::DoNotOptimize(total);
-	}
+    std::vector&lt;double&gt; data(1'000'000, 1.0);
+    for (auto _ : state) {
+        double total = 0.0;
+        for (double d : data)
+            total += d * d;
+        benchmark::DoNotOptimize(total);
+    }
 }
 </code></pre>
 <p><code>benchmark::DoNotOptimize</code> is not magic. On most implementations it acts as an opaque read of the value (often an inline asm that the compiler treats as potentially observing the variable). Use it on the final result, not on every intermediate step, or you risk inhibiting legitimate optimizations the production code would also benefit from. If you are unsure whether DCE is affecting your results, compile with <code>-S</code> and inspect the assembly.</p>
@@ -3980,22 +3980,22 @@ static void BM_good_dce(benchmark::State&amp; state) {
 <pre><code class="language-cpp">// BROKEN: construction cost dominates. The benchmark is
 // measuring vector allocation and initialization, not lookup.
 static void BM_bad_lookup(benchmark::State&amp; state) {
-	for (auto _ : state) {
-		std::vector&lt;int&gt; v(1'000'000);
-		std::iota(v.begin(), v.end(), 0);
-		auto it = std::lower_bound(v.begin(), v.end(), 500'000);
-		benchmark::DoNotOptimize(it);
-	}
+    for (auto _ : state) {
+        std::vector&lt;int&gt; v(1'000'000);
+        std::iota(v.begin(), v.end(), 0);
+        auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+        benchmark::DoNotOptimize(it);
+    }
 }
 
 // FIXED: setup goes outside the timing loop.
 static void BM_good_lookup(benchmark::State&amp; state) {
-	std::vector&lt;int&gt; v(1'000'000);
-	std::iota(v.begin(), v.end(), 0);
-	for (auto _ : state) {
-		auto it = std::lower_bound(v.begin(), v.end(), 500'000);
-		benchmark::DoNotOptimize(it);
-	}
+    std::vector&lt;int&gt; v(1'000'000);
+    std::iota(v.begin(), v.end(), 0);
+    for (auto _ : state) {
+        auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+        benchmark::DoNotOptimize(it);
+    }
 }
 </code></pre>
 <h3 id="flawed-benchmark-wrong-baseline"><a class="header" href="#flawed-benchmark-wrong-baseline">Flawed Benchmark: Wrong Baseline</a></h3>
@@ -4005,13 +4005,13 @@ static void BM_good_lookup(benchmark::State&amp; state) {
 // in production is sorted vector with binary search, which may
 // be within 2x and uses half the memory.
 static void BM_linear_scan(benchmark::State&amp; state) {
-	std::vector&lt;std::pair&lt;int,int&gt;&gt; data(100'000);
-	// ... fill with random kv pairs, unsorted ...
-	for (auto _ : state) {
-		auto it = std::find_if(data.begin(), data.end(),
-			[](const auto&amp; p) { return p.first == 42; });
-		benchmark::DoNotOptimize(it);
-	}
+    std::vector&lt;std::pair&lt;int,int&gt;&gt; data(100'000);
+    // ... fill with random kv pairs, unsorted ...
+    for (auto _ : state) {
+        auto it = std::find_if(data.begin(), data.end(),
+            [](const auto&amp; p) { return p.first == 42; });
+        benchmark::DoNotOptimize(it);
+    }
 }
 </code></pre>
 <p>The right baseline is the realistic alternative, not the worst possible option. Always state what the benchmark is comparing against and why that alternative is the one the team would actually choose.</p>
@@ -4020,15 +4020,15 @@ static void BM_linear_scan(benchmark::State&amp; state) {
 // iteration.  Production accesses the same structure after
 // processing unrelated data that evicts it from cache.
 static void BM_warm_cache(benchmark::State&amp; state) {
-	std::vector&lt;int&gt; v(1'000);  // ~4 KB, fits in L1
-	std::iota(v.begin(), v.end(), 0);
-	for (auto _ : state) {
-		int sum = 0;
-		for (int x : v) sum += x;
-		benchmark::DoNotOptimize(sum);
-	}
-	// Reports ~50 ns.  In production, with cache-cold data,
-	// the same operation takes 10-50x longer.
+    std::vector&lt;int&gt; v(1'000);  // ~4 KB, fits in L1
+    std::iota(v.begin(), v.end(), 0);
+    for (auto _ : state) {
+        int sum = 0;
+        for (int x : v) sum += x;
+        benchmark::DoNotOptimize(sum);
+    }
+    // Reports ~50 ns.  In production, with cache-cold data,
+    // the same operation takes 10-50x longer.
 }
 </code></pre>
 <p>If the production access pattern encounters cold data, either make the working set large enough to exceed cache, or explicitly flush cache lines between iterations (platform-specific and fragile, but sometimes necessary for honest results).</p>
@@ -4038,14 +4038,14 @@ static void BM_warm_cache(benchmark::State&amp; state) {
 <li><strong>Forgetting <code>benchmark::ClobberMemory()</code></strong>: <code>DoNotOptimize</code> prevents dead stores of a value, but it does not force the compiler to assume memory has changed. If your benchmark modifies a data structure in place, the compiler may hoist reads above writes across iterations. Use <code>benchmark::ClobberMemory()</code> after mutations to force a reload:</li>
 </ol>
 <pre><code class="language-cpp">static void BM_modify(benchmark::State&amp; state) {
-	std::vector&lt;int&gt; v(10'000, 0);
-	for (auto _ : state) {
-		for (auto&amp; x : v) x += 1;
-		benchmark::ClobberMemory();
-		// Without ClobberMemory, the compiler could theoretically
-		// observe that v is never read and eliminate the writes,
-		// or combine multiple iterations into one.
-	}
+    std::vector&lt;int&gt; v(10'000, 0);
+    for (auto _ : state) {
+        for (auto&amp; x : v) x += 1;
+        benchmark::ClobberMemory();
+        // Without ClobberMemory, the compiler could theoretically
+        // observe that v is never read and eliminate the writes,
+        // or combine multiple iterations into one.
+    }
 }
 </code></pre>
 <ol start="2">
@@ -4148,58 +4148,58 @@ static void BM_warm_cache(benchmark::State&amp; state) {
 <p>Consider a service that rewrites an on-disk snapshot atomically. The production rule is not “call <code>write</code>, then <code>rename</code>, then <code>remove</code> on failure.” The production rule is “either the new snapshot becomes visible, or the old one remains intact and the staging file is cleaned up.” A useful test targets that rule directly.</p>
 <h3 id="intentional-partial-a-seam-that-makes-rollback-testable"><a class="header" href="#intentional-partial-a-seam-that-makes-rollback-testable">Intentional partial: a seam that makes rollback testable</a></h3>
 <pre><code class="language-cpp">struct file_system {
-	virtual ~file_system() = default;
+    virtual ~file_system() = default;
 
-	virtual auto write(std::filesystem::path const&amp; path,
-					   std::span&lt;char const&gt; bytes)
-		-&gt; std::expected&lt;void, std::error_code&gt; = 0;
+    virtual auto write(std::filesystem::path const&amp; path,
+                       std::span&lt;char const&gt; bytes)
+        -&gt; std::expected&lt;void, std::error_code&gt; = 0;
 
-	virtual auto rename(std::filesystem::path const&amp; from,
-						std::filesystem::path const&amp; to)
-		-&gt; std::expected&lt;void, std::error_code&gt; = 0;
+    virtual auto rename(std::filesystem::path const&amp; from,
+                        std::filesystem::path const&amp; to)
+        -&gt; std::expected&lt;void, std::error_code&gt; = 0;
 
-	virtual void remove(std::filesystem::path const&amp; path) noexcept = 0;
+    virtual void remove(std::filesystem::path const&amp; path) noexcept = 0;
 };
 
 enum class snapshot_error {
-	staging_write_failed,
-	commit_failed,
+    staging_write_failed,
+    commit_failed,
 };
 
 auto write_snapshot_atomically(file_system&amp; fs,
-							   std::filesystem::path const&amp; target,
-							   std::span&lt;char const&gt; bytes)
-	-&gt; std::expected&lt;void, snapshot_error&gt;
+                               std::filesystem::path const&amp; target,
+                               std::span&lt;char const&gt; bytes)
+    -&gt; std::expected&lt;void, snapshot_error&gt;
 {
-	auto staging = target;
-	staging += ".tmp";
+    auto staging = target;
+    staging += ".tmp";
 
-	if (auto r = fs.write(staging, bytes); !r) {
-		return std::unexpected(snapshot_error::staging_write_failed);
-	}
+    if (auto r = fs.write(staging, bytes); !r) {
+        return std::unexpected(snapshot_error::staging_write_failed);
+    }
 
-	if (auto r = fs.rename(staging, target); !r) {
-		fs.remove(staging);
-		return std::unexpected(snapshot_error::commit_failed);
-	}
+    if (auto r = fs.rename(staging, target); !r) {
+        fs.remove(staging);
+        return std::unexpected(snapshot_error::commit_failed);
+    }
 
-	return {};
+    return {};
 }
 </code></pre>
 <pre><code class="language-cpp">TEST(write_snapshot_atomically_cleans_up_staging_file_on_commit_failure)
 {
-	fake_file_system fs;
-	fs.fail_rename_with(make_error_code(std::errc::device_or_resource_busy));
+    fake_file_system fs;
+    fs.fail_rename_with(make_error_code(std::errc::device_or_resource_busy));
 
-	auto result = write_snapshot_atomically(
-		fs,
-		"cache/index.bin",
-		std::as_bytes(std::span{"new snapshot"sv.data(), "new snapshot"sv.size()}));
+    auto result = write_snapshot_atomically(
+        fs,
+        "cache/index.bin",
+        std::as_bytes(std::span{"new snapshot"sv.data(), "new snapshot"sv.size()}));
 
-	ASSERT_FALSE(result.has_value());
-	EXPECT_EQ(result.error(), snapshot_error::commit_failed);
-	EXPECT_FALSE(fs.exists("cache/index.bin.tmp"));
-	EXPECT_EQ(fs.read("cache/index.bin"), "old snapshot");
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), snapshot_error::commit_failed);
+    EXPECT_FALSE(fs.exists("cache/index.bin.tmp"));
+    EXPECT_EQ(fs.read("cache/index.bin"), "old snapshot");
 }
 </code></pre>
 <p>This is the right kind of seam because it sits at the business boundary. The test does not mock half the standard library. It creates one replaceable interface around the external effect and checks the postconditions the caller depends on.</p>
@@ -4209,13 +4209,13 @@ auto write_snapshot_atomically(file_system&amp; fs,
 <pre><code class="language-cpp">// BAD: This test passes, but proves nothing about cleanup.
 TEST(write_snapshot_calls_remove_on_rename_failure)
 {
-	strict_mock_file_system fs;
-	EXPECT_CALL(fs, write(_, _)).WillOnce(Return(std::expected&lt;void, std::error_code&gt;{}));
-	EXPECT_CALL(fs, rename(_, _)).WillOnce(Return(
-		std::unexpected(make_error_code(std::errc::device_or_resource_busy))));
-	EXPECT_CALL(fs, remove("cache/index.bin.tmp")).Times(1);
+    strict_mock_file_system fs;
+    EXPECT_CALL(fs, write(_, _)).WillOnce(Return(std::expected&lt;void, std::error_code&gt;{}));
+    EXPECT_CALL(fs, rename(_, _)).WillOnce(Return(
+        std::unexpected(make_error_code(std::errc::device_or_resource_busy))));
+    EXPECT_CALL(fs, remove("cache/index.bin.tmp")).Times(1);
 
-	write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
+    write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
 }
 </code></pre>
 <p>This test verifies that <code>remove</code> is called. It does not verify that the staging file is actually gone or that the original file is untouched. If someone refactors the cleanup to use <code>std::filesystem::remove_all</code> or changes the staging path convention, this test breaks – but a real bug where <code>remove</code> silently fails and leaves the staging file behind would pass. The earlier test against <code>fake_file_system</code> is stronger because it asserts observable postconditions, not call sequences.</p>
@@ -4223,38 +4223,38 @@ TEST(write_snapshot_calls_remove_on_rename_failure)
 <p>Scoped RAII is not enough if error paths skip construction or move ownership incorrectly. A surprisingly common pattern is a resource that leaks only on a specific failure path:</p>
 <pre><code class="language-cpp">class connection_pool {
 public:
-	auto acquire() -&gt; std::expected&lt;pooled_connection, pool_error&gt;;
-	void release(pooled_connection conn) noexcept;
+    auto acquire() -&gt; std::expected&lt;pooled_connection, pool_error&gt;;
+    void release(pooled_connection conn) noexcept;
 };
 
 // This function has a leak on the second acquire failure.
 auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
-	-&gt; std::expected&lt;receipt, transfer_error&gt;
+    -&gt; std::expected&lt;receipt, transfer_error&gt;
 {
-	auto src = pool.acquire();
-	if (!src) return std::unexpected(transfer_error::no_connection);
+    auto src = pool.acquire();
+    if (!src) return std::unexpected(transfer_error::no_connection);
 
-	auto dst = pool.acquire();
-	if (!dst) {
-		// BUG: forgot to release src back to the pool.
-		return std::unexpected(transfer_error::no_connection);
-	}
+    auto dst = pool.acquire();
+    if (!dst) {
+        // BUG: forgot to release src back to the pool.
+        return std::unexpected(transfer_error::no_connection);
+    }
 
-	// ... perform transfer, release both on success ...
-	pool.release(std::move(*src));
-	pool.release(std::move(*dst));
-	return receipt{};
+    // ... perform transfer, release both on success ...
+    pool.release(std::move(*src));
+    pool.release(std::move(*dst));
+    return receipt{};
 }
 </code></pre>
 <p>A test that only exercises the success path never sees the leak. A test that only checks the return value on failure also misses it. The test that catches it asserts pool state:</p>
 <pre><code class="language-cpp">TEST(transfer_releases_source_connection_when_dest_acquire_fails)
 {
-	counting_connection_pool pool{.max_connections = 1};
+    counting_connection_pool pool{.max_connections = 1};
 
-	auto result = transfer(pool, make_request());
+    auto result = transfer(pool, make_request());
 
-	ASSERT_FALSE(result.has_value());
-	EXPECT_EQ(pool.available(), 1);  // Source connection must be returned.
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(pool.available(), 1);  // Source connection must be returned.
 }
 </code></pre>
 <p>This is the pattern: if you own a scarce resource, your failure-path tests should assert that the resource is released, not just that an error was returned.</p>
@@ -4262,19 +4262,19 @@ auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
 <p>Even <code>noexcept</code>-free code paths deserve testing when exception safety matters. A container or cache that provides the strong exception guarantee should be tested for it:</p>
 <pre><code class="language-cpp">TEST(cache_insert_preserves_existing_entries_on_allocation_failure)
 {
-	lru_cache&lt;std::string, std::string&gt; cache(/*capacity=*/4);
-	cache.insert("key1", "value1");
-	cache.insert("key2", "value2");
+    lru_cache&lt;std::string, std::string&gt; cache(/*capacity=*/4);
+    cache.insert("key1", "value1");
+    cache.insert("key2", "value2");
 
-	failing_allocator::arm_failure_after(1);  // Fail during insert internals.
+    failing_allocator::arm_failure_after(1);  // Fail during insert internals.
 
-	auto result = cache.insert("key3", "value3");
-	EXPECT_FALSE(result.has_value());
+    auto result = cache.insert("key3", "value3");
+    EXPECT_FALSE(result.has_value());
 
-	// Strong guarantee: pre-existing entries are intact.
-	EXPECT_EQ(cache.get("key1"), "value1");
-	EXPECT_EQ(cache.get("key2"), "value2");
-	EXPECT_EQ(cache.size(), 2);
+    // Strong guarantee: pre-existing entries are intact.
+    EXPECT_EQ(cache.get("key1"), "value1");
+    EXPECT_EQ(cache.get("key2"), "value2");
+    EXPECT_EQ(cache.size(), 2);
 }
 </code></pre>
 <p>If the cache provides only the basic guarantee, the test should still verify that no resources leaked and the cache is in a valid (if modified) state. The worst outcome is no test at all – the cache silently corrupts its internal structure on exception, and callers discover the problem under production allocation pressure.</p>
@@ -4290,21 +4290,21 @@ auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
 // This test passes because the input string outlives the config.
 TEST(config_parser_reads_server_name)
 {
-	std::string input = R"({"server": "prod-01"})";
-	auto cfg = parse_config(input);
-	EXPECT_EQ(cfg.server_name(), "prod-01");  // PASSES -- but fragile.
+    std::string input = R"({"server": "prod-01"})";
+    auto cfg = parse_config(input);
+    EXPECT_EQ(cfg.server_name(), "prod-01");  // PASSES -- but fragile.
 }
 
 // This test exposes the dangling view.
 TEST(config_survives_input_destruction)
 {
-	auto cfg = []{
-		std::string input = R"({"server": "prod-01"})";
-		return parse_config(input);
-	}();
-	// input is destroyed. If server_name() holds a string_view into it,
-	// this is use-after-free. It may still "pass" without sanitizers.
-	EXPECT_EQ(cfg.server_name(), "prod-01");
+    auto cfg = []{
+        std::string input = R"({"server": "prod-01"})";
+        return parse_config(input);
+    }();
+    // input is destroyed. If server_name() holds a string_view into it,
+    // this is use-after-free. It may still "pass" without sanitizers.
+    EXPECT_EQ(cfg.server_name(), "prod-01");
 }
 </code></pre>
 <p>The first test is the one most teams write. The second is the one that catches the real bug. Pair it with AddressSanitizer (next chapter) to turn the silent corruption into a hard failure.</p>
@@ -4444,18 +4444,18 @@ endif()
 <h3 id="the-bug-that-works-without-asan"><a class="header" href="#the-bug-that-works-without-asan">The bug that “works” without ASan</a></h3>
 <p>This is the canonical case that wastes days of debugging time in codebases that skip sanitizer builds:</p>
 <pre><code class="language-cpp">auto get_session_name(session_registry&amp; registry, session_id id)
-	-&gt; std::string_view
+    -&gt; std::string_view
 {
-	auto it = registry.find(id);
-	if (it == registry.end()) return {};
-	return it-&gt;second.name();  // Returns view into the session object.
+    auto it = registry.find(id);
+    if (it == registry.end()) return {};
+    return it-&gt;second.name();  // Returns view into the session object.
 }
 
 void log_and_remove_session(session_registry&amp; registry, session_id id)
 {
-	auto name = get_session_name(registry, id);
-	registry.erase(id);             // Session destroyed. name is now dangling.
-	audit_log("removed session: {}", name);  // Use-after-free.
+    auto name = get_session_name(registry, id);
+    registry.erase(id);             // Session destroyed. name is now dangling.
+    audit_log("removed session: {}", name);  // Use-after-free.
 }
 </code></pre>
 <p>Without ASan, this code will usually pass tests and even run correctly in production for months. The freed memory still contains the old string data until something else overwrites it. The test passes. Code review might not catch it – the function looks straightforward. When it does fail, the symptom is garbled log output or a crash in an unrelated allocation, nowhere near the actual bug.</p>
@@ -4480,7 +4480,7 @@ previously allocated by thread T0 here:
 <p>The report identifies the exact read, the exact free, and the exact allocation. Compare that with the alternative: a corrupted log entry three weeks from now that nobody connects to this code path.</p>
 <p>Typical build characteristics look like this:</p>
 <pre><code class="language-bash">clang++ -std=c++23 -O1 -g -fno-omit-frame-pointer \
-	-fsanitize=address,undefined
+    -fsanitize=address,undefined
 </code></pre>
 <p>The exact flags vary by toolchain, but the principles are stable: keep enough optimization to preserve realistic structure, keep debug info, and keep frame pointers so stacks are usable.</p>
 <h3 id="undefinedbehaviorsanitizer"><a class="header" href="#undefinedbehaviorsanitizer">UndefinedBehaviorSanitizer</a></h3>
@@ -4488,9 +4488,9 @@ previously allocated by thread T0 here:
 <p>Do not over-interpret it, though. UBSan is not a proof system. It only reports behavior that the exercised execution encountered and that the enabled checks can see.</p>
 <p>A concrete example: signed overflow in size calculations is a common source of security bugs that compilers are free to exploit.</p>
 <pre><code class="language-cpp">auto compute_buffer_size(std::int32_t width, std::int32_t height, std::int32_t channels)
-	-&gt; std::int32_t
+    -&gt; std::int32_t
 {
-	return width * height * channels;  // Signed overflow if product exceeds INT32_MAX.
+    return width * height * channels;  // Signed overflow if product exceeds INT32_MAX.
 }
 </code></pre>
 <p>For <code>width=4096, height=4096, channels=4</code>, the product is 67,108,864 – safe. For <code>width=32768, height=32768, channels=4</code>, the product is 4,294,967,296 which overflows a 32-bit signed integer. Without UBSan, the compiler may optimize downstream bounds checks away entirely because signed overflow is undefined. UBSan catches this at the multiplication:</p>
@@ -4503,21 +4503,21 @@ represented in type 'int'
 <h3 id="the-data-race-that-tests-never-catch"><a class="header" href="#the-data-race-that-tests-never-catch">The data race that tests never catch</a></h3>
 <p>Data races are invisible to testing without TSan because they depend on scheduling. Consider a metrics counter shared between a request handler and a background reporter:</p>
 <pre><code class="language-cpp">struct service_stats {
-	std::int64_t requests_handled = 0;   // No synchronization.
-	std::int64_t bytes_processed = 0;
+    std::int64_t requests_handled = 0;   // No synchronization.
+    std::int64_t bytes_processed = 0;
 };
 
 // Thread 1: request handler
 void handle_request(service_stats&amp; stats, request const&amp; req) {
-	process(req);
-	stats.requests_handled++;    // Data race: unsynchronized write.
-	stats.bytes_processed += req.size();
+    process(req);
+    stats.requests_handled++;    // Data race: unsynchronized write.
+    stats.bytes_processed += req.size();
 }
 
 // Thread 2: periodic reporter
 void report_stats(service_stats const&amp; stats) {
-	log_metrics("requests", stats.requests_handled);   // Data race: unsynchronized read.
-	log_metrics("bytes", stats.bytes_processed);
+    log_metrics("requests", stats.requests_handled);   // Data race: unsynchronized read.
+    log_metrics("bytes", stats.bytes_processed);
 }
 </code></pre>
 <p>This code will pass every test you write. It will run correctly for months on x86 where the memory model is relatively forgiving. It becomes a problem when the compiler reorders the writes, when the optimizer lifts the read into a register, or when someone ports to ARM. The bug is real today but the symptoms are deferred.</p>
@@ -4626,74 +4626,74 @@ void report_stats(service_stats const&amp; stats) {
 <h3 id="what-debugging-looks-like-without-observability"><a class="header" href="#what-debugging-looks-like-without-observability">What debugging looks like without observability</a></h3>
 <p>To make the value concrete, consider a service that processes file uploads. A user reports that uploads are timing out. Here is the handler with no structured observability:</p>
 <pre><code class="language-cpp">void handle_upload(const http_request&amp; req) {
-	std::println("INFO: Processing upload");
+    std::println("INFO: Processing upload");
 
-	std::println("INFO: Starting validation");
-	auto validation = validate(req);
-	if (!validation) {
-		std::println(stderr, "ERROR: Validation failed: {}",
-		             validation.error().message());
-		return;
-	}
+    std::println("INFO: Starting validation");
+    auto validation = validate(req);
+    if (!validation) {
+        std::println(stderr, "ERROR: Validation failed: {}",
+                     validation.error().message());
+        return;
+    }
 
-	std::println("INFO: Storing file");
-	auto store_result = store(req);
-	if (!store_result) {
-		std::println(stderr, "ERROR: Store failed: {}",
-		             store_result.error().message());
-		return;
-	}
+    std::println("INFO: Storing file");
+    auto store_result = store(req);
+    if (!store_result) {
+        std::println(stderr, "ERROR: Store failed: {}",
+                     store_result.error().message());
+        return;
+    }
 
-	notify(req);
-	std::println("INFO: Upload complete");
+    notify(req);
+    std::println("INFO: Upload complete");
 }
 </code></pre>
 <p>Which upload failed? Was it the same user or a different one? What was it waiting on – disk I/O, a downstream service, a lock? How long did the store call take? Was the failure retried? None of these questions are answerable from the logs this function produces. The on-call engineer resorts to grepping logs by timestamp ranges, guessing at correlation, and asking the user to reproduce.</p>
 <p>Now the same function with structured logging, correlation IDs, and dimensional metrics:</p>
 <pre><code class="language-cpp">void handle_upload(upload_context&amp; ctx) {
-	auto span = ctx.tracer().start_span("handle_upload", {
-		{"request_id", ctx.request_id()},
-		{"user_id",    ctx.user_id()},
-		{"file_size",  ctx.file_size()},
-		{"shard",      ctx.shard_id()},
-	});
+    auto span = ctx.tracer().start_span("handle_upload", {
+        {"request_id", ctx.request_id()},
+        {"user_id",    ctx.user_id()},
+        {"file_size",  ctx.file_size()},
+        {"shard",      ctx.shard_id()},
+    });
 
-	ctx.log(severity::info, "upload_started", {
-		{"request_id", ctx.request_id()},
-		{"file_name",  ctx.file_name()},
-		{"file_size",  std::to_string(ctx.file_size())},
-	});
+    ctx.log(severity::info, "upload_started", {
+        {"request_id", ctx.request_id()},
+        {"file_name",  ctx.file_name()},
+        {"file_size",  std::to_string(ctx.file_size())},
+    });
 
-	auto validation = validate(ctx);
-	if (!validation) {
-		ctx.log(severity::warning, "validation_failed", {
-			{"request_id", ctx.request_id()},
-			{"reason",     validation.error().category()},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "validation"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto validation = validate(ctx);
+    if (!validation) {
+        ctx.log(severity::warning, "validation_failed", {
+            {"request_id", ctx.request_id()},
+            {"reason",     validation.error().category()},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "validation"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	auto store_result = store(ctx);
-	if (!store_result) {
-		ctx.log(severity::error, "store_failed", {
-			{"request_id",  ctx.request_id()},
-			{"dependency",  "blob_store"},
-			{"error_class", store_result.error().category()},
-			{"latency_ms",  std::to_string(store_result.elapsed_ms())},
-		});
-		ctx.metrics().increment("upload_failures", 1,
-			{{"reason", "store"}, {"shard", ctx.shard_id()}});
-		return;
-	}
+    auto store_result = store(ctx);
+    if (!store_result) {
+        ctx.log(severity::error, "store_failed", {
+            {"request_id",  ctx.request_id()},
+            {"dependency",  "blob_store"},
+            {"error_class", store_result.error().category()},
+            {"latency_ms",  std::to_string(store_result.elapsed_ms())},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "store"}, {"shard", ctx.shard_id()}});
+        return;
+    }
 
-	ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
-		{{"shard", ctx.shard_id()}});
-	ctx.log(severity::info, "upload_complete", {
-		{"request_id", ctx.request_id()},
-		{"latency_ms", std::to_string(span.elapsed_ms())},
-	});
+    ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
+        {{"shard", ctx.shard_id()}});
+    ctx.log(severity::info, "upload_complete", {
+        {"request_id", ctx.request_id()},
+        {"latency_ms", std::to_string(span.elapsed_ms())},
+    });
 }
 </code></pre>
 <p>Now the on-call engineer filters by <code>request_id</code>, sees that the timeout happened during <code>store</code> with <code>dependency=blob_store</code>, checks the <code>upload_duration_ms</code> histogram by shard, and discovers that shard-3 latency spiked at 09:40. The blob store dashboard confirms the dependency was degraded. Total investigation time drops from hours to minutes.</p>
@@ -4780,30 +4780,30 @@ ctx.log(severity::error, "dependency_connect_failed", {
 <p>A common failure mode in async native services is latency that lives in queueing, not in execution. Without trace propagation across executor boundaries, this is invisible:</p>
 <pre><code class="language-cpp">// No trace context propagation. The span only covers execution, not waiting.
 void enqueue_work(thread_pool&amp; pool, request req) {
-	pool.submit([req = std::move(req)] {
-		auto span = tracer::start_span("process_request");  // Starts when work RUNS.
-		process(req);
-	});
-	// Time between submit() and when the lambda actually executes is lost.
-	// If the pool is saturated, requests wait 500ms in the queue,
-	// but traces show 2ms of execution time. Operators see low latency
-	// in traces while users experience high latency. The queue time is a
-	// blind spot.
+    pool.submit([req = std::move(req)] {
+        auto span = tracer::start_span("process_request");  // Starts when work RUNS.
+        process(req);
+    });
+    // Time between submit() and when the lambda actually executes is lost.
+    // If the pool is saturated, requests wait 500ms in the queue,
+    // but traces show 2ms of execution time. Operators see low latency
+    // in traces while users experience high latency. The queue time is a
+    // blind spot.
 }
 </code></pre>
 <p>With proper context propagation, the full picture is visible:</p>
 <pre><code class="language-cpp">void enqueue_work(thread_pool&amp; pool, request req, trace_context ctx) {
-	auto enqueue_time = steady_clock::now();
-	pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
-		auto queue_span = ctx.start_span("queued", {
-			{"queue_ms", std::to_string(duration_cast&lt;milliseconds&gt;(
-				steady_clock::now() - enqueue_time).count())},
-		});
-		queue_span.end();
+    auto enqueue_time = steady_clock::now();
+    pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
+        auto queue_span = ctx.start_span("queued", {
+            {"queue_ms", std::to_string(duration_cast&lt;milliseconds&gt;(
+                steady_clock::now() - enqueue_time).count())},
+        });
+        queue_span.end();
 
-		auto exec_span = ctx.start_span("process_request");
-		process(req);
-	});
+        auto exec_span = ctx.start_span("process_request");
+        process(req);
+    });
 }
 </code></pre>
 <p>Now the trace shows two spans – queueing and execution – both linked to the parent request. When queue time dominates, it is immediately visible in the trace waterfall. This is the kind of latency that metrics alone (average processing time) systematically hide.</p>
@@ -4838,20 +4838,20 @@ void enqueue_work(thread_pool&amp; pool, request req) {
 <pre><code class="language-cpp">enum class severity { debug, info, warning, error };
 
 struct diagnostic_field {
-	std::string_view key;
-	std::string_view value;
+    std::string_view key;
+    std::string_view value;
 };
 
 struct diagnostics_sink {
-	virtual ~diagnostics_sink() = default;
+    virtual ~diagnostics_sink() = default;
 
-	virtual void record_event(severity level,
-							  std::string_view event_name,
-							  std::span&lt;diagnostic_field const&gt; fields) noexcept = 0;
+    virtual void record_event(severity level,
+                              std::string_view event_name,
+                              std::span&lt;diagnostic_field const&gt; fields) noexcept = 0;
 
-	virtual void increment_counter(std::string_view name,
-								   std::int64_t delta,
-								   std::span&lt;diagnostic_field const&gt; dimensions) noexcept = 0;
+    virtual void increment_counter(std::string_view name,
+                                   std::int64_t delta,
+                                   std::span&lt;diagnostic_field const&gt; dimensions) noexcept = 0;
 };
 </code></pre>
 <p>This kind of interface keeps the library honest. It can report parse failures, retries, cache evictions, or reload timings without hard-coding a vendor SDK into every binary that uses it. The host decides how to attach request IDs, export metrics, or bridge into traces.</p>
@@ -4888,28 +4888,28 @@ struct diagnostics_sink {
 <p>The service object should therefore model ownership directly. It should be the place where long-lived dependencies are constructed, started, and stopped. That does not mean one giant god object. It means one clear root that owns the parts whose lifetimes must end together.</p>
 <h3 id="intentional-partial-a-service-root-that-owns-time-and-shutdown"><a class="header" href="#intentional-partial-a-service-root-that-owns-time-and-shutdown">Intentional partial: a service root that owns time and shutdown</a></h3>
 <pre><code class="language-cpp">struct service_components {
-	config cfg;
-	request_router router;
-	storage_client storage;
-	bounded_executor executor;
-	telemetry telemetry;
-	http_listener listener;
+    config cfg;
+    request_router router;
+    storage_client storage;
+    bounded_executor executor;
+    telemetry telemetry;
+    http_listener listener;
 };
 
 class service {
 public:
-	explicit service(service_components components)
-		: components_(std::move(components)) {}
+    explicit service(service_components components)
+        : components_(std::move(components)) {}
 
-	auto run(std::stop_token stop) -&gt; std::expected&lt;void, service_error&gt;;
-	void request_stop() noexcept;
+    auto run(std::stop_token stop) -&gt; std::expected&lt;void, service_error&gt;;
+    void request_stop() noexcept;
 
 private:
-	auto start() -&gt; std::expected&lt;void, service_error&gt;;
-	auto drain() noexcept -&gt; void;
+    auto start() -&gt; std::expected&lt;void, service_error&gt;;
+    auto drain() noexcept -&gt; void;
 
-	service_components components_;
-	std::atomic&lt;bool&gt; stopping_{false};
+    service_components components_;
+    std::atomic&lt;bool&gt; stopping_{false};
 };
 </code></pre>
 <p>This is intentionally boring. The service has one ownership root, one stop path, and one place to reason about startup and drain order. A small service does not need architectural theater.</p>
@@ -5187,25 +5187,25 @@ auto handler = webapi::middleware::chain(pipeline, router.to_handler());
 <p>Value types are often the right center of gravity for library APIs because they travel well across teams and tests. They make copying cost visible, move semantics deliberate, and invariants attachable to construction or validation boundaries. Borrowed inputs such as <code>std::string_view</code> and <code>std::span</code> are still excellent for call boundaries, but they should be used only when the library can complete its work within the borrowed lifetime or copy what it must retain.</p>
 <h3 id="intentional-partial-a-caller-facing-api-with-explicit-contracts"><a class="header" href="#intentional-partial-a-caller-facing-api-with-explicit-contracts">Intentional partial: a caller-facing API with explicit contracts</a></h3>
 <pre><code class="language-cpp">enum class parse_error {
-	invalid_syntax,
-	unsupported_version,
-	duplicate_key,
-	resource_limit_exceeded,
+    invalid_syntax,
+    unsupported_version,
+    duplicate_key,
+    resource_limit_exceeded,
 };
 
 struct parse_options {
-	std::size_t max_document_bytes = 1 &lt;&lt; 20;
-	bool allow_comments = false;
+    std::size_t max_document_bytes = 1 &lt;&lt; 20;
+    bool allow_comments = false;
 };
 
 struct document {
-	std::pmr::vector&lt;entry&gt; entries;
+    std::pmr::vector&lt;entry&gt; entries;
 };
 
 [[nodiscard]] auto parse_document(std::string_view input,
-								  parse_options const&amp; options,
-								  std::pmr::memory_resource&amp; memory)
-	-&gt; std::expected&lt;document, parse_error&gt;;
+                                  parse_options const&amp; options,
+                                  std::pmr::memory_resource&amp; memory)
+    -&gt; std::expected&lt;document, parse_error&gt;;
 </code></pre>
 <p>This excerpt does a few useful things. It separates caller-controlled policy from input bytes. It makes allocation strategy visible without forcing a global allocator policy. It returns a domain error rather than a transport-specific or parser-internal type. It also makes result checking harder to forget through <code>[[nodiscard]]</code> and <code>std::expected</code>.</p>
 <p>The tradeoff is that the function signature is less minimal than <code>document parse(std::string_view)</code>. That is fine. Reusable libraries do not get paid for looking compact in slides. They get paid for making costs and contracts legible.</p>

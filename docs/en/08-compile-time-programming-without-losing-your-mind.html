@@ -261,31 +261,31 @@ constexpr auto crc_table = build_crc_table();
 <p><code>consteval</code> is stronger than <code>constexpr</code>: it requires evaluation at compile time. That is useful when accepting runtime fallback would hide a configuration mistake you never want in production.</p>
 <p>Imagine a wire protocol subsystem with a fixed set of message descriptors that must have unique opcodes and bounded payload sizes. Those constraints are not dynamic business logic. They are part of the static shape of the program. Catching a duplicate opcode at compile time is materially better than discovering it during startup or, worse, through a routing bug in integration.</p>
 <pre><code class="language-cpp">struct MessageDescriptor {
-	std::uint16_t opcode;
-	std::size_t max_payload;
+    std::uint16_t opcode;
+    std::size_t max_payload;
 };
 
 template &lt;std::size_t N&gt;
 consteval auto validate_descriptors(std::array&lt;MessageDescriptor, N&gt; table)
-	-&gt; std::array&lt;MessageDescriptor, N&gt;
+    -&gt; std::array&lt;MessageDescriptor, N&gt;
 {
-	for (std::size_t i = 0; i &lt; N; ++i) {
-		if (table[i].max_payload &gt; 64 * 1024) {
-			throw "payload limit exceeded";
-		}
-		for (std::size_t j = i + 1; j &lt; N; ++j) {
-			if (table[i].opcode == table[j].opcode) {
-				throw "duplicate opcode";
-			}
-		}
-	}
-	return table;
+    for (std::size_t i = 0; i &lt; N; ++i) {
+        if (table[i].max_payload &gt; 64 * 1024) {
+            throw "payload limit exceeded";
+        }
+        for (std::size_t j = i + 1; j &lt; N; ++j) {
+            if (table[i].opcode == table[j].opcode) {
+                throw "duplicate opcode";
+            }
+        }
+    }
+    return table;
 }
 
 constexpr auto descriptors = validate_descriptors(std::array{
-	MessageDescriptor{0x10, 1024},
-	MessageDescriptor{0x11, 4096},
-	MessageDescriptor{0x12, 512},
+    MessageDescriptor{0x10, 1024},
+    MessageDescriptor{0x11, 4096},
+    MessageDescriptor{0x12, 512},
 });
 </code></pre>
 <p>The exact error text and mechanism can be refined, but the design point is solid. These descriptors are static program structure. Rejecting an invalid table during compilation is worth the cost.</p>
