@@ -30,7 +30,7 @@ RAII means tying a resource to the lifetime of an object whose destructor releas
 
 ### Anti-pattern: Manual Socket Lifetime in Control Flow
 
-Before illustrating the RAII pattern, it is worth seeing the manual approach in a fuller form, because production codebases still contain code that looks exactly like this.
+Before illustrating the RAII pattern, it is worth seeing the manual approach in a fuller form. The following anti-pattern is intentionally buggy on purpose, because production codebases still contain code that looks exactly like this.
 
 ```cpp
 socket_t create_server_socket(std::uint16_t port) {
@@ -169,10 +169,15 @@ The surrounding code in the same module shows how this behaves in real use. The 
     Socket sock{::socket(AF_INET, SOCK_STREAM, 0)}; // ownership starts here
     if (!sock) return {};
 
+    int opt = 1;
     if (::setsockopt(sock.fd(), SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         return {}; // sock is destroyed here, so the descriptor closes automatically
     }
 
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port_);
     if (::bind(sock.fd(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
         return {}; // same: failure path still releases the descriptor
     }
@@ -188,9 +193,11 @@ Socket client{::accept(server_sock.fd(), ...)}; // accepted socket now has an ow
 handle_connection(std::move(client));           // explicit ownership transfer
 
 void handle_connection(Socket client) const {
+    std::array<char, 8192> buf{};
     auto n = read_from_socket(client.fd(), buf.data(), buf.size());
     if (n <= 0) return;
 
+    Response resp = handler_(req); // request parsing omitted here
     auto data = resp.serialize();
     (void)write_to_socket(client.fd(), data.data(), static_cast<int>(data.size()));
 } // client goes out of scope here and closes automatically
