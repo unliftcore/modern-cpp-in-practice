@@ -1,0 +1,455 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>数据布局、容器与内存行为 - 现代 C++ 实战</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="面向有经验程序员的现代 C++ 生产实践指南：所有权、接口、失败边界、并发、性能与验证。">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-8b875a01.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">现代 C++ 实战</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice/edit/main/translations/zh-CN/chapters/chapters/15-data-layout-containers-and-memory-behavior.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="数据布局容器与内存行为"><a class="header" href="#数据布局容器与内存行为">数据布局、容器与内存行为</a></h1>
+<h2 id="生产问题"><a class="header" href="#生产问题">生产问题</a></h2>
+<p>C++ 中的许多性能问题，表面上看是算法选择之争，实则是数据表示的失败。团队还在讨论某次查找该是 $O(1)$ 还是 $O(\log n)$，真正的问题早已暴露在别处——热路径上堆节点的逐一遍历、过多缓存行的触碰、每次迭代中冷字段的无谓搬运。编译器无法弥补糟糕的数据形状，它只能在既定形状上做些微不足道的优化。</p>
+<p>本章关注的正是决定数据如何驻留在内存中的一系列决策：容器选择、元素布局、迭代顺序、失效行为，以及视图如何在不掩盖生命周期的前提下暴露存储数据。重点不在于抽象地讨论”哪个容器最快”，而是一个更具体、也更有价值的问题：在你实际构建的系统中，什么样的数据表示能让核心操作足够高效？</p>
+<p>回答这个问题时，要以真实的负载压力为参照。想象一下：一个管理着数百万路由条目的请求路由器、一条持续摄取高密度时序样本的遥测 pipeline、一个每帧都要扫描组件状态的游戏或模拟更新循环，或者一个逐批遍历事件的分析作业。在这些系统中，容器选择绝不只是实现细节，而是性能契约的一部分。</p>
+<h2 id="当-big-o-不再解释运行时间"><a class="header" href="#当-big-o-不再解释运行时间">当 Big-O 不再解释运行时间</a></h2>
+<p>渐近复杂度是必要的，但远远不够。它能排除明显低效的设计，却无法描述内存访问流量、分支预测命中率、prefetch 行为、false sharing，以及指针间接跳转的代价。<code>std::list</code> 的插入是常数时间——但如果每个有意义的操作都要在冷内存里追指针，这一点几乎毫无意义。对于中等规模的数据，排序后的 <code>std::vector</code> 常常能打赢哈希表，因为连续内存上的二分查找和廉价迭代带来的优势，往往盖过名义上的查找复杂度差异。</p>
+<p>这种错位很重要，因为生产环境的负载很少是均匀的。某些操作主导了总体开销，另一些操作则对延迟极其敏感——多出几次缓存未命中，可能比多做一次比较影响更大。在选择容器之前，先用直白的语言描述清楚实际的负载特征：</p>
+<ul>
+<li>主导操作是什么——全量遍历、单点查找、尾部追加、中间删除，还是批量重建？</li>
+<li>数据构建完成后主要是只读的，还是会被持续修改？</li>
+<li>是否需要稳定地址、稳定的迭代顺序，或可预测的失效规则？</li>
+<li>数据集是小到能放进私有缓存，还是大到 TLB 和内存带宽已成为主要瓶颈？</li>
+</ul>
+<p>如果这些问题没有答案，容器选择就只能靠经验传闻。</p>
+<h2 id="默认优先连续存储"><a class="header" href="#默认优先连续存储">默认优先连续存储</a></h2>
+<p>对于频繁遍历的数据，连续存储应当是默认起点。<code>std::vector</code>、<code>std::array</code>、<code>std::span</code>、<code>std::mdspan</code>、flat buffer 和列式数组屡屡胜出，因为硬件天然偏爱可预测的访问模式。顺序扫描使处理器能够高效 prefetch、摊薄 TLB 开销，并保持简单的分支行为。这种硬件层面的优势，往往比理论上”更高级”的数据结构所带来的算法优势更大。</p>
+<p>这种差异并不微妙。以一个简单的例子来说明：对元素数量相同的 <code>std::vector&lt;int&gt;</code> 和 <code>std::list&lt;int&gt;</code> 分别求和：</p>
+<pre><code class="language-cpp">#include &lt;list&gt;
+#include &lt;vector&gt;
+#include &lt;numeric&gt;
+#include &lt;cstdint&gt;
+
+// Contiguous: hardware prefetcher has a good day.
+std::int64_t sum_vector(const std::vector&lt;int&gt;&amp; v) {
+	return std::accumulate(v.begin(), v.end(), std::int64_t{0});
+}
+
+// Scattered: every node is a pointer chase.  Each dereference is
+// a potential cache miss if nodes were allocated at different times
+// and landed on different cache lines or pages.
+std::int64_t sum_list(const std::list&lt;int&gt;&amp; l) {
+	return std::accumulate(l.begin(), l.end(), std::int64_t{0});
+}
+</code></pre>
+<p>在典型硬件上处理一百万个元素时，纯遍历场景下 vector 版本通常比 list 版本快 10-50 倍。list 固然有每节点开销（大多数实现中每个元素附带两个指针，外加 allocator 元数据），但主导成本不在空间上——真正的瓶颈在于：推进到下一个节点时需要加载一个指针，而该指针指向的地址对 prefetcher 来说完全不可预测。每一步都可能触发一次 last-level cache miss，代价 50-100 ns；反观 vector 扫描，由于硬件 prefetcher 能识别顺序访问模式，几乎每次都能命中 L1 或 L2 缓存。</p>
+<p>这并不是刻意构造的最坏场景，而是 <code>std::list</code> 在通用 allocator 下随时间分配节点的常态。即便换用 pool allocator 使节点在内存中更加连续，改善也只是部分的——next-pointer 的间接跳转和每节点的额外开销依然无法消除。</p>
+<p>正因如此，许多高性能设计初看起来都很“朴素“：把记录存进 <code>std::vector</code>，排序一次，之后通过二分查找或批量扫描来响应查询；热数据保持紧凑；用粗粒度批处理重建索引，而不是增量维护 pointer-rich 结构；尽可能将随机访问转化为规则性的顺序访问。</p>
+<p>这并不是说 <code>std::vector</code> 放之四海而皆准，而是说举证责任通常在非连续方案一侧。如果确实需要 node-based 或 hash-based 结构，理由应当具体明确：变更过程中需要迭代器稳定、确实存在大量中间位置的插入、需要并发所有权模式、外部 handle 必须在容器变更后仍然有效，或者查找模式的规模和稀疏度确实大到让 hashing 物有所值。</p>
+<h2 id="容器编码的是权衡不只是操作"><a class="header" href="#容器编码的是权衡不只是操作">容器编码的是权衡，不只是操作</a></h2>
+<p>有经验的评审者应当把每个容器选择解读为一组承诺与代价。</p>
+<p><code>std::vector</code> 承诺连续存储、高效尾部追加和快速遍历。它的代价在于：偶发的重分配、扩容时的迭代器失效，以及昂贵的中间删除。对于批处理、索引、稠密状态，以及可以重建或压缩的表，它通常是正确选择。</p>
+<p><code>std::deque</code> 牺牲了严格的连续性，换来更高效的双端增长和避免整块缓冲区搬迁。这对队列式负载可能很有价值，但其遍历时的局部性弱于 <code>std::vector</code>。在扫描密集的场景中，把它当成”基本等同于 vector”是错误的。</p>
+<p><code>std::map</code> 和 <code>std::set</code> 等有序关联容器，提供的是稳定的排列顺序以及在频繁变更下仍然稳定的引用，代价则是节点分配、间接访问和分支密集的遍历。只有当排序在语义上不可或缺，或者变更模式使得”一次构建、定期重建”的策略不可行时，使用它们才有充分理由。对于读多写少数据上的热查找，它们不是好的默认选项。</p>
+<p><code>std::unordered_map</code> 和 <code>std::unordered_set</code> 以放弃顺序为代价，换取平均情况下更快的查找速度。但它们也有实实在在的内存开销：bucket 数组、load factor 管理、许多实现中的节点存储，以及不可预测的 probe 行为。在键空间较大且需要频繁精确查找的场景中，它们很有价值。但如果迭代是主要操作、内存占用很重要，或者工作集小到排序后的连续数据完全放得进缓存，它们的优势就不那么明显了。</p>
+<p>C++23 新增了 <code>std::flat_map</code> 和 <code>std::flat_set</code>（分别在 <code>&lt;flat_map&gt;</code> 和 <code>&lt;flat_set&gt;</code> 头文件中），将生产代码库多年来的通行做法标准化了：用一个排序后的连续键值数组做索引，在读多写少的场景中往往表现更佳。C++23 之前，团队只能依赖 Boost.Container、Abseil 或自行实现的等价物。标准版本接受底层容器作为模板参数，你可以根据局部性和分配需求选用 <code>std::vector</code>（默认）、<code>std::deque</code> 或 <code>std::pmr::vector</code> 作为后端。需要注意的是，<code>std::flat_map</code> 的迭代器失效规则与 <code>std::vector</code> 一致，中间位置的插入由于元素搬移仍是 O(n)。它是为读优化而设计的，不适合频繁写入。</p>
+<h2 id="元素内部的布局与容器本身同样重要"><a class="header" href="#元素内部的布局与容器本身同样重要">元素内部的布局与容器本身同样重要</a></h2>
+<p>光选对容器（比如 <code>std::vector&lt;Order&gt;</code>）还不够，<code>Order</code> 本身的结构照样可能浪费带宽。如果每次迭代只需要读取 <code>price</code>、<code>quantity</code> 和 <code>timestamp</code>，但每个对象还附带着一个大 symbol 字符串、审计元数据、重试策略和调试状态，那么扫描这个 vector 时，大量冷字节仍然会被拖进缓存。</p>
+<p>这正是 hot/cold splitting 发挥作用的地方。原则很简单：把时间上经常一起访问的字段在物理上也放到一起。如果将不常用的状态移到单独的表、side structure 或 handle 背后能显著降低扫描成本，就应当这样做。不必过度抽象成通用的”entity system”——除非代码库确实有这个需求。很多时候，正确做法更直接：一个紧凑的热记录，外加一个存放冷元数据的辅助存储。</p>
+<p>同样的性能压力也驱动着 array-of-structures（AoS）与 structure-of-arrays（SoA）之间的抉择。当对象作为整体在系统中流转时，AoS 更易于理解和维护。而当处理本质上是列式的——过滤所有 timestamp、对所有 price 做计算、聚合所有计数器，或为向量化 kernel 提供输入——SoA 则更具优势。数据表示应当匹配主导访问模式，而非迁就想象中的对象模型。</p>
+<p>为了更直观地展示这种权衡，来比较同一批数据的两种表示方式：</p>
+<pre><code class="language-cpp">// Array of Structures (AoS): natural object-oriented layout.
+// Each Tick is self-contained.  Good when you routinely need all
+// fields of a single tick (e.g., serializing one record, looking
+// up a specific event).
+struct Tick {
+	std::int64_t timestamp_ns;
+	std::int32_t instrument_id;
+	double bid;
+	double ask;
+	char exchange[8];       // cold: rarely used in hot aggregation
+	std::uint32_t seq_no;   // cold
+	std::uint16_t flags;    // cold
+	// sizeof(Tick) ~ 48 bytes with padding on most ABIs
+};
+
+double mid_price_sum_aos(std::span&lt;const Tick&gt; ticks) {
+	double total = 0.0;
+	for (const auto&amp; t : ticks) {
+		// Each iteration loads a full 48-byte Tick, but only
+		// reads bid and ask (16 bytes).  The remaining 32 bytes
+		// pollute cache lines and reduce effective bandwidth.
+		total += (t.bid + t.ask) * 0.5;
+	}
+	return total;
+}
+</code></pre>
+<pre><code class="language-cpp">// Structure of Arrays (SoA): columnar layout.
+// Each field lives in its own contiguous array.
+struct TickColumns {
+	std::vector&lt;std::int64_t&gt; timestamp_ns;
+	std::vector&lt;std::int32_t&gt; instrument_id;
+	std::vector&lt;double&gt; bid;
+	std::vector&lt;double&gt; ask;
+	std::vector&lt;std::array&lt;char, 8&gt;&gt; exchange;
+	std::vector&lt;std::uint32_t&gt; seq_no;
+	std::vector&lt;std::uint16_t&gt; flags;
+
+	void append(std::int64_t ts, std::int32_t id, double b, double a) {
+		timestamp_ns.push_back(ts);
+		instrument_id.push_back(id);
+		bid.push_back(b);
+		ask.push_back(a);
+		// ...other columns omitted for brevity
+	}
+};
+
+double mid_price_sum_soa(const TickColumns&amp; ticks) {
+	double total = 0.0;
+	// Only bid[] and ask[] are touched.  Each cache line is 100%
+	// useful payload.  The compiler can auto-vectorize this loop,
+	// and the prefetcher has two clean sequential streams.
+	for (std::size_t i = 0; i != ticks.bid.size(); ++i) {
+		total += (ticks.bid[i] + ticks.ask[i]) * 0.5;
+	}
+	return total;
+}
+</code></pre>
+<p>处理一百万条 tick 时，在现代 x86 硬件上做列式聚合，SoA 版本通常快 2-4 倍。根本原因在于带宽利用率：AoS 循环每个元素加载约 48 字节却只用到 16 字节，每次缓存行读取有三分之二是浪费。SoA 循环只访问所需的两个 8 字节数组，而且两者都是完美的顺序访问。编译器也更容易为 SoA 版本生成 SIMD 指令，因为没有交错步长来妨碍向量化。</p>
+<p>SoA 的代价体现在别处。新增一条 tick 意味着要向每个列 vector 都追加一次，写起来繁琐也容易出错。想把”一条 tick”传给函数，要么传索引加整张表的引用，要么从各列临时拼装一个 struct。如果系统的主要操作是逐条记录处理、且需要访问大部分字段，AoS 布局既能避免这种拼装开销，也能让相关数据在内存中紧挨着。</p>
+<p>一个实用的折中方案是 hot/cold splitting，而非完全转向 SoA：保留一个只包含热路径所需字段的紧凑”热” struct，冷字段则放进一个按相同下标索引的并行 side table。</p>
+<p>这种表示并不因为”看起来更现代”就天然更好。它的优势只在特定条件下成立：负载确实会反复独立处理各列，或者紧凑的数值列能显著改善内存行为。如果下游逻辑频繁需要包含多个相关字段的完整 tick 对象，那么数据拼装的成本或代码清晰度的损失，完全可能抵消布局上的收益。</p>
+<h2 id="稳定-handle-很昂贵先问你是否真的需要它们"><a class="header" href="#稳定-handle-很昂贵先问你是否真的需要它们">稳定 handle 很昂贵；先问你是否真的需要它们</a></h2>
+<p>许多糟糕的数据表示，根源在于一个没有被明确提出的隐含需求：地址稳定性。代码把裸指针或引用存入容器元素，于是容器的选择不再由访问成本驱动，而被生命周期和失效问题所绑架。这往往把设计推向 node-based 结构——地址是稳定了，其他所有路径上的局部性却全面恶化。</p>
+<p>有时这种权衡确实合理。但更多时候，深层问题在于系统把对象身份与物理地址耦合在了一起。如果组件需要持久的外部引用，应当使用显式 handle、带 generation counter 的索引，或指向稳定间接层的 key。这样既能让底层存储保持紧凑和可移动，又能保证外部引用的安全性。</p>
+<p>这当然不是零成本的——handle 会引入额外的查找步骤、校验逻辑，以及围绕过期引用的错误处理。但这些成本是显式且局部化的，通常好过为了满足少数长生命周期的 alias，就让整个数据层都被迫使用 pointer-stable 容器。</p>
+<h2 id="失效规则是-api-设计的一部分"><a class="header" href="#失效规则是-api-设计的一部分">失效规则是 API 设计的一部分</a></h2>
+<p>容器不仅是存储机制，它还隐含地创造或破坏 API 保证。返回一个指向 <code>std::vector&lt;T&gt;</code> 内部的 <code>std::span&lt;T&gt;</code>，等于告诉调用方：只有在底层存储仍然存活、且未发生导致失效的变更时，这个视图才有效。返回哈希表中的迭代器，则把 rehash 敏感性暴露给了调用方。返回 node 容器中的引用，则暴露了关于对象生命周期和同步的隐含假设。</p>
+<p>这就是为什么数据表示与接口设计无法彻底分开。如果一个模块希望保留在内部进行压缩、排序、重建或重新分配的自由，就不该轻易向外暴露原始迭代器或长生命周期引用。当实现需要移动数据的自由时，应优先采用返回值、短生命周期的回调式访问、拷贝出的摘要，或 opaque handle。</p>
+<p>ranges 让非拥有访问的表达更整洁，但也更容易被误用。一条 view pipeline 表面上看起来是纯函数式的，背后却可能借用了某段生命周期比 pipeline 本身更短的存储。如果底层数据位于临时 buffer、query object 或请求级 arena 中，那么一个写得再漂亮的 range 表达式，本质上仍然是生命周期 bug。归根结底，存储模型才是第一位的。</p>
+<h2 id="在热路径上稠密数据胜过聪明的对象模型"><a class="header" href="#在热路径上稠密数据胜过聪明的对象模型">在热路径上，稠密数据胜过聪明的对象模型</a></h2>
+<p>当团队过于字面地对问题领域建模时，数据密集型系统的性能往往会急剧退化。比如一个日志处理阶段，因为领域“听起来很面向对象“，就被建成了由对象图、virtual method 和分散所有权构成的体系。结果在高负载下，profiler 暴露出的瓶颈不是昂贵的算术运算，而是大量的缓存未命中和 allocator 抖动。</p>
+<p>在热路径上，应优先选择能让主要遍历操作既简单又稠密的数据表示。举几个例子：数据包分类器可以把解析后的头字段存入紧凑数组，罕见的扩展数据另行存放；推荐引擎可以把不可变的 item 特征与请求级的评分 buffer 分离；订单簿在价格区间有界的情况下，可以把价格档位放入按归一化 tick 偏移量索引的连续数组，而非使用堆节点构成的树。</p>
+<p>这些设计看上去可能不如对象图“优雅“，但它们往往更诚实地反映了硬件的工作方式——硬件执行的是内存访问，不是类图。</p>
+<h2 id="实际中的缓存不友好结构"><a class="header" href="#实际中的缓存不友好结构">实际中的缓存不友好结构</a></h2>
+<p>有必要仔细看看缓存不友好结构到底是什么样子、为什么会拖垮性能——因为这种失败模式非常常见，而且在代码评审中很难被发现。</p>
+<pre><code class="language-cpp">// A naive priority queue built from scattered heap nodes.
+// Each node is individually allocated and linked by pointer.
+struct Job {
+	int priority;
+	std::string description;  // may allocate on heap
+	Job* next;
+};
+
+class NaivePriorityQueue {
+	Job* head_ = nullptr;
+public:
+	void insert(int priority, std::string desc) {
+		auto* node = new Job{priority, std::move(desc), nullptr};
+		// Sorted insert: walk the list to find position.
+		// Each step dereferences a pointer to a random heap location.
+		Job** pos = &amp;head_;
+		while (*pos &amp;&amp; (*pos)-&gt;priority &lt;= priority)
+			pos = &amp;(*pos)-&gt;next;
+		node-&gt;next = *pos;
+		*pos = node;
+	}
+
+	// Find highest-priority job.  Cheap -- it is at the head.
+	// But any operation that scans (e.g., "remove by description",
+	// "count jobs above threshold") pointer-chases through
+	// potentially thousands of cold cache lines.
+	Job* top() const { return head_; }
+
+	~NaivePriorityQueue() {
+		while (head_) { auto* n = head_; head_ = head_-&gt;next; delete n; }
+	}
+};
+</code></pre>
+<p>再来看一个将相同数据连续存放的缓存友好版本：</p>
+<pre><code class="language-cpp">struct Job {
+	int priority;
+	std::string description;
+};
+
+class FlatPriorityQueue {
+	std::vector&lt;Job&gt; jobs_;
+public:
+	void insert(int priority, std::string desc) {
+		jobs_.push_back({priority, std::move(desc)});
+		// Could maintain sorted order with std::lower_bound + insert,
+		// or just push_back and sort/partial_sort when needed.
+	}
+
+	// Rebuild top in O(n) but with contiguous memory access.
+	// For scan-heavy workloads this dominates pointer-chasing.
+	const Job&amp; top() const {
+		return *std::min_element(jobs_.begin(), jobs_.end(),
+			[](const auto&amp; a, const auto&amp; b) {
+				return a.priority &lt; b.priority;
+			});
+	}
+};
+</code></pre>
+<p>flat 版本调用 <code>top()</code> 时比较次数可能更多，但所有比较都是在连续内存上流式完成的。实践中，对于几千个元素以内的集合，flat scan 往往比链表版本的”O(1) 头访问 + O(n) 插入”更快，因为链表插入过程中每访问一个节点就可能触发一次缓存未命中。对于更大的集合，<code>std::priority_queue</code>（底层用 <code>std::vector</code> 维护一个连续堆）正是出于同样的原因而成为标准工具。</p>
+<p>总结规律：pointer-linked 结构在每一步遍历时都要缴纳一次“节点税“——这在算法复杂度分析中完全不可见，却往往主导了实际的执行时间。</p>
+<h2 id="常见失败模式"><a class="header" href="#常见失败模式">常见失败模式</a></h2>
+<p>有几类反复出现的错误，值得明确点名。</p>
+<p>第一类：根据操作速查表而非实际负载特征选容器。”需要快速查找”这句话太笼统了——多少元素？键的分布如何？遍历多频繁？重建多频繁？没有这些数字，”快”毫无意义。</p>
+<p>第二类：因为“放在一个 struct 里更整洁“就把热字段和冷字段混在一起。当代码每秒要遍历数百万个元素时，紧凑布局绝不是过早优化。</p>
+<p>第三类：让偶然产生的 alias 决定整个数据表示。少量长生命周期的指针不应逼迫整个系统转向 node-based 存储——如果一个 handle 层就能把需求隔离开来，就应当这样做。</p>
+<p>第四类：把视图误当作生命周期管理工具。它们不是。<code>std::span</code> 和 ranges 只是让非拥有式访问变得显式，但并不能让这种访问自动变得安全。</p>
+<p>第五类：对单个 microbenchmark 过拟合。一种数据表示在孤立的查找测试中胜出，并不代表它在解码、过滤、聚合和序列化相互交织的完整 pipeline 中同样出色——事实上可能差距悬殊。</p>
+<h2 id="在真实代码中要验证什么"><a class="header" href="#在真实代码中要验证什么">在真实代码中要验证什么</a></h2>
+<p>数据表示层面的决策，应当在代码评审和测量计划中有所体现，而不只是埋在实现里。</p>
+<p>评审者应当追问：</p>
+<ul>
+<li>哪些操作主导了时间开销和内存流量？</li>
+<li>所选容器是在优化这些主导操作，还是只为了让某个局部调用点写起来更方便？</li>
+<li>地址稳定性是真正的需求，还是代码通过 alias 无意间泄露了内部的表示约束？</li>
+<li>哪些失效规则已经成为 API 契约的组成部分？</li>
+<li>热字段在物理上是否紧密相邻，还是每次扫描都在把冷状态拖进缓存？</li>
+<li>如果返回了视图，是哪些存储条件和变更操作限定了视图的有效生命周期？</li>
+</ul>
+<p>下一章将把这些问题转化为具体的成本模型。就本章而言，核心观点很简单：数据表示往往是影响性能的第一要素。在讨论 allocator、内联策略或基准测试方法论之前，先把数据的形状设计对。</p>
+<h2 id="要点总结"><a class="header" href="#要点总结">要点总结</a></h2>
+<ul>
+<li>从主导访问模式出发，而非从容器的经验传闻出发。</li>
+<li>对扫描密集和读多写少的负载，默认优先选择连续存储。</li>
+<li>将稳定地址和稳定迭代器视为昂贵的需求，使用时须有充分理由。</li>
+<li>当反复遍历使带宽成为瓶颈时，将热数据与冷数据分离。</li>
+<li>当对象身份需要在存储移动后依然有效时，有意识地引入 handle 或间接层。</li>
+<li>将失效规则和视图生命周期视为数据表示在 API 层面的直接后果。</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="14-structured-concurrency-cancellation-and-backpressure.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="16-allocation-locality-and-cost-models.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="14-structured-concurrency-cancellation-and-backpressure.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="16-allocation-locality-and-cost-models.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

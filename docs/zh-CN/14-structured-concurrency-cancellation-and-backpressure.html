@@ -1,0 +1,459 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>结构化并发、取消与背压 - 现代 C++ 实战</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="面向有经验程序员的现代 C++ 生产实践指南：所有权、接口、失败边界、并发、性能与验证。">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-8b875a01.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">现代 C++ 实战</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice/edit/main/translations/zh-CN/chapters/chapters/14-structured-concurrency-cancellation-and-backpressure.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="结构化并发取消与背压"><a class="header" href="#结构化并发取消与背压">结构化并发、取消与背压</a></h1>
+<p>本章假定你已经理解局部协程生命周期和挂起风险。现在要关注的是系统的整体形态：在真实负载下，一组任务如何启动、如何结束、如何失败，又如何彼此施加压力。</p>
+<h2 id="生产问题"><a class="header" href="#生产问题">生产问题</a></h2>
+<p>很多异步系统会失败——即便其中每个任务单独看都没什么问题。</p>
+<p>一个请求扇出到四个后端，三个返回后就给出响应，但第四个在客户端断开后仍在运行。一条 worker pipeline 的输入速度快于下游存储的提交速度，内存一路攀升，直到进程被杀。关闭路径永远等不到结束，因为后台任务被 detach 了，而不是挂在受监督的任务树下。重试风暴吞掉了系统恢复本身所需的容量。这些归根结底都不是局部协程 bug，而是编排 bug。</p>
+<p>结构化并发是一种工程纪律：让并发工作遵循词法作用域和所有权结构。任务归属于父作用域，生命周期有明确边界，失败会传播到确定的位置。取消不是口头约定，背压是准入策略的组成部分，而非上线后仪表盘上冒出来的意外。</p>
+<p>本章讨论的就是这些系统级规则。第 12 章讲的是共享可变状态，第 13 章讲的是单个协程跨挂起点的所有权。而本章的分析单元是一组任务——它们共同构成一条请求路径、一个流处理器，或一个有界服务阶段。</p>
+<h2 id="非结构化工作放大的不只是吞吐量还有故障"><a class="header" href="#非结构化工作放大的不只是吞吐量还有故障">非结构化工作放大的不只是吞吐量，还有故障</a></h2>
+<p>启动并发工作最简单的做法，就是哪里需要就在哪里发起任务，然后指望最终都能自行收场。这种风格之所以诱人，是因为它把眼前的协调成本降到了最低。但它同样也是系统暗中积累不可见工作的方式。</p>
+<p>Detached task、临时线程池和 fire-and-forget 重试，会带来三个可以预见的后果：</p>
+<ol>
+<li><strong>生命周期变得非局部。</strong> 启动工作的代码不再有责任证明这项工作何时结束。</li>
+<li><strong>失败变成被动观察。</strong> 错误只有在有人记得去记录或轮询时才会浮现。</li>
+<li><strong>容量变成空中楼阁。</strong> 系统不断接受新工作，因为没有任何父作用域掌控准入压力。</li>
+</ol>
+<p>如果流量不大、很少重启，服务靠这种做法也许能撑上几个月。一旦遇到突发负载、频繁部署或缓慢的下游依赖，那些隐藏的工作就会喧宾夺主，成为系统的主要行为。</p>
+<h2 id="fire-and-forget一份失败清单"><a class="header" href="#fire-and-forget一份失败清单">Fire-and-forget：一份失败清单</a></h2>
+<p>在与结构化并发做对比之前，有必要先看清非结构化工作到底是怎么出问题的。”Fire-and-forget”不是一种反模式，而是好几种，每种都有各自的失败方式。</p>
+<h3 id="无主工作的资源泄漏"><a class="header" href="#无主工作的资源泄漏">无主工作的资源泄漏</a></h3>
+<pre><code class="language-cpp">// Anti-pattern: detached task leaks a database connection on cancellation.
+void on_request(request req) {
+	std::jthread([req = std::move(req)] {
+		auto conn = db_pool.acquire();        // acquired, never returned on some paths
+		auto result = conn.execute(req.query);
+		send_response(req.client, result);
+	}).detach(); // no owner, no cancellation, no cleanup guarantee
+}
+</code></pre>
+<p>进程一旦开始关闭，detached thread 不会收到 stop request，数据库连接也不会归还连接池。把这种情况乘以滚动部署期间成千上万的在途请求：数据库会遭遇连接耗尽，旧进程卡在 <code>std::thread</code> 的析构函数里；更糟的情况是，进程在这些线程仍引用已销毁的全局对象时就退出了。</p>
+<h3 id="未被观察的异常会静默消失"><a class="header" href="#未被观察的异常会静默消失">未被观察的异常会静默消失</a></h3>
+<pre><code class="language-cpp">// Anti-pattern: exception in detached task is never observed.
+void start_background_sync() {
+	auto handle = std::async(std::launch::async, [] {
+		auto data = fetch_remote_config(); // throws on network error
+		apply_config(data);
+	});
+	// handle is destroyed here — std::async's destructor blocks,
+	// but if this were a custom fire-and-forget task, the exception
+	// would be silently swallowed.
+}
+</code></pre>
+<p><code>std::async</code> 的析构函数会阻塞等待（这本身就可能出乎意料）。但对于大多数支持 detach 的自定义任务类型，销毁 handle 而不观察结果，异常就会无声无息地消失。系统继续带着过期配置运行，直到数小时后出现一次莫名其妙的行为退化，失败才会被注意到。</p>
+<h3 id="孤儿工作导致关闭挂起"><a class="header" href="#孤儿工作导致关闭挂起">孤儿工作导致关闭挂起</a></h3>
+<pre><code class="language-cpp">// Anti-pattern: shutdown cannot complete because background tasks were never tracked.
+class ingestion_service {
+	void ingest(message msg) {
+		// "just kick off enrichment in the background"
+		pool_.submit([msg = std::move(msg), this] {
+			auto enriched = enrich(msg);       // calls external service, may block
+			store_.write(enriched);
+		});
+	}
+
+	void shutdown() {
+		store_.close();    // closes storage
+		pool_.shutdown();  // waits for in-flight tasks
+		// BUG: in-flight tasks may call store_.write() after store_ is closed
+		// BUG: enrich() may block indefinitely — pool shutdown hangs
+	}
+};
+</code></pre>
+<p>线程池里确实有任务，但服务对这些任务需要什么资源、该如何取消，完全没有建模。关闭要么挂起（卡在一个阻塞的外部调用上），要么产生竞态（任务还在使用依赖，依赖就被先关掉了）。到了生产环境，一次本该干净的重启变成了进程 kill，进程 kill 又演变成数据丢失。</p>
+<h3 id="结构化替代方案概述"><a class="header" href="#结构化替代方案概述">结构化替代方案概述</a></h3>
+<p>上述三个问题，结构化的回答都指向同一个原则：谁创建了工作，谁就负责它的完成。</p>
+<pre><code class="language-cpp">// Structured: parent scope owns child tasks, propagates cancellation, awaits completion.
+task&lt;void&gt; on_request(request req, std::stop_token stop) {
+	auto conn = co_await db_pool.acquire(stop);  // respects cancellation
+	auto result = co_await conn.execute(req.query, stop);
+	co_await send_response(req.client, result);
+	// conn returned to pool when coroutine frame is destroyed
+	// if stop is triggered, co_await points observe it and unwind cleanly
+}
+</code></pre>
+<p>父请求作用域可以在客户端断开或 deadline 到期时取消 token。协程的 awaitable 在每个挂起点检查 token，资源通过普通 RAII 释放，没有任何工作能比拥有者活得更久。与 fire-and-forget 的差别不在于风格，而在于系统能否干净地关闭。</p>
+<h2 id="结构化并发意味着父作用域拥有子工作"><a class="header" href="#结构化并发意味着父作用域拥有子工作">结构化并发意味着父作用域拥有子工作</a></h2>
+<p>核心思想很简单：如果某个作用域启动了子任务来完成自己的工作，那么在该作用域被视为完成之前，这些子任务就应当完成、失败或被取消。</p>
+<p>由此你获得三个属性，而这恰恰是临时拼凑的异步代码默认不具备的：</p>
+<ol>
+<li>工作的生命周期受父操作约束。</li>
+<li>失败可以在同一个地方被聚合或升级。</li>
+<li>取消和关闭沿着任务树传播，而不必在进程里到处搜索散落的尾巴。</li>
+</ol>
+<p>这不要求使用某个特定库，要求的是设计纪律。一个向多个后端扇出的请求处理器，不应该在后端调用仍在运行时就返回——除非业务契约明确允许 detached 的后续工作，并且指定了它的所有者。一个 batch consumer 不应该把下游任务入队，却不同时决定关闭时由谁来排空它们、过载时由谁来吸收压力。</p>
+<p>所以说，结构化并发就是把所有权规则应用到时间维度。如果第 1 章教的是每个资源都需要所有者，本章教的就是把同样的原则应用到并发工作上。</p>
+<h2 id="取消必须是一等契约"><a class="header" href="#取消必须是一等契约">取消必须是一等契约</a></h2>
+<p>取消常被当成一种客气的建议。但在生产环境里，它就是负载控制。</p>
+<p>客户端一旦断开、deadline 一旦到期、父任务一旦失败，继续执行子工作就是在浪费 CPU、内存、数据库容量和重试预算。更严重的是，未取消的工作会与有效工作争抢资源。系统在高压下频频崩溃，往往就是因为它还在忙着做那些已经没有意义的事。</p>
+<p>现代 C++ 提供了 <code>std::stop_source</code>、<code>std::stop_token</code> 和 <code>std::jthread</code> 等有用的构件。示例项目的 <code>Server::run(std::stop_token)</code>（<code>examples/web-api/src/modules/http.cppm</code>）正是使用了这些构件：accept 循环在每次迭代时检查 <code>stop_token.stop_requested()</code>，并通过带一秒超时的 <code>select()</code> 确保即使没有客户端连接，检查也能及时进行。这就是真实服务器中的协作式取消——token 是契约，基于超时的轮询是机制。</p>
+<p>但仅有原语是不够的。更难回答的是语义层面的问题：</p>
+<ol>
+<li>哪些操作是可取消的？</li>
+<li>在哪些边界上观察取消？</li>
+<li>在报告完成之前，保证了哪些清理？</li>
+<li>部分进度会被提交、回滚，还是通过补偿机制显式可见？</li>
+</ol>
+<p>如果这些问题没有答案，把 stop token 透传几个函数也不过是做做样子。</p>
+<p>取消还有方向性。从父到子的传播应当是默认行为；从子到父的升级则取决于策略：一个子任务失败，可能需要取消兄弟任务，可能需要降级结果，也可能只是记录下来、让其余工作继续。关键是：这条规则必须在拥有该任务组的作用域上写明。</p>
+<h2 id="反模式没有有界所有权的-fan-out"><a class="header" href="#反模式没有有界所有权的-fan-out">反模式：没有有界所有权的 fan-out</a></h2>
+<pre><code class="language-cpp">// Anti-pattern: child work outlives the request and overload has no admission limit.
+task&lt;aggregate_reply&gt; handle_request(request req) {
+	auto a = fetch_profile(req.user_id);
+	auto b = fetch_inventory(req.item_id);
+	auto c = fetch_pricing(req.item_id);
+
+	co_return aggregate_reply{
+		co_await a,
+		co_await b,
+		co_await c,
+	};
+}
+</code></pre>
+<p>这段代码很整洁，但定义严重不足。</p>
+<p>客户端在第一次 await 之后超时了，谁来取消这三个子操作？有什么机制阻止一万个并发请求瞬间启动三万个后端调用？<code>fetch_inventory</code> 如果卡住，另外两个还继续跑吗？某个调用快速失败后，其余的应该被取消，还是因为部分结果有用而继续完成？</p>
+<p>问题不在于扇出本身不好，而在于代码里看不到任何监督策略。</p>
+<p>在结构化设计中，请求作用域持有一个取消 source 或 token，子任务在该作用域内启动并附带 deadline，对下游依赖的并发度则通过 permit 或 semaphore 做有界控制。具体用什么抽象因代码库而异，但核心性质不变：请求不得创建匿名工作。</p>
+<h2 id="deadline-与预算优于尽力而为的-timeout"><a class="header" href="#deadline-与预算优于尽力而为的-timeout">Deadline 与预算优于尽力而为的 timeout</a></h2>
+<p>Timeout 往往各处各设、毫无一致性。某个依赖用 200 ms，另一个用 500 ms，而调用方自身的 deadline 是 300 ms，却没人把它传下去。结果就是白做工加上混乱的遥测数据。</p>
+<p>更好的做法是预算传播。父操作携带一个 deadline 或剩余预算，子操作从中派生自己的限制，而不是各自发明一套毫无关联的超时值。这样取消意图和延迟预期才能保持一致。</p>
+<p>代价是下游 API 必须显式接收 deadline 或取消上下文，timeout 行为也会在函数签名或任务构造器中暴露出来。这个代价值得付。隐藏的 timeout 策略通常比显式的 timeout 策略更危险。</p>
+<h2 id="背压是准入控制不是抱怨日志"><a class="header" href="#背压是准入控制不是抱怨日志">背压是准入控制，不是抱怨日志</a></h2>
+<p>背压意味着系统对”工作到来的速度快于处理速度时该怎么办”这个问题，有一个经过深思熟虑的答案。</p>
+<p>没有这个答案，工作就会堆积在队列、buffer、重试循环和协程帧里。先涨的是内存，然后是延迟，最后故障才变得不可忽视。无界队列不是弹性，它只不过是把过载变成了延时爆炸。</p>
+<p>真正的背压机制都是具体的：</p>
+<ol>
+<li>有界队列——满了就拒绝或延后新工作。</li>
+<li>Semaphore 或 permit——限制对稀缺依赖的并发访问数。</li>
+<li>生产者节流——下游阶段饱和时自动减速。</li>
+<li>负载丢弃——当服务全部流量会拖垮所有人的延迟时，主动放弃一部分。</li>
+<li>Batch 大小和 flush 策略——与下游提交成本匹配。</li>
+</ol>
+<p>每种机制背后都是业务策略：哪些工作可以丢？哪些必须等？哪些客户端会收到显式的过载信号？这些都是用并发控制手段表达的产品决策。</p>
+<h2 id="有界并发通常优于更大的线程池"><a class="header" href="#有界并发通常优于更大的线程池">有界并发通常优于更大的线程池</a></h2>
+<p>依赖变慢时，很多团队的第一反应是加大线程池或加深队列。这往往适得其反。</p>
+<p>一个数据库如果只能承受五十个有效并发请求，放进去两百个在途操作，多出来的部分基本只会加剧争用和 timeout 重叠。CPU 密集的解析阶段、压缩任务、以及本身就有内部瓶颈的远程服务调用，道理都一样。</p>
+<p>应该在稀缺资源实际所在的位置约束并发，让这个上限在代码和遥测中都清晰可见，然后再决定触及上限后该怎么办：等待、快速失败、降级还是重定向。盲目扩大线程池只会把过载隐藏起来，直到整个系统一起饱和。</p>
+<h2 id="pipeline-需要让压力向上游传播"><a class="header" href="#pipeline-需要让压力向上游传播">Pipeline 需要让压力向上游传播</a></h2>
+<p>Pipeline 是背压纪律最无法回避的场景。</p>
+<p>假设有一个消息消费者：解析记录、用远程查找做 enrich、最后把 batch 写入存储。如果解析快过存储，总得有个阶段降速。如果 enrich 快过解析，它也不该仅仅因为“能做“就继续制造更多在途请求。如果系统开始关闭，所有阶段都需要协调好的 drain 或 cancel 策略。</p>
+<p>因此，好的 pipeline 设计会明确定义：</p>
+<ol>
+<li>每个阶段允许的最大在途工作量。</li>
+<li>阶段之间的最大队列深度。</li>
+<li>队列满时，生产者会被阻塞、丢弃输入，还是触发负载削减。</li>
+<li>取消时，是排空部分完成的 batch，还是丢弃它们。</li>
+<li>哪些 metrics 能在内存压力变得致命之前揭示饱和。</li>
+</ol>
+<p>这不是锦上添花的基础设施优化。它决定了系统是能优雅降级，还是一路积压工作直到崩溃。</p>
+<h2 id="失败传播需要策略而不是希望"><a class="header" href="#失败传播需要策略而不是希望">失败传播需要策略，而不是希望</a></h2>
+<p>工作一旦被组织成任务组，失败处理就从碰运气变成了设计选择。</p>
+<p>常见策略包括：</p>
+<ol>
+<li>Fail-fast 任务组：一个子任务失败就取消同级任务，因为没有所有部分结果就毫无意义。</li>
+<li>Best-effort 任务组：允许某些子任务失败，并把它们记录下来。</li>
+<li>Quorum 任务组：只要足够多的子任务成功就满足操作，其余任务会被取消。</li>
+<li>Supervisory loop：在速率限制和预算约束下，重启隔离的子工作。</li>
+</ol>
+<p>这四种在各自适用的场景中都是正确的。关键在于代码和抽象必须让所选策略一目了然。子任务失败后悄悄继续运行，那不叫韧性，那叫含糊不清。</p>
+<h2 id="关闭是照妖镜"><a class="header" href="#关闭是照妖镜">关闭是照妖镜</a></h2>
+<p>并发结构薄弱的系统平时看起来往往一切正常，直到关闭时才原形毕露。</p>
+<p>干净的关闭路径会把所有隐藏问题逼到台面上：还有哪些任务在跑？哪些可以安全中断？哪些队列必须排空？关闭开始后哪些副作用仍可能被提交？哪些后台循环持有 stop source，又由谁来等待它们完成？</p>
+<p>正因如此，关闭测试的价值远超一般测试。它们能暴露 detached 工作、缺失的取消点、无界队列和无主任务。一个子系统如果说不清自己在负载下如何停止，就说明它还没有真正掌控自己的并发模型。</p>
+<p>示例项目实现了一条完整的结构化关闭链，将上述原则付诸实践。这条链横跨三个文件：</p>
+<p><strong>信号处理器设置标志位</strong>（<code>examples/web-api/src/main.cpp</code>）：</p>
+<pre><code class="language-cpp">std::atomic&lt;bool&gt; shutdown_requested{false};
+
+extern "C" void signal_handler(int /*sig*/) {
+    shutdown_requested.store(true, std::memory_order_release);
+}
+</code></pre>
+<p><strong><code>Server::run_until</code> 将标志位桥接到 <code>jthread</code> 的 stop token</strong>（<code>examples/web-api/src/modules/http.cppm</code>）：</p>
+<pre><code class="language-cpp">void run_until(const std::atomic&lt;bool&gt;&amp; should_stop) {
+    std::jthread server_thread{[this](std::stop_token st) {
+        run(st);
+    }};
+    while (!should_stop.load(std::memory_order_acquire)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    server_thread.request_stop();
+    // jthread 在析构时自动 join
+}
+</code></pre>
+<p><strong><code>Server::run</code> 在每次 accept 循环迭代时检查 token</strong>：</p>
+<pre><code class="language-cpp">void run(std::stop_token stop_token) {
+    // ...
+    while (!stop_token.stop_requested()) {
+        // 带一秒超时的 select()，然后再次检查 stop
+        // accept 并处理连接……
+    }
+    std::cout &lt;&lt; "Server shutting down gracefully\n";
+}
+</code></pre>
+<p>所有权链清晰可见：<code>main</code> 拥有 <code>Server</code>，<code>Server</code> 拥有 <code>jthread</code>，<code>jthread</code> 拥有 <code>stop_source</code>。当 Ctrl+C 到来时，信号处理器设置 atomic 标志，<code>run_until</code> 观察到它并调用 <code>request_stop()</code>，accept 循环在下一次迭代退出，<code>jthread</code> 析构函数 join 线程。没有 detached 工作，没有孤立连接，关闭和在途请求之间没有竞态。这就是结构化并发应用于真实服务生命周期的样子。</p>
+<h2 id="结构化异步系统的验证与遥测"><a class="header" href="#结构化异步系统的验证与遥测">结构化异步系统的验证与遥测</a></h2>
+<p>光靠单元测试无法验证结构化并发和背压。你需要实际证据表明系统在压力下行为依然正常。</p>
+<p>有效的验证手段包括：</p>
+<ol>
+<li>负载测试：把系统推到标称容量以上，确认内存仍然有界。</li>
+<li>取消测试：注入断连、deadline 到期和部分子任务失败。</li>
+<li>关闭测试：启动工作、触发停止，验证系统能迅速归于静止。</li>
+<li>监控指标：在途任务数、队列深度、permit 利用率、拒绝率、deadline 到期次数、取消延迟。</li>
+<li>链路追踪或日志：展示父子关联关系，让孤儿工作无所遁形。</li>
+</ol>
+<p>如果可观测性无法揭示工作堆积在哪里、由哪个父作用域负责，那么所谓的结构就只存在于作者脑中。</p>
+<h2 id="结构化并发的评审问题"><a class="header" href="#结构化并发的评审问题">结构化并发的评审问题</a></h2>
+<p>在批准一个异步编排方案之前，问问自己：</p>
+<ol>
+<li>每组子任务归谁管？</li>
+<li>什么事件触发取消：父任务完成、失败、deadline、关闭，还是过载？</li>
+<li>用什么机制限制对每个稀缺依赖的并发访问？</li>
+<li>当队列或 permit 达到上限时会发生什么？</li>
+<li>失败会取消同级任务、优雅降级，还是等待 quorum？</li>
+<li>在峰值负载下，关闭能否迅速完成？</li>
+<li>哪些 metrics 能证明背压真的在工作？</li>
+</ol>
+<p>如果答不上来，系统多半就是在靠乐观和余量撑着。</p>
+<h2 id="要点"><a class="header" href="#要点">要点</a></h2>
+<p>结构化并发，就是把所有权延伸到时间和任务树上。</p>
+<p>不要发起匿名工作。让父作用域掌管子任务的生命周期，有意识地传播取消，在资源真正稀缺的地方限制并发。把背压当作准入策略来设计，而非事后调参的补救措施。一个说不清工作何时停止、由谁取消、过载如何限制的系统，算不上拥有并发模型——它只是拥有异步代码。</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="13-coroutines-tasks-and-suspension-boundaries.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="15-data-layout-containers-and-memory-behavior.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="13-coroutines-tasks-and-suspension-boundaries.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="15-data-layout-containers-and-memory-behavior.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

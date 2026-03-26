@@ -1,0 +1,541 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Shared State, Synchronization, and Contention - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-a846e9dc.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/12-shared-state-synchronization-and-contention.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="shared-state-synchronization-and-contention"><a class="header" href="#shared-state-synchronization-and-contention">Shared State, Synchronization, and Contention</a></h1>
+<p>This chapter assumes you already reason precisely about ownership and invariants in single-threaded code. The question now is what survives once multiple threads can observe and mutate the same state.</p>
+<h2 id="the-production-problem"><a class="header" href="#the-production-problem">The Production Problem</a></h2>
+<p>Most concurrency failures are not caused by missing primitives. They are caused by vague sharing policy.</p>
+<p>A cache is “mostly reads.” A connection pool has “just one mutex.” A metrics registry uses atomics “for speed.” A request coordinator stores a few counters and a queue behind a lock and appears correct in code review. Then production load arrives. Lock hold time couples unrelated work. A reader observes half-updated state because the invariant spans two fields. A background cleanup path waits under the same mutex as the hot path. Throughput collapses before anyone sees a crash, and once crashes do appear they are often data-race UB, deadlock, or starvation rather than a clean failure.</p>
+<p>This chapter is about the shape of shared mutable state in production C++23 systems. The core question is not which mutex type to memorize. It is how much state should be shared at all, which invariants require synchronization, how contention appears under real traffic, and what reviewable designs look like when sharing is unavoidable.</p>
+<p>Keep the boundary with the next chapters clear. This chapter is about simultaneous access to shared mutable state. Chapter 13 is about coroutine lifetime across suspension. Chapter 14 is about orchestrating groups of tasks, cancellation, and backpressure. Those topics interact, but they are not interchangeable.</p>
+<h2 id="shared-mutable-state-is-a-cost-center"><a class="header" href="#shared-mutable-state-is-a-cost-center">Shared Mutable State Is a Cost Center</a></h2>
+<p>Shared state buys coordination convenience at the price of coupling.</p>
+<p>Once two threads can mutate the same object graph, local reasoning stops being enough. Every access now depends on synchronization policy, lock ordering, memory ordering, wakeup behavior, and destruction timing. Reviewers must ask not only whether an operation is correct in isolation, but whether the state can be observed between two steps, whether a callback re-enters under a lock, whether waiting code holds resources needed for progress, and whether contention turns a correct design into a slow one.</p>
+<p>That cost means the first concurrency decision should be structural:</p>
+<ol>
+<li>Can this state become thread-confined instead?</li>
+<li>Can updates be batched, sharded, snapshotted, or message-passed?</li>
+<li>If sharing is unavoidable, what invariant must be preserved atomically?</li>
+</ol>
+<p>Teams often skip directly to lock selection. That is backward. The expensive choice is the sharing topology, not the spelling of <code>std::mutex</code>.</p>
+<h2 id="start-by-narrowing-the-sharing-surface"><a class="header" href="#start-by-narrowing-the-sharing-surface">Start by Narrowing the Sharing Surface</a></h2>
+<p>The safest shared state is the state you never share.</p>
+<p>In service code, many apparently shared structures can be split by traffic key, request lifetime, or ownership role. Metrics ingestion can aggregate per thread and merge periodically. A session table can be sharded by session identifier. A cache can separate immutable value blobs from a small mutable index. A queue consumer can own its local work buffer and publish only completed snapshots.</p>
+<p>These moves matter more than switching from one primitive to another because they reduce the number of places where correctness depends on interleaving.</p>
+<p>Three reductions are especially common in production systems:</p>
+<h3 id="thread-confinement"><a class="header" href="#thread-confinement">Thread confinement</a></h3>
+<p>Let one thread or one executor own mutation. Everyone else communicates by message, snapshot, or handoff. This is often the simplest answer for request schedulers, connection managers, and event loops. The benefit is not merely fewer locks. It is that the invariants stay local.</p>
+<h3 id="sharding"><a class="header" href="#sharding">Sharding</a></h3>
+<p>Partition state by a stable key so that contention is proportional to hot-key concentration rather than total traffic. Sharding does not remove synchronization, but it narrows the blast radius of each critical section.</p>
+<h3 id="snapshotting"><a class="header" href="#snapshotting">Snapshotting</a></h3>
+<p>If readers dominate and they can tolerate slightly stale data, publish immutable snapshots and update them off to the side. Readers get cheap, stable access. Writers pay the complexity cost once.</p>
+<p>None of these is free. Confinement can create bottlenecks. Sharding complicates cross-shard operations. Snapshotting increases allocation and copy cost. But those are explicit costs, which is better than paying accidental contention everywhere.</p>
+<h2 id="what-happens-without-synchronization"><a class="header" href="#what-happens-without-synchronization">What Happens Without Synchronization</a></h2>
+<p>Before discussing which primitives to use, it is worth seeing what happens when they are absent. The following code has a data race, which is undefined behavior in C++.</p>
+<pre><code class="language-cpp">// BUG: data race — two threads read and write counter without synchronization.
+struct metrics {
+	int request_count = 0;
+	int error_count = 0;
+};
+
+metrics g_metrics;
+
+void record_request(bool success) {
+	++g_metrics.request_count;            // unsynchronized read-modify-write
+	if (!success) ++g_metrics.error_count; // same
+}
+</code></pre>
+<p>This is not merely a correctness risk; it is undefined behavior per the standard. The compiler and hardware are free to reorder, tear, or elide these operations. In practice, counters may lose updates, report impossible values, or corrupt adjacent memory on architectures with non-atomic word stores. Sanitizers will flag this immediately, but sanitizers are not always running in production.</p>
+<p>A subtler variant involves multi-field invariants:</p>
+<pre><code class="language-cpp">// BUG: readers can observe state_ == READY while payload_ is half-written.
+struct shared_result {
+	std::string payload_;
+	enum { EMPTY, READY } state_ = EMPTY;
+};
+
+// Writer thread:
+result.payload_ = build_payload();   // not yet visible to readers
+result.state_ = READY;              // may be reordered before payload_ write
+
+// Reader thread:
+if (result.state_ == READY)
+	process(result.payload_);        // may see partially constructed string
+</code></pre>
+<p>Even if <code>state_</code> were atomic, the write to <code>payload_</code> could be reordered past it without an appropriate memory order. The lesson: data races are not just about single variables. They are about the visibility ordering of related mutations.</p>
+<h2 id="raw-mutex-misuse-vs-scoped-guards"><a class="header" href="#raw-mutex-misuse-vs-scoped-guards">Raw Mutex Misuse vs. Scoped Guards</a></h2>
+<p>Manual lock/unlock is the oldest source of mutex bugs. Consider:</p>
+<pre><code class="language-cpp">// BUG: exception between lock and unlock leaks the lock.
+std::mutex mtx;
+std::vector&lt;int&gt; data;
+
+void push(int value) {
+	mtx.lock();
+	data.push_back(value); // may throw (allocation failure)
+	mtx.unlock();          // never reached if push_back throws — deadlock on next access
+}
+</code></pre>
+<p>If <code>push_back</code> throws, <code>unlock()</code> is skipped. Every subsequent thread that tries to acquire <code>mtx</code> will block forever. This is not hypothetical; allocation failure under memory pressure or a throwing copy constructor will trigger it.</p>
+<p>The fix is mechanical: use RAII guards.</p>
+<pre><code class="language-cpp">void push(int value) {
+	std::scoped_lock lock(mtx);
+	data.push_back(value); // if this throws, ~scoped_lock releases the mutex
+}
+</code></pre>
+<p><code>std::scoped_lock</code> handles single and multiple mutexes with deadlock avoidance. <code>std::unique_lock</code> adds the ability to defer locking, transfer ownership, and use condition variables. Prefer <code>scoped_lock</code> unless you need the extra flexibility.</p>
+<pre><code class="language-cpp">// unique_lock: needed when the lock must be released before scope exit.
+void transfer_expired(registry&amp; reg, std::vector&lt;session&gt;&amp; out) {
+	std::unique_lock lock(reg.mutex_);
+	auto expired = reg.extract_expired(); // modifies registry under lock
+	lock.unlock();                        // release before expensive cleanup
+	for (auto&amp; s : expired)
+		s.close_socket();                 // no lock held — safe to block
+	// out is caller-owned, no synchronization needed
+	out.insert(out.end(),
+		std::make_move_iterator(expired.begin()),
+		std::make_move_iterator(expired.end()));
+}
+</code></pre>
+<h2 id="deadlock-from-inconsistent-lock-ordering"><a class="header" href="#deadlock-from-inconsistent-lock-ordering">Deadlock from Inconsistent Lock Ordering</a></h2>
+<p>When code acquires multiple mutexes, inconsistent ordering is the classic deadlock source.</p>
+<pre><code class="language-cpp">// BUG: deadlock if thread 1 calls transfer(a, b) while thread 2 calls transfer(b, a).
+struct account {
+	std::mutex mtx;
+	int balance = 0;
+};
+
+void transfer(account&amp; from, account&amp; to, int amount) {
+	std::lock_guard lock_from(from.mtx); // locks 'from' first
+	std::lock_guard lock_to(to.mtx);     // then 'to' — opposite order on another thread
+	from.balance -= amount;
+	to.balance += amount;
+}
+</code></pre>
+<p>Thread 1 locks <code>a.mtx</code> and waits for <code>b.mtx</code>. Thread 2 locks <code>b.mtx</code> and waits for <code>a.mtx</code>. Neither can proceed. <code>std::scoped_lock</code> solves this by using <code>std::lock</code> internally to acquire both mutexes with deadlock avoidance:</p>
+<pre><code class="language-cpp">void transfer(account&amp; from, account&amp; to, int amount) {
+	std::scoped_lock lock(from.mtx, to.mtx); // deadlock-free acquisition
+	from.balance -= amount;
+	to.balance += amount;
+}
+</code></pre>
+<p>This is not just a convenience. It is a correctness boundary. Any design requiring multiple mutexes should either use <code>std::scoped_lock</code> for simultaneous acquisition or enforce a documented total ordering on locks. Ad hoc ordering disciplines rarely survive refactoring.</p>
+<h2 id="the-performance-cost-of-over-synchronization"><a class="header" href="#the-performance-cost-of-over-synchronization">The Performance Cost of Over-Synchronization</a></h2>
+<p>Contention is not just about correctness. Excessive locking serializes work that could run in parallel.</p>
+<pre><code class="language-cpp">// Over-synchronized: every stat update contends on one lock.
+class request_stats {
+	std::mutex mtx_;
+	uint64_t total_requests_ = 0;
+	uint64_t total_bytes_ = 0;
+	uint64_t error_count_ = 0;
+public:
+	void record(uint64_t bytes, bool error) {
+		std::scoped_lock lock(mtx_);
+		++total_requests_;
+		total_bytes_ += bytes;
+		if (error) ++error_count_;
+	}
+};
+</code></pre>
+<p>On a 64-core machine handling millions of requests per second, every thread serializes on one cache line. Lock acquisition, cache-line bouncing, and scheduler wakeups dominate. The better design depends on tolerances:</p>
+<ul>
+<li>If exact consistency between fields is unnecessary, use per-thread counters and merge periodically.</li>
+<li>If only approximate totals are needed, use <code>std::atomic&lt;uint64_t&gt;</code> with <code>memory_order_relaxed</code> for each counter independently.</li>
+<li>If cross-field consistency is required (e.g., error rate = errors / total), keep the mutex but shard by thread or request key.</li>
+</ul>
+<p>The point is not that mutexes are slow. It is that one mutex shared across all cores turns a parallel workload into a serial bottleneck. Measure lock hold time and wait time separately; high wait time with low hold time is the signature of over-synchronization.</p>
+<h2 id="design-around-invariants-not-fields"><a class="header" href="#design-around-invariants-not-fields">Design Around Invariants, Not Fields</a></h2>
+<p>Locks do not protect variables. They protect invariants.</p>
+<p>That distinction matters because production objects rarely fail at the field level. They fail when multiple fields must change together and one thread can observe the state between those changes.</p>
+<p>A connection pool is not correct because <code>available_count</code> is atomic. It is correct if the following relationship always holds under concurrent access: checked-out connections are not also on the idle list, closed connections are not reissued, and waiters are woken when progress becomes possible. Those are invariant statements. If the design does not name them explicitly, the synchronization boundary is already underspecified.</p>
+<p>This is where coarse-grained locking sometimes wins. If one mutex cleanly covers one invariant domain, that may be a better design than several finer locks that allow impossible intermediate states or require fragile lock ordering. Fine-grained locking is not advanced by default. It is often just harder to review.</p>
+<h2 id="anti-pattern-one-lock-around-a-growing-service-object"><a class="header" href="#anti-pattern-one-lock-around-a-growing-service-object">Anti-pattern: One Lock Around a Growing Service Object</a></h2>
+<p>The most common failure shape is not “no synchronization.” It is “one reasonable lock that gradually became the service boundary.”</p>
+<pre><code class="language-cpp">// Anti-pattern: one mutex protects unrelated invariants and long operations.
+class session_registry {
+public:
+	std::optional&lt;session_info&gt; find(session_id id) {
+		std::scoped_lock lock(mutex_);
+		auto it = sessions_.find(id);
+		if (it == sessions_.end()) {
+			return std::nullopt;
+		}
+		return it-&gt;second;
+	}
+
+	void expire_idle_sessions(std::chrono::steady_clock::time_point now) {
+		std::scoped_lock lock(mutex_);
+		for (auto it = sessions_.begin(); it != sessions_.end();) {
+			if (it-&gt;second.expires_at &lt;= now) {
+				close_socket(it-&gt;second.socket); // RISK: blocking work under the lock.
+				it = sessions_.erase(it);
+			} else {
+				++it;
+			}
+		}
+	}
+
+private:
+	std::mutex mutex_;
+	std::unordered_map&lt;session_id, session_info&gt; sessions_;
+};
+</code></pre>
+<p>This object may survive early testing because it is locally simple. It fails later because unrelated work now shares one queueing point. A read blocks on cleanup. Cleanup holds the mutex while doing I/O. Future features will add metrics, callbacks, and logging inside the same critical section because the lock already exists.</p>
+<p>The problem is not just duration of the critical section. It is that the object has no explicit invariant boundaries. Lifetime management, lookup, expiration, and side effects have been collapsed into one synchronization domain.</p>
+<p>The better direction is usually to separate state transition from external action: identify which sessions should expire under the lock, move them out, release the lock, then close sockets afterward. That shortens lock scope and makes the invariant easier to state: the protected region updates the registry; external cleanup happens after ownership has been transferred out of the shared structure.</p>
+<h2 id="minimize-lock-scope-but-do-not-split-logic-blindly"><a class="header" href="#minimize-lock-scope-but-do-not-split-logic-blindly">Minimize Lock Scope, But Do Not Split Logic Blindly</a></h2>
+<p>“Keep lock scope small” is correct and incomplete.</p>
+<p>A critical section should contain exactly the work required to preserve the invariant, no more and no less. That means:</p>
+<ol>
+<li>No blocking I/O under the lock.</li>
+<li>No callbacks into foreign code under the lock.</li>
+<li>No allocation-heavy or logging-heavy slow paths under the lock if they can be moved out.</li>
+<li>No splitting of logically atomic state updates merely to make the scope visually shorter.</li>
+</ol>
+<p>The last point is where teams get into trouble. A lock that protects a multi-step invariant may need to span several operations. If you release it between steps to look “faster,” you may create impossible states. Optimize after you can state what must remain atomic.</p>
+<h2 id="atomics-are-for-narrow-facts-not-complex-ownership"><a class="header" href="#atomics-are-for-narrow-facts-not-complex-ownership">Atomics Are for Narrow Facts, Not Complex Ownership</a></h2>
+<p>Atomics are essential and easy to misuse.</p>
+<p>Use atomics when the shared fact is truly narrow: a stop flag, a generation counter, an index into a ring buffer, a reference count in an already-sound ownership model, or a statistics counter where relaxed ordering is sufficient. Avoid using atomics as a substitute for structured ownership or for multi-field invariants.</p>
+<p>The example project’s <code>TaskRepository</code> (<code>examples/web-api/src/modules/repository.cppm</code>) illustrates the distinction. The ID generator is a single monotonic counter — a textbook narrow fact — so it uses <code>std::atomic&lt;TaskId&gt;</code> with <code>memory_order_relaxed</code>. The task collection, on the other hand, is a multi-field invariant (the vector contents must be consistent with the IDs issued), so it is protected by a <code>shared_mutex</code>. Mixing those two strategies in one class is perfectly sound because the scopes do not overlap: the atomic handles one independent fact, the mutex handles everything else.</p>
+<p>An atomic counter does not make a queue safe. An atomic pointer does not make object lifetime trivial. A handful of <code>memory_order</code> arguments does not fix a design that lets one thread observe partially published state.</p>
+<p>C++23 gives useful tools here, including <code>std::atomic::wait</code> and <code>notify_one</code> or <code>notify_all</code>. They can remove some condition-variable boilerplate for narrow state transitions. They do not change the need to design the state machine first.</p>
+<p>If a reviewer cannot explain which value transitions are legal and why the chosen ordering is sufficient, the atomic code is not done.</p>
+<h2 id="reader-heavy-data-wants-different-shapes"><a class="header" href="#reader-heavy-data-wants-different-shapes">Reader-Heavy Data Wants Different Shapes</a></h2>
+<p>Contention is often caused less by write frequency than by read design.</p>
+<p>A configuration table, routing map, or feature-policy snapshot may be read on every request and updated rarely. Protecting that with a central mutex works functionally and creates avoidable tail latency. In these cases, immutable snapshots or copy-on-write style publication often produce a better system than finer locking.</p>
+<p>The tradeoff is explicit:</p>
+<ol>
+<li>Readers get stable, low-contention access.</li>
+<li>Writers pay copy and publication cost.</li>
+<li>Memory pressure may increase due to overlapping generations.</li>
+<li>Staleness must be acceptable for the domain.</li>
+</ol>
+<p>That is often the right trade in request routing, authorization policy, and read-mostly metadata. It is the wrong trade for highly write-heavy order books or frequently mutating shared indexes.</p>
+<p>When neither extreme applies — reads are frequent but writes happen on every create, update, or delete request — <code>std::shared_mutex</code> with <code>std::shared_lock</code> for readers and <code>std::scoped_lock</code> for writers is the pragmatic middle ground. The example project’s <code>TaskRepository</code> (<code>examples/web-api/src/modules/repository.cppm</code>) follows exactly this pattern:</p>
+<pre><code class="language-cpp">// repository.cppm — reader-writer locking in practice
+class TaskRepository {
+    mutable std::shared_mutex mutex_;
+    std::vector&lt;Task&gt;         tasks_;
+    std::atomic&lt;TaskId&gt;       next_id_{1};
+public:
+    // Reads take shared_lock — multiple readers proceed in parallel.
+    [[nodiscard]] std::optional&lt;Task&gt; find_by_id(TaskId id) const {
+        std::shared_lock lock{mutex_};
+        auto it = std::ranges::find(tasks_, id, &amp;Task::id);
+        if (it == tasks_.end()) return std::nullopt;
+        return *it;
+    }
+
+    // Writes take scoped_lock — exclusive access preserves invariants.
+    [[nodiscard]] Result&lt;Task&gt; create(Task task) {
+        std::scoped_lock lock{mutex_};
+        // validate, assign id, store ...
+    }
+};
+</code></pre>
+<p>Every read path (<code>find_by_id</code>, <code>find_all</code>, <code>find_completed</code>, <code>size</code>) acquires a <code>shared_lock</code>, allowing concurrent readers. Every write path (<code>create</code>, <code>update</code>, <code>remove</code>) acquires a <code>scoped_lock</code> for exclusive access. The mutex protects the invariant domain — the relationship between <code>tasks_</code> and <code>next_id_</code> — not individual fields.</p>
+<p>The corresponding stress test (<code>examples/web-api/tests/test_repository.cpp</code>) validates this design under concurrent load:</p>
+<pre><code class="language-cpp">void test_concurrent_access() {
+    webapi::TaskRepository repo;
+    constexpr int num_threads = 8;
+    constexpr int ops_per_thread = 100;
+
+    std::vector&lt;std::jthread&gt; threads;
+    for (int i = 0; i &lt; num_threads; ++i) {
+        threads.emplace_back([&amp;repo, i]() {
+            for (int j = 0; j &lt; ops_per_thread; ++j) {
+                auto title = std::format("Task-{}-{}", i, j);
+                auto result = repo.create(webapi::Task{.title = std::move(title)});
+                assert(result.has_value());
+            }
+        });
+    }
+    threads.clear(); // jthreads auto-join
+    assert(repo.size() == num_threads * ops_per_thread);
+}
+</code></pre>
+<p>Eight threads hammering <code>create</code> concurrently, then verifying the total count matches expectations. This is a baseline correctness test, not a contention benchmark — but it catches data races and lost updates that would surface under ThreadSanitizer.</p>
+<h2 id="condition-variables-and-wakeup-discipline"><a class="header" href="#condition-variables-and-wakeup-discipline">Condition Variables and Wakeup Discipline</a></h2>
+<p>Condition variables are where many otherwise careful designs become hand-wavy.</p>
+<p>The rule is simple: the wait predicate is part of the invariant, not a convenience expression. A waiting thread must re-check a predicate that is protected by the same synchronization domain that makes the predicate meaningful. Notifications are signals to re-check, not proofs that progress is guaranteed.</p>
+<p>In practical terms:</p>
+<ol>
+<li>Name the predicate precisely: queue not empty, shutdown requested, capacity available, generation changed.</li>
+<li>Update the predicate state before notifying.</li>
+<li>Keep waiting code robust against spurious wakeups and shutdown races.</li>
+<li>Decide whether waking one waiter or all waiters matches the progress model.</li>
+</ol>
+<p>Most broken condition-variable code is not broken because the author forgot the loop. It is broken because the predicate is underspecified or split across state that different code paths update inconsistently.</p>
+<h2 id="hidden-shared-state-is-still-shared-state"><a class="header" href="#hidden-shared-state-is-still-shared-state">Hidden Shared State Is Still Shared State</a></h2>
+<p>Concurrency bugs often hide in objects that do not look shared from the call site.</p>
+<p>Examples include:</p>
+<ol>
+<li>Allocators or memory resources used by many threads.</li>
+<li>Logging sinks with internal buffers.</li>
+<li>Reference-counted handles with shared control blocks.</li>
+<li>Caches behind seemingly pure helper APIs.</li>
+<li>Global registries used for plugin discovery, metrics, or tracing.</li>
+</ol>
+<p>These deserve the same scrutiny as explicit shared maps and queues. “This helper is thread-safe” is not enough. Ask whether it serializes all callers, whether it allocates under contention, whether it can call user code while holding internal locks, and whether it introduces contention in the hot path without making that cost visible in the API.</p>
+<h2 id="measuring-contention-changes-the-design"><a class="header" href="#measuring-contention-changes-the-design">Measuring Contention Changes the Design</a></h2>
+<p>Correctness is only the first gate. After that, shared-state design is a measurement problem.</p>
+<p>Contention rarely appears as a clear source-level smell. It shows up as queueing time, lock hold distributions, convoy behavior, cache-line bouncing, and scheduler-visible stalls. That means verification must include operational evidence:</p>
+<ol>
+<li>Measure lock hold time and wait time on hot paths.</li>
+<li>Track tail latency, not only throughput averages.</li>
+<li>Observe hot-key skew when using sharding.</li>
+<li>Profile allocation inside critical sections.</li>
+<li>Use ThreadSanitizer for race detection and targeted stress tests for deadlock and starvation patterns.</li>
+</ol>
+<p>A design that is logically correct but collapses at the ninety-ninth percentile is still a bad concurrency design.</p>
+<h2 id="review-questions-for-shared-state"><a class="header" href="#review-questions-for-shared-state">Review Questions for Shared State</a></h2>
+<p>Before approving concurrent shared-state code, ask:</p>
+<ol>
+<li>What exact invariant does each lock or atomic protect?</li>
+<li>Could this state be confined, sharded, or snapshotted instead of shared?</li>
+<li>Does any critical section perform I/O, allocation-heavy work, logging, or callbacks?</li>
+<li>Are cross-field updates truly atomic with respect to observers?</li>
+<li>Are condition-variable predicates precise and updated under the right synchronization domain?</li>
+<li>Where will contention appear under burst load or hot-key skew?</li>
+<li>What evidence do we have beyond “it passed tests”?</li>
+</ol>
+<p>If those questions do not have crisp answers, the design is not ready for production load.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<p>Shared mutable state is not the default shape of concurrent design. It is the expensive shape.</p>
+<p>When sharing is unavoidable, define invariants before choosing primitives. Prefer confinement, sharding, and snapshots over ever more clever locking. Use mutexes to protect invariant domains, atomics for narrow facts, and condition variables only with clearly stated predicates. Then measure the result under realistic load, because correct synchronization can still produce the wrong system if contention dominates behavior.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="11-modules-libraries-packaging-and-abi-reality.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="13-coroutines-tasks-and-suspension-boundaries.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="11-modules-libraries-packaging-and-abi-reality.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="13-coroutines-tasks-and-suspension-boundaries.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

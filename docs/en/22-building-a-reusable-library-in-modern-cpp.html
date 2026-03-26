@@ -1,0 +1,478 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Building a Reusable Library in Modern C++ - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-a846e9dc.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/22-building-a-reusable-library-in-modern-cpp.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="building-a-reusable-library-in-modern-c"><a class="header" href="#building-a-reusable-library-in-modern-c">Building a Reusable Library in Modern C++</a></h1>
+<p>Application code can get away with local convenience for a surprisingly long time. Library code cannot. Once an API escapes its original caller set, every vague ownership contract, every overloaded error channel, every accidental allocation, and every unstable type dependency becomes somebody else’s problem. The library may still compile. It becomes expensive to trust.</p>
+<p>The production question for this chapter is therefore not “how do I write a nice API?” It is “what does a reusable modern C++23 library have to make explicit so that other teams can adopt it without inheriting hidden coupling, unstable behavior, or unverifiable claims?” The answer starts with scope. A good reusable library makes a narrow promise, expresses that promise in types and contracts that survive real use, and refuses to leak its implementation economics into the whole dependency graph.</p>
+<p>The sample shape here is a parsing and transformation library used by several services and command-line tools. That is a useful domain because it brings together most of the hard pressures: input boundaries, allocation behavior, diagnostics, performance expectations, extensibility, and packaging.</p>
+<h2 id="start-by-choosing-a-narrow-promise"><a class="header" href="#start-by-choosing-a-narrow-promise">Start by Choosing a Narrow Promise</a></h2>
+<p>Many bad libraries fail before the first line of public API. They are designed as “the shared place for everything related to X.” That usually means they accumulate multiple responsibilities, grow extension points for unrelated concerns, and become difficult to version because every change touches somebody.</p>
+<p>A reusable library should instead make one narrow promise. Parse and validate this format. Normalize these records. Expose this storage abstraction. Compute these derived values. The promise can be substantial. It should still have a clear center.</p>
+<p>This sounds obvious, but it changes interface design immediately. A narrow promise leads to a small vocabulary of public types, a small set of failure categories, and a smaller number of places where callers need customization. A vague promise pushes complexity outward into templates, callback forests, configuration maps, and documentation that reads like negotiated truce.</p>
+<p>The most important library design decision is therefore not whether to use modules, concepts, or <code>std::expected</code>. It is where the public contract stops.</p>
+<h2 id="public-types-should-encode-ownership-and-invariants-directly"><a class="header" href="#public-types-should-encode-ownership-and-invariants-directly">Public Types Should Encode Ownership and Invariants Directly</a></h2>
+<p>Callers should not need repository context to answer basic questions about ownership, lifetime, mutability, or validity. If the library returns a view, the caller should know what owns the underlying data. If it accepts a callback, the callback lifetime and threading expectations should be obvious. If a configuration object may be invalid, the invalid state should be representable only long enough to validate it.</p>
+<p>Value types are often the right center of gravity for library APIs because they travel well across teams and tests. They make copying cost visible, move semantics deliberate, and invariants attachable to construction or validation boundaries. Borrowed inputs such as <code>std::string_view</code> and <code>std::span</code> are still excellent for call boundaries, but they should be used only when the library can complete its work within the borrowed lifetime or copy what it must retain.</p>
+<h3 id="intentional-partial-a-caller-facing-api-with-explicit-contracts"><a class="header" href="#intentional-partial-a-caller-facing-api-with-explicit-contracts">Intentional partial: a caller-facing API with explicit contracts</a></h3>
+<pre><code class="language-cpp">enum class parse_error {
+	invalid_syntax,
+	unsupported_version,
+	duplicate_key,
+	resource_limit_exceeded,
+};
+
+struct parse_options {
+	std::size_t max_document_bytes = 1 &lt;&lt; 20;
+	bool allow_comments = false;
+};
+
+struct document {
+	std::pmr::vector&lt;entry&gt; entries;
+};
+
+[[nodiscard]] auto parse_document(std::string_view input,
+								  parse_options const&amp; options,
+								  std::pmr::memory_resource&amp; memory)
+	-&gt; std::expected&lt;document, parse_error&gt;;
+</code></pre>
+<p>This excerpt does a few useful things. It separates caller-controlled policy from input bytes. It makes allocation strategy visible without forcing a global allocator policy. It returns a domain error rather than a transport-specific or parser-internal type. It also makes result checking harder to forget through <code>[[nodiscard]]</code> and <code>std::expected</code>.</p>
+<p>The tradeoff is that the function signature is less minimal than <code>document parse(std::string_view)</code>. That is fine. Reusable libraries do not get paid for looking compact in slides. They get paid for making costs and contracts legible.</p>
+<h2 id="make-failure-shape-stable"><a class="header" href="#make-failure-shape-stable">Make Failure Shape Stable</a></h2>
+<p>Application code can sometimes afford to let exceptions and internal error categories drift because one team controls both sides. Libraries should be much stricter. The caller must know which failures are part of the contract, which are programming errors, and which remain implementation accidents.</p>
+<p>That usually leads to one of three designs.</p>
+<ol>
+<li>Use <code>std::expected</code> or a similar result type for routine domain failures the caller is expected to handle.</li>
+<li>Reserve exceptions for invariant violations, exceptional environment failures, or APIs whose ecosystem already assumes exception-based use.</li>
+<li>Translate low-level errors into a stable public error vocabulary at the boundary.</li>
+</ol>
+<p>The right choice depends on the domain. Parsing, validation, and recoverable business-rule failures usually fit <code>std::expected</code> well. Low-level infrastructure libraries integrated into exception-based application frameworks may reasonably use exceptions. What matters most is consistency. A library that returns <code>std::expected</code> for some recoverable failures, throws for others, and leaks <code>std::system_error</code> from one backend but not another is forcing callers to reverse-engineer policy from implementation.</p>
+<p>Do not make the public error surface too granular. Callers need distinctions they can act on. They rarely benefit from twenty parser-internal states that only the library can interpret. Keep the stable categories small, then provide optional richer diagnostics through separate channels.</p>
+<h2 id="separate-mechanism-from-policy-without-abstracting-everything"><a class="header" href="#separate-mechanism-from-policy-without-abstracting-everything">Separate Mechanism from Policy Without Abstracting Everything</a></h2>
+<p>Reusable libraries often need some customization: allocation, logging hooks, host-owned diagnostics, clock sources, I/O adapters, or user-defined handlers. This is where teams either over-template the entire surface or bury the library inside runtime-polymorphic interfaces that allocate and dispatch everywhere.</p>
+<p>The better approach is to choose a small number of explicit policy seams and keep the core mechanism concrete. Concepts help when the customization must stay zero-overhead and compile-time checked. Type erasure or callback interfaces help when binary boundaries, plugin models, or operational decoupling matter more than template transparency.</p>
+<p>For example, an internal parsing engine probably does not need to be a giant policy-based template on logging, allocation, diagnostics, and error formatting simultaneously. It can parse concretely, accept a <code>std::pmr::memory_resource&amp;</code>, and optionally emit diagnostics through a narrow sink interface. That keeps most call sites simple while still allowing hosts to control the expensive or environment-specific parts.</p>
+<p>This is also where library authors need discipline about dependencies. If the public headers include a networking stack, formatting library, metrics SDK, and filesystem abstraction just to support optional features, the library has already lost portability and build hygiene. Optional operational concerns belong behind narrow seams or in companion adapters, not in the center of the API.</p>
+<h3 id="mistake-exposing-internal-types-in-public-headers"><a class="header" href="#mistake-exposing-internal-types-in-public-headers">Mistake: exposing internal types in public headers</a></h3>
+<p>One of the most common library design failures is leaking implementation types into the public API surface. This creates hidden coupling: callers transitively depend on headers they never asked for, build times grow, and internal refactors become breaking changes.</p>
+<pre><code class="language-cpp">// BAD: public header pulls in implementation details
+#pragma once
+#include &lt;boost/asio/io_context.hpp&gt;      // transport detail
+#include &lt;spdlog/spdlog.h&gt;                // logging detail
+#include "internal/parser_state_machine.h" // implementation detail
+
+class document_parser {
+public:
+    document_parser(boost::asio::io_context&amp; io,
+                    std::shared_ptr&lt;spdlog::logger&gt; log);
+
+    auto parse(std::string_view input) -&gt; document;
+
+private:
+    boost::asio::io_context&amp; io_;          // caller now depends on Boost.Asio
+    std::shared_ptr&lt;spdlog::logger&gt; log_;  // caller now depends on spdlog
+    internal::parser_state_machine fsm_;   // caller now depends on internal layout
+};
+// Every caller's translation unit now includes Boost.Asio and spdlog headers.
+// Changing the logging library is a breaking change for all consumers.
+</code></pre>
+<p>The fix is to keep the public header minimal and push implementation types behind forward declarations, PIMPL, or narrow callback interfaces.</p>
+<pre><code class="language-cpp">// BETTER: public header exposes only the library's own vocabulary
+#pragma once
+#include &lt;string_view&gt;
+#include &lt;expected&gt;
+#include &lt;memory&gt;
+
+namespace mylib {
+
+enum class parse_error { invalid_syntax, resource_limit_exceeded };
+
+struct diagnostic_event {
+    std::string_view message;
+    std::size_t line;
+};
+
+using diagnostic_sink = std::function&lt;void(diagnostic_event const&amp;)&gt;;
+
+class document_parser {
+public:
+    struct options {
+        std::size_t max_bytes = 1 &lt;&lt; 20;
+        diagnostic_sink on_diagnostic = {};  // optional, no spdlog dependency
+    };
+
+    explicit document_parser(options opts = {});
+    ~document_parser();
+    document_parser(document_parser&amp;&amp;) noexcept;
+    document_parser&amp; operator=(document_parser&amp;&amp;) noexcept;
+
+    [[nodiscard]] auto parse(std::string_view input)
+        -&gt; std::expected&lt;document, parse_error&gt;;
+
+private:
+    struct impl;
+    std::unique_ptr&lt;impl&gt; impl_;  // Boost, spdlog, FSM all hidden here
+};
+
+} // namespace mylib
+// Callers include only standard headers. Internal deps are invisible.
+// Changing from spdlog to another logger requires zero caller changes.
+</code></pre>
+<h3 id="mistake-poor-error-reporting"><a class="header" href="#mistake-poor-error-reporting">Mistake: poor error reporting</a></h3>
+<p>Libraries that report errors as raw integers, bare <code>std::string</code> messages, or platform-specific exception types force callers to reverse-engineer failure semantics from implementation details. The result is fragile error handling that breaks whenever the library changes its internals.</p>
+<pre><code class="language-cpp">// BAD: error reporting through mixed, unstable channels
+auto parse(std::string_view input) -&gt; document {
+    if (input.empty())
+        throw std::runtime_error("empty input");  // string-based
+    if (input.size() &gt; max_size)
+        return {};  // default-constructed "null" document — is this an error?
+    if (!validate_header(input))
+        throw parser_exception(ERR_INVALID_HEADER);  // internal enum leaked
+    // caller must catch two exception types AND check for empty documents
+}
+</code></pre>
+<pre><code class="language-cpp">// BETTER: single, stable error channel with actionable categories
+[[nodiscard]] auto parse(std::string_view input)
+    -&gt; std::expected&lt;document, parse_error&gt;
+{
+    if (input.empty())
+        return std::unexpected(parse_error::invalid_syntax);
+    if (input.size() &gt; max_size)
+        return std::unexpected(parse_error::resource_limit_exceeded);
+    if (!validate_header(input))
+        return std::unexpected(parse_error::invalid_syntax);
+    // one return type, one error vocabulary, no exceptions for routine failures
+}
+</code></pre>
+<p>For richer diagnostics beyond the category, provide a separate channel (a diagnostic sink, an error details accessor, or a structured log) rather than overloading the primary error type with implementation-specific fields that callers cannot act on programmatically.</p>
+<h2 id="versioning-and-abi-need-a-policy-not-optimism"><a class="header" href="#versioning-and-abi-need-a-policy-not-optimism">Versioning and ABI Need a Policy, Not Optimism</a></h2>
+<p>Even an internal shared library benefits from treating versioning as part of design rather than release paperwork. The practical question is what kinds of change the library promises callers they can survive. Source compatibility, ABI compatibility, wire-format stability, serialized-data stability, and semantic compatibility are related but different promises.</p>
+<p>For many C++ libraries, the easiest honest policy is source compatibility within a major version and no blanket ABI promise across arbitrary toolchains. That is often a stronger real-world posture than pretending ABI stability while exposing standard-library types, inline-heavy templates, or platform-dependent layout in the public surface.</p>
+<p>If ABI stability does matter, the design must change accordingly. That usually means narrower exported surfaces, opaque types, PIMPL-like boundaries, stricter exception policy, reduced template exposure, and controlled compiler and standard-library assumptions. Those are not finishing touches. They affect the entire API shape.</p>
+<h3 id="mistake-breaking-abi-with-inline-changes"><a class="header" href="#mistake-breaking-abi-with-inline-changes">Mistake: breaking ABI with inline changes</a></h3>
+<p>A change that appears safe at the source level can break binary compatibility silently. Adding a member to a class, changing a default parameter value in an inline function, or reordering fields all change the ABI without any compiler diagnostic.</p>
+<pre><code class="language-cpp">// v1.0 — shipped as shared library
+struct document {
+    std::pmr::vector&lt;entry&gt; entries;
+    // sizeof(document) == N, known to callers at compile time
+};
+
+// v1.1 — "just added a field"
+struct document {
+    std::pmr::vector&lt;entry&gt; entries;
+    std::optional&lt;metadata&gt; meta;  // sizeof(document) changed
+    // callers compiled against v1.0 still assume size N
+    // stack allocations, memcpy, placement new — all wrong
+};
+</code></pre>
+<p>The fix for ABI-stable libraries is to hide layout behind a PIMPL boundary, so that callers never depend on <code>sizeof</code> or field offsets.</p>
+<pre><code class="language-cpp">// ABI-stable public header
+class document {
+public:
+    document();
+    ~document();
+    document(document&amp;&amp;) noexcept;
+    document&amp; operator=(document&amp;&amp;) noexcept;
+
+    [[nodiscard]] auto entries() const -&gt; std::span&lt;entry const&gt;;
+    [[nodiscard]] auto metadata() const -&gt; std::optional&lt;metadata_view&gt;;
+
+private:
+    struct impl;
+    std::unique_ptr&lt;impl&gt; impl_;
+};
+
+// In the .cpp file (not visible to callers):
+struct document::impl {
+    std::pmr::vector&lt;entry&gt; entries;
+    std::optional&lt;metadata&gt; meta;
+    // add fields freely — callers see only the pointer
+};
+</code></pre>
+<p>PIMPL adds one heap allocation per object and one indirection per access. For types created infrequently (documents, connections, sessions), this is nearly always an acceptable cost. For types created millions of times per second in a hot loop, it is not, and ABI stability for those types should be reconsidered.</p>
+<h3 id="versioning-pattern-inline-namespaces-for-source-versioning"><a class="header" href="#versioning-pattern-inline-namespaces-for-source-versioning">Versioning pattern: inline namespaces for source versioning</a></h3>
+<p>When the library must support multiple API versions simultaneously (for example, during a migration period), inline namespaces let you version the symbols without forcing callers to change their code.</p>
+<pre><code class="language-cpp">namespace mylib {
+inline namespace v2 {
+    struct document { /* v2 layout */ };
+    auto parse_document(std::string_view input) -&gt; std::expected&lt;document, parse_error&gt;;
+}
+
+namespace v1 {
+    struct document { /* v1 layout, kept for compatibility */ };
+    auto parse_document(std::string_view input) -&gt; std::expected&lt;document, parse_error&gt;;
+}
+}
+
+// Callers using `mylib::document` get v2 by default.
+// Callers that need v1 use `mylib::v1::document` explicitly.
+// Linker symbols are distinct, so v1 and v2 can coexist in one binary.
+</code></pre>
+<p>Modules improve build structure and distribution hygiene, but they do not erase ABI reality. Likewise, concepts improve diagnostics and constraints, but they do not automatically make a heavily templated library versionable. Treat these tools as local improvements, not policy substitutes.</p>
+<h2 id="documentation-should-answer-integration-questions"><a class="header" href="#documentation-should-answer-integration-questions">Documentation Should Answer Integration Questions</a></h2>
+<p>Library documentation for experienced programmers should focus on adoption decisions, not feature advertising. A caller evaluating a reusable library needs to know:</p>
+<ul>
+<li>What problem the library owns and what it refuses to own.</li>
+<li>Which inputs are borrowed and which outputs own storage.</li>
+<li>Which failures are routine and how they are reported.</li>
+<li>Which allocations, copies, or background work are part of normal use.</li>
+<li>Which thread-safety guarantees exist, if any.</li>
+<li>Which versioning and compatibility promises are real.</li>
+</ul>
+<p>Short, production-looking examples help here, especially when they show the normal error path and configuration boundary. Huge tutorial walkthroughs usually do not. The purpose of the docs is to let another team integrate the library without learning internal folklore.</p>
+<p>Performance claims deserve the same restraint. Do not say the library is fast. Say what was measured, under what workload, against what baseline, and where the cost model is sensitive. Parsing libraries often have costs that depend heavily on allocation strategy, input size distribution, and failure rate. Say that directly.</p>
+<h2 id="verification-should-match-the-librarys-public-promises"><a class="header" href="#verification-should-match-the-librarys-public-promises">Verification Should Match the Library’s Public Promises</a></h2>
+<p>A reusable library needs stronger verification discipline than a leaf application component because callers cannot inspect all of your assumptions. Tests should therefore map directly to public promises.</p>
+<p>If the library guarantees stable parsing behavior for a documented format version, keep fixture-based contract tests. If it guarantees that malformed input returns structured failures without undefined behavior, run fuzzing and sanitizers on the public parse entry points. If it claims bounded allocations under certain modes, benchmark or instrument that claim. If it exposes host-provided diagnostics, test that the sink receives stable event categories rather than implementation chatter.</p>
+<p>This is also where compatibility checks belong. If source compatibility across minor versions is part of the promise, keep integration tests or sample clients that exercise old call patterns. If ABI matters, test produced artifacts in a way that actually checks symbol and layout expectations. “It still compiled on my machine” is not a compatibility policy.</p>
+<h2 id="know-when-not-to-build-a-library-yet"><a class="header" href="#know-when-not-to-build-a-library-yet">Know When Not To Build a Library Yet</a></h2>
+<p>Teams often create shared libraries too early. If only one application uses the code, if the domain vocabulary is still moving weekly, or if the supposed reuse is mostly organizational aspiration, forcing a stable public surface can freeze bad assumptions into place. Sometimes the right answer is to keep the component internal until the contract stabilizes.</p>
+<p>This is not an argument against reuse. It is an argument for charging the real cost of public APIs. Once other teams depend on the library, changing semantics, ownership, or error policy becomes much more expensive than changing internal code. Reuse is valuable when the problem and contract are mature enough to deserve that cost.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<p>A good reusable C++23 library makes a narrow promise, encodes ownership and invariants directly in public types, keeps failure shape stable, exposes only a few deliberate customization seams, and states versioning and performance claims honestly. It should minimize dependency drag and make adoption decisions easy for experienced callers.</p>
+<p>The tradeoffs are the usual ones but paid more explicitly than in applications. Richer signatures can look less elegant. Stable error categories require translation. ABI-aware design limits public template freedom. Narrow seams require discipline about what not to customize. Those are acceptable costs because a library is a long-lived contract, not just a pile of reusable code.</p>
+<p>Review questions:</p>
+<ul>
+<li>What narrow promise does this library make, and what important responsibilities does it explicitly refuse?</li>
+<li>Which public types communicate ownership, lifetime, and invariants without hidden assumptions?</li>
+<li>Is the public error surface small, stable, and actionable for callers?</li>
+<li>Which customization seams are genuinely necessary, and which dependencies should be pushed behind adapters instead of into public headers?</li>
+<li>What compatibility promise is actually being made: source, ABI, serialized format, semantic behavior, or some combination?</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="21-building-a-small-service-in-modern-cpp.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="23-reviewers-checklist-modern-cpp-code.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="21-building-a-small-service-in-modern-cpp.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="23-reviewers-checklist-modern-cpp-code.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,435 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>协程、任务与挂起边界 - 现代 C++ 实战</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="面向有经验程序员的现代 C++ 生产实践指南：所有权、接口、失败边界、并发、性能与验证。">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-8b875a01.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">现代 C++ 实战</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice/edit/main/translations/zh-CN/chapters/chapters/13-coroutines-tasks-and-suspension-boundaries.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="协程任务与挂起边界"><a class="header" href="#协程任务与挂起边界">协程、任务与挂起边界</a></h1>
+<p>本章假定你已经理解错误传递和并发共享状态设计。本章关注点更集中：协程拥有什么、什么能在挂起后继续存活，以及异步控制流掩盖生命周期时会引发什么问题。</p>
+<h2 id="生产中的问题"><a class="header" href="#生产中的问题">生产中的问题</a></h2>
+<p>协程让异步代码更好读，也更容易产生误导。</p>
+<p>原本层层嵌套回调的请求处理器，可以写成顺序执行的直线代码。流式解析器可以自然地逐个产出值。后台刷新任务可以用 <code>co_await</code> 等待定时器和 I/O，不必再手写状态机。这些都是实实在在的收益。但底层机制并没有消失——状态机依然存在，只是搬进了协程帧，而协程帧的生命周期、所有权和恢复上下文都需要刻意设计。</p>
+<p>生产环境中协程引发的故障通常有四类：</p>
+<ol>
+<li>借用的数据在挂起后比其来源存活得更久。</li>
+<li>任务没有明确的所有者，导致工作比启动它的组件存活得更久。</li>
+<li>失败和取消路径是隐式的，挂起的工作恢复时所依赖的假设已经失效。</li>
+<li>执行在线程或 executor 之间跳转，而代码中看不出来。</li>
+</ol>
+<p>本章的讨论范围限于局部。这里还不涉及如何在取消压力下管理整棵任务树——那是第 14 章的内容。本章要回答的问题是：每个协程到底是什么？答案是——一个拥有资源的对象，其挂起点划定了生命周期的边界。</p>
+<h2 id="协程替代了什么回调地狱与手写状态机"><a class="header" href="#协程替代了什么回调地狱与手写状态机">协程替代了什么：回调地狱与手写状态机</a></h2>
+<p>要理解协程的设计取舍，先看看它们替代了什么。在协程出现之前，异步代码依赖 continuation-passing style（续体传递风格），即每一步都把回调串到下一步。一个简单的”获取、校验、存储”序列写出来是这样的：</p>
+<pre><code class="language-cpp">// Continuation-passing style — correct but unreadable at scale.
+void handle_request(request req, std::function&lt;void(response)&gt; done) {
+	fetch_profile(req.user_id, [req, done](std::expected&lt;profile, error&gt; prof) {
+		if (!prof) { done(error_response(prof.error())); return; }
+		validate_access(prof-&gt;role, req.resource,
+			[req, prof = *prof, done](std::expected&lt;bool, error&gt; ok) {
+				if (!ok || !*ok) { done(denied_response()); return; }
+				store_audit_log(req, prof,
+					[req, prof, done](std::expected&lt;void, error&gt; result) {
+						if (!result) { done(error_response(result.error())); return; }
+						done(success_response(prof));
+					});
+			});
+	});
+}
+</code></pre>
+<p>每一步都嵌套更深一层。错误处理在每一层重复。捕获变量的生命周期必须手动管理——按值捕获会带来大量拷贝，按引用捕获则可能悬空。如果再加上超时、取消或重试逻辑，嵌套只会进一步膨胀。这不是刻意构造的极端例子，而是协程出现之前生产代码中异步 C++ 的真实面貌。</p>
+<p>对应的协程版本：</p>
+<pre><code class="language-cpp">task&lt;response&gt; handle_request(request req) {
+	auto prof = co_await fetch_profile(req.user_id);
+	if (!prof) co_return error_response(prof.error());
+
+	auto ok = co_await validate_access(prof-&gt;role, req.resource);
+	if (!ok || !*ok) co_return denied_response();
+
+	auto result = co_await store_audit_log(req, *prof);
+	if (!result) co_return error_response(result.error());
+
+	co_return success_response(*prof);
+}
+</code></pre>
+<p>代码可以顺序阅读，每一步只有一条错误路径，也没有嵌套。改进是实实在在的。但状态机并没有消失——它搬进了协程帧。本章剩余部分讨论的，就是这对所有权和生命周期意味着什么。</p>
+<p>示例项目的 handler 层（<code>examples/web-api/src/modules/handlers.cppm</code>）展示了同一种结构优势的同步版本。每个 handler 是一个接收 <code>const http::Request&amp;</code>（借用）并返回 <code>http::Response</code>（拥有）的函数，控制流是直线式的：解析路径参数、校验输入、调用 repository、把结果转换为 HTTP 响应。错误处理就在每一步的本地完成，无需嵌套回调。虽然这些 handler 不是协程，但它们体现了同一条原则——当每一步都是顺序的、错误路径是扁平的，业务逻辑就更具可读性和可审查性。</p>
+<h2 id="协程是带存储的状态机"><a class="header" href="#协程是带存储的状态机">协程是带存储的状态机</a></h2>
+<p>把协程当语法糖来用，是最快制造生命周期 bug 的捷径。</p>
+<p>函数变成协程后，部分状态会搬进协程帧。参数可能被拷贝或移动到帧中。跨越挂起点存活的局部变量会驻留在帧中。awaiter 的状态则可能决定执行何时恢复、在哪里恢复。析构可能发生在成功、失败、取消，或者持有该任务对象的外部对象被销毁时。这些都不是无关紧要的细节。</p>
+<p>这之所以重要，是因为基于栈的常规直觉不再可靠。在非协程函数中，局部变量会在控制流离开作用域时销毁。而在协程中，一个跨越挂起点的局部变量，可能比调用方预想的活得久得多；反过来，一个借用调用方存储的 view，却可能在恢复之前早已失效。</p>
+<p>核心评审问题很简单：从一个挂起点到下一个挂起点之间，哪些数据必须保持有效？</p>
+<h2 id="挂起点就是生命周期边界"><a class="header" href="#挂起点就是生命周期边界">挂起点就是生命周期边界</a></h2>
+<p>每个 <code>co_await</code> 都是一道边界，跨过它时应当重新审视之前的假设。</p>
+<p>挂起之前，先问自己：</p>
+<ol>
+<li>哪些引用、span、string view、迭代器和指针在恢复后仍然需要？</li>
+<li>它们所引用的存储归谁所有？</li>
+<li>被等待的操作有没有可能比发起它的调用方、请求或组件活得更久？</li>
+<li>恢复会发生在哪个 executor 或线程上？</li>
+</ol>
+<p>这相当于把 API 生命周期评审搬到了局部层面。如果协程在挂起期间保留了借用数据，你就必须证明数据的所有者比协程活得更久，否则就应该让协程接管所有权。</p>
+<p>这也解释了为什么协程 API 对参数的选择往往比同步 API 更严格。同步的辅助函数可以放心地接收 <code>std::string_view</code>，因为它会立即返回。而会挂起的异步任务通常不应保留这个 view，除非所有权契约极其严格并且有明确文档。</p>
+<p>示例项目的 <code>Request::path_param_after()</code>（<code>examples/web-api/src/modules/http.cppm</code>）展示了这条边界安全的一面。它返回 <code>std::optional&lt;std::string_view&gt;</code>，指向请求对象的 <code>path</code> 成员。在当前设计中这是安全的，因为 handler 同步执行——<code>Request</code> 对象在整个 handler 调用期间都存活。但如果这些 handler 变成了会在执行中途挂起的协程，同一个 <code>string_view</code> 就会在请求缓冲区被回收的瞬间变为悬空引用。这个设计之所以成立，恰恰是因为生命周期契约足够简单：请求在 handler 执行期间存活，而 handler 不会挂起。</p>
+<h2 id="反模式借用的请求状态跨越挂起存活"><a class="header" href="#反模式借用的请求状态跨越挂起存活">反模式：借用的请求状态跨越挂起存活</a></h2>
+<pre><code class="language-cpp">// Anti-pattern: borrowed data may dangle after suspension.
+task&lt;parsed_request&gt; parse_and_authorize(
+	std::string_view body,
+	const auth_context&amp; auth) {
+
+	auto token = co_await fetch_access_token(auth.user_id());
+	co_return parse_request(body, token); // BUG: body may refer to caller-owned storage.
+}
+</code></pre>
+<p>这段代码看上去很高效，因为省去了一次拷贝。但它只在调用方保证 <code>body</code> 在协程完成前始终有效时才是正确的。在服务端代码中，“协程完成“通常意味着网络 I/O、认证查找、重试和超时处理全部结束。这可不是一个轻松的承诺，而且往往是一个错误的承诺。</p>
+<p>更安全的默认做法是：凡是挂起后还要用的数据，都把所有权移交给协程。</p>
+<pre><code class="language-cpp">task&lt;parsed_request&gt; parse_and_authorize(
+	std::string body,
+	auth_context auth) {
+
+	auto token = co_await fetch_access_token(auth.user_id());
+	co_return parse_request(body, token);
+}
+</code></pre>
+<p>拷贝或移动的开销清晰可见、便于评审。协程帧现在拥有了它所需的一切。如果分配开销确实构成问题，那就去测量，再围绕消息边界或存储复用来重新设计。不要悄悄地跨越时间借用数据。</p>
+<h2 id="更多生命周期陷阱局部变量临时对象和-lambda-捕获"><a class="header" href="#更多生命周期陷阱局部变量临时对象和-lambda-捕获">更多生命周期陷阱：局部变量、临时对象和 lambda 捕获</a></h2>
+<p>上面的借用参数反模式是最常见的情况，但协程生命周期 bug 还有其他几种值得特别关注的形式。</p>
+<h3 id="指向调用方局部变量的悬空引用"><a class="header" href="#指向调用方局部变量的悬空引用">指向调用方局部变量的悬空引用</a></h3>
+<pre><code class="language-cpp">// BUG: coroutine captures a reference to a local that dies when the caller returns.
+task&lt;void&gt; start_processing(dispatcher&amp; d) {
+	std::vector&lt;record&gt; batch = build_batch();
+	co_await d.schedule([&amp;batch] {     // lambda captures batch by reference
+		process(batch);                // batch may be destroyed if start_processing
+	});                                // is suspended and its caller exits
+}
+</code></pre>
+<p>当 <code>start_processing</code> 在 <code>co_await</code> 处挂起时，协程帧会让 <code>batch</code> 继续存活——但前提是帧本身还活着。一旦任务被 detach 或父作用域退出，协程帧随之销毁，lambda 中的引用便会悬空。修复方法：按值捕获，或通过结构化所有权确保父作用域的生命周期长于被调度的工作。</p>
+<h3 id="临时对象生命周期坍塌"><a class="header" href="#临时对象生命周期坍塌">临时对象生命周期坍塌</a></h3>
+<pre><code class="language-cpp">// BUG: temporary string destroyed before coroutine body executes.
+task&lt;void&gt; log_message(std::string_view msg);
+
+void caller() {
+	log_message("request started"s + request_id()); // temporary std::string
+	// temporary is destroyed here, before the coroutine even begins if lazy-start
+}
+</code></pre>
+<p>如果是 lazy-start 协程，这个临时 <code>std::string</code> 在分号处就销毁了，而协程甚至还没开始执行。即使是 eager-start 协程，如果帧把 <code>msg</code> 存为 <code>string_view</code>，第一次挂起之后它就指向了已释放的内存。解决方案是在协程签名中按值接收 <code>std::string</code>，让帧持有自己的副本。</p>
+<h3 id="跨越挂起的-this-指针"><a class="header" href="#跨越挂起的-this-指针">跨越挂起的 <code>this</code> 指针</a></h3>
+<pre><code class="language-cpp">// BUG: 'this' may dangle if the object is moved or destroyed while suspended.
+class connection {
+	std::string peer_addr_;
+public:
+	task&lt;void&gt; run() {
+		auto data = co_await read_socket();    // suspended here
+		log("received from " + peer_addr_);    // 'this' may be invalid
+	}
+};
+</code></pre>
+<p>如果 <code>connection</code> 对象在 <code>run()</code> 挂起期间被移动到另一个容器或被销毁，恢复时 <code>this</code> 就失效了。成员协程只在对象的生命周期确保长于协程时才安全。实践中，这通常意味着协程应持有 <code>shared_ptr&lt;connection&gt;</code>，或者所有者作用域必须做结构化设计，防止对象在挂起期间被销毁。</p>
+<p>这些都不是奇特的边角案例，而是生产环境中协程生命周期最常见的失败模式。每个挂起点，都是调用方的世界可能已经变了样的时刻。</p>
+<h2 id="任务类型就是所有权契约"><a class="header" href="#任务类型就是所有权契约">任务类型就是所有权契约</a></h2>
+<p>协程的返回类型不是装饰品，它定义了所有权、结果传递和析构语义。</p>
+<p>一个合格的任务类型至少要回答以下问题：</p>
+<ol>
+<li>销毁任务时会取消工作、detach 工作、阻塞等待，还是泄漏？</li>
+<li>结果会被消费一次、多次，还是完全不消费？</li>
+<li>异常如何传递？</li>
+<li>任务是立即启动（eager），还是等到被 await 时才开始（lazy）？</li>
+<li>取消是否有显式表示？</li>
+</ol>
+<p>很多协程 bug 本质上是任务类型 bug。detached 的”发后即忘”协程并不是一种异步风格偏好，而是一个所有权声明——后续代码不需要知道工作何时完成、是否失败、是否该在关闭时取消。这个声明在生产服务中很少能站得住脚。</p>
+<p>保守的默认做法很简单：每个已启动的任务都应有明确的所有者和可见的完成路径。如果你说不出所有者是谁，那你就是在制造孤儿工作。</p>
+<h2 id="立即启动与延迟启动影响的是正确性"><a class="header" href="#立即启动与延迟启动影响的是正确性">立即启动与延迟启动影响的是正确性</a></h2>
+<p>协程是创建后立刻运行，还是等到被 await 时才启动——这影响的是正确性，而不仅仅是性能。</p>
+<p>eager task 可能在调用方保存 handle 之前就已产生副作用。lazy task 则会把工作推迟到编排代码决定何时、何地运行时才开始。两种方式都有合理的使用场景，关键是行为必须一致且有文档说明。</p>
+<p>这直接影响失败边界。如果构造任务就可能触发工作，那么异常和取消可能在任何父作用域认为任务”已激活”之前就已经可以被观察到。如果工作只在第一次 await 或显式调度时启动，所有权关系通常更容易推理。</p>
+<p>对生产代码的建议不是一刀切地偏向某种策略，而是：任务抽象必须让启动策略足够明显——明显到评审者无需深入 promise type 的实现，就能知道副作用何时开始。</p>
+<h2 id="恢复上下文是正确性的一部分"><a class="header" href="#恢复上下文是正确性的一部分">恢复上下文是正确性的一部分</a></h2>
+<p>协程代码读起来往往像是一直在同一个线程上执行。这是错觉。</p>
+<p>一个被等待的操作，恢复时可能跑在 I/O 线程、调度器线程池、UI 亲和线程，或 awaiter 选定的 executor 上。如果恢复后的代码会访问线程绑定的状态，或者必须在特定 executor 上继续执行，那么这个要求必须在抽象层面显式体现。</p>
+<p>这正是团队用更漂亮的语法重蹈回调时代覆辙的地方。控制流看起来是顺序的，评审者便不再追问 continuation 在哪个线程上运行。结果协程在线程池线程上恢复，访问了只在发起 executor 上才安全的请求局部状态。</p>
+<p>恢复策略应通过以下三种方式之一变得可见：</p>
+<ol>
+<li>任务类型自身携带明确的调度器或 executor 契约。</li>
+<li>代码在使用线程亲和资源前显式切换上下文。</li>
+<li>组件的设计使得 await 之后的代码不依赖特定 executor。</li>
+</ol>
+<p>如果三者都不满足，这个协程就在依赖隐式的环境行为。而环境行为一旦重构就会失效。</p>
+<h2 id="协程不会消除错误边界设计"><a class="header" href="#协程不会消除错误边界设计">协程不会消除错误边界设计</a></h2>
+<p><code>co_await</code> 并不能回答”失败应该抛异常、返回 <code>std::expected</code>、请求取消，还是终止更大操作”这个问题。它只改变了控制流的形状。</p>
+<p>也就是说，第 3 章讨论的错误边界决策在任务 API 中依然适用，而且要保持一致：</p>
+<ol>
+<li>在内部层间栈展开可接受且被充分理解的领域，使用异常。</li>
+<li>当失败是预期中的、可组合的、属于正常业务流程时，使用结果类型。</li>
+<li>明确取消以何种形式呈现——在值空间、异常空间，还是任务状态中。</li>
+<li>让超时处理保持显式，而不是把它埋进一个行为出人意料的 awaiter 里。</li>
+</ol>
+<p>失败模型应当在调用点可读。”这个协程可能挂起”远远不够——调用方还需要知道完成意味着什么，以及失败时会是什么样子。</p>
+<h2 id="生成器与任务解决的是不同问题"><a class="header" href="#生成器与任务解决的是不同问题">生成器与任务解决的是不同问题</a></h2>
+<p>C++23 的协程支持同时涵盖了 pull 风格的生成器和异步任务，不要混淆二者。</p>
+<p>生成器解决的是向本地消费者分阶段产出值的问题。它们通常适用于流式解析管线、分词、批量遍历或增量转换。核心关注点是迭代器有效性、生产者生命周期，以及 yield 出去的引用是否仍然有效。</p>
+<p>任务解决的是异步工作最终完成的问题。核心关注点是所有权、调度、取消和结果传递。</p>
+<p>二者共享底层机制，但需要不同的评审视角。生成器 bug 往往是”这个 yield 出去的引用到底指向哪里？”任务 bug 往往是”挂起之后这份工作归谁管？”把这两类问题区分开来，代码评审就能更有针对性。</p>
+<h2 id="析构与取消必须能组合"><a class="header" href="#析构与取消必须能组合">析构与取消必须能组合</a></h2>
+<p>协程的清理路径很容易被忽略，因为正常路径看起来就是一条直线。</p>
+<p>试想：如果拥有者作用域在协程挂起时退出了，会怎样？析构会请求取消吗？会等待子操作完成吗？会不会和正常完成产生竞争？未完成的注册、文件描述符、定时器或缓冲区能否被恰好释放一次？</p>
+<p>这些都不是实现细节，而是任务抽象的语义契约。</p>
+<p>如果协程析构只是丢掉了 handle，而底层操作仍在别处继续，那就是“析构即 detach“。有时这确实是有意为之，但更多时候，它只是一个等着在关闭时爆发的 bug。</p>
+<h2 id="协程代码的验证"><a class="header" href="#协程代码的验证">协程代码的验证</a></h2>
+<p>仅靠正常路径的单元测试来验证协程逻辑是远远不够的。验证应着重覆盖边界行为：</p>
+<ol>
+<li>生命周期测试——强制让调用方拥有的数据在恢复前消失。</li>
+<li>取消测试——在多个挂起点中断协程。</li>
+<li>调度器测试——让协程在非预期的 executor 上恢复，以暴露线程亲和性假设。</li>
+<li>失败路径测试——覆盖异常、错误结果和超时竞争场景。</li>
+<li>Sanitizer 运行——当协程状态与共享对象交互时，检测 use-after-free 和数据竞争。</li>
+</ol>
+<p>对于高价值组件，通常值得编写确定性的测试 awaiter 或 fake scheduler，让恢复顺序可控，而非靠猜测。</p>
+<h2 id="协程的评审问题"><a class="header" href="#协程的评审问题">协程的评审问题</a></h2>
+<p>在批准协程代码之前，问一问：</p>
+<ol>
+<li>协程帧里存了什么，由谁拥有？</li>
+<li>哪些借用的 view 或引用会跨越挂起点存活？</li>
+<li>任务启动后归谁所有？</li>
+<li>副作用何时开始——构造时、调度时，还是首次 await 时？</li>
+<li>恢复发生在什么上下文中？</li>
+<li>失败、超时和取消分别如何表达？</li>
+<li>如果发起方在挂起期间关闭了，会怎样？</li>
+</ol>
+<p>如果这些问题的答案都含含糊糊，那这个协程并不比回调代码更简单——只是更容易被误读罢了。</p>
+<h2 id="要点"><a class="header" href="#要点">要点</a></h2>
+<p>协程改善的是控制流的清晰度，而非免除生命周期设计的责任。</p>
+<p>把每个挂起点都视为一道边界——跨过它之后，所有权、恢复上下文和失败语义都必须依然成立。优先选择所有权和完成行为明确的任务类型。数据需要跨越挂起存活时，就把它移入协程帧。在概念上把生成器和异步任务区分开来。最重要的是，不要把看似顺序的源码等同于顺序的生命周期。协程的正确性取决于什么会跨越时间持续存在，而不是 <code>co_await</code> 链写得有多整齐。</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="12-shared-state-synchronization-and-contention.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="14-structured-concurrency-cancellation-and-backpressure.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="12-shared-state-synchronization-and-contention.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="14-structured-concurrency-cancellation-and-backpressure.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

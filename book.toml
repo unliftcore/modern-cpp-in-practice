@@ -1,0 +1,29 @@
+[book]
+title = "Modern CPP in Practice"
+authors = ["Qiao Wang"]
+language = "en"
+src = "chapters"
+description = "A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification."
+
+[build]
+build-dir = "docs/en"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "light"
+git-repository-url = "https://github.com/qiaowan/modern-cpp"
+edit-url-template = "https://github.com/qiaowan/modern-cpp/edit/main/chapters/{path}"
+no-section-label = false
+additional-css = ["theme/custom.css"]
+
+[output.html.search]
+enable = true
+limit-results = 20
+boost-hierarchy = 2
+
+[output.html.print]
+enable = true
+
+[output.html.fold]
+enable = true
+level = 1

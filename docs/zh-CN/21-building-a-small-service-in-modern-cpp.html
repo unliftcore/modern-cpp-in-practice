@@ -1,0 +1,534 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>用现代 C++ 构建小型服务 - 现代 C++ 实战</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="面向有经验程序员的现代 C++ 生产实践指南：所有权、接口、失败边界、并发、性能与验证。">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-8b875a01.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">现代 C++ 实战</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice/edit/main/translations/zh-CN/chapters/chapters/21-building-a-small-service-in-modern-cpp.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="在现代-c-中构建一个小型服务"><a class="header" href="#在现代-c-中构建一个小型服务">在现代 C++ 中构建一个小型服务</a></h1>
+<p>小型服务往往是 C++ 团队养成良好工程纪律或栽跟头的分水岭。代码库尚小，人们很容易即兴行事；然而流程中已经埋着不少真实的失败模式：过载、启动时配置加载不全、部分写入、依赖超时、队列无限增长、关闭时的竞态条件，以及证据不足时的生产环境排障。语言本身帮不了你。</p>
+<p>本章不是框架教程。要回答的生产问题更为具体：如果你希望六个月后回头看，所有权、失败处理、并发和运维依然清晰可审，那么一个小型 C++23 服务该是什么样子？答案不是”把最新特性全用上”，而是选择一种服务形态，使生命周期一目了然、异步工作归属明确、资源限制显式可控，并且在高压下仍能快速定位问题。</p>
+<p>本章的示例是一个配置驱动的小型服务：接收请求、校验请求、执行有界的后台工作、持久化状态，并对外暴露指标和健康信息。细节刻意选得很普通——大多数生产服务在概念上并无新意，之所以出问题，是因为基本的工程边界没有划清。</p>
+<h2 id="先定义所有权单元再定义部署单元"><a class="header" href="#先定义所有权单元再定义部署单元">先定义所有权单元，再定义部署单元</a></h2>
+<p>小型服务最常见的第一个架构错误，是按端点、处理器或框架回调来组织代码，而非按照它所拥有的资源来组织。一个可部署的服务拥有一组固定的长生命周期对象：配置、监听器、执行器、连接池、存储适配器、遥测汇聚点，以及关闭协调机制。如果不把这些对象显式建模出来，代码就会慢慢滑向全局变量、共享单例、脱管的后台工作，以及”听天由命”的关闭流程。</p>
+<p>因此，服务对象应当直接体现所有权关系——由它来构造、启动和停止所有长生命周期的依赖。这并不是要造一个无所不包的上帝对象，而是要有一个清晰的根，负责管辖那些生命周期必须一同结束的组件。</p>
+<h3 id="刻意只展示片段掌控时序与关闭流程的服务根"><a class="header" href="#刻意只展示片段掌控时序与关闭流程的服务根">刻意只展示片段：掌控时序与关闭流程的服务根</a></h3>
+<pre><code class="language-cpp">struct service_components {
+config cfg;
+request_router router;
+storage_client storage;
+bounded_executor executor;
+telemetry telemetry;
+http_listener listener;
+};
+
+class service {
+public:
+explicit service(service_components components)
+: components_(std::move(components)) {}
+
+auto run(std::stop_token stop) -&gt; std::expected&lt;void, service_error&gt;;
+void request_stop() noexcept;
+
+private:
+auto start() -&gt; std::expected&lt;void, service_error&gt;;
+auto drain() noexcept -&gt; void;
+
+service_components components_;
+std::atomic&lt;bool&gt; stopping_{false};
+};
+</code></pre>
+<p>这段代码故意写得很朴素。服务只有一个所有权根、一条停止路径、一个可以推导启动和排空顺序的地方。小型服务不需要花哨的架构。</p>
+<p>示例项目 <code>examples/web-api/</code> 就是这一模式的具体实现。其 <code>main.cpp</code> 在一个连续的作用域中构造所有长生命周期资源——仓储、路由、中间件管道、服务器——并在进程开始接受请求前完成组装：</p>
+<pre><code class="language-cpp">// examples/web-api/src/main.cpp — scoped multi-resource construction
+webapi::TaskRepository repo;
+// ... seed data ...
+
+webapi::Router router;
+router
+    .get("/health",       webapi::handlers::health_check(repo))
+    .get("/tasks",        webapi::handlers::list_tasks(repo))
+    // ... remaining routes ...
+
+std::vector&lt;webapi::middleware::Middleware&gt; pipeline{
+    webapi::middleware::request_logger(),
+    webapi::middleware::require_json(),
+};
+auto handler = webapi::middleware::chain(pipeline, router.to_handler());
+
+webapi::http::Server server{port, std::move(handler)};
+server.run_until(shutdown_requested);
+</code></pre>
+<p>所有权根只有一个（<code>main</code>），关闭协调点也只有一个（<code>shutdown_requested</code>），每个资源都有明确的作用域。当 <code>run_until</code> 返回后，析构按声明的逆序进行——先是 server，再是 handler、router，最后是 repository。没有共享指针，没有全局注册表，没有脱管工作。</p>
+<p>这个根通常应当直接持有具体的基础设施类型，而不是一张堆分配接口拼成的对象图，再靠共享所有权勉强缝合。依赖反转仍然重要，但反转点通常落在存储、传输或遥测适配器这类边界上。进程内部，静态所有权比漫山遍野的 <code>std::shared_ptr</code> 更简单、更廉价——后者往往让真正的所有者在纸面上无从追溯。</p>
+<h3 id="反模式shared_ptr-大杂烩式的请求状态"><a class="header" href="#反模式shared_ptr-大杂烩式的请求状态">反模式：shared_ptr 大杂烩式的请求状态</a></h3>
+<p>一种常见的失败模式是：用 <code>std::shared_ptr</code> 把请求的生命周期横跨回调、队列和重试逻辑一路延长，却始终没有显式的所有权模型。代码编译没问题，看上去也安全，但没人说得清请求资源到底什么时候释放、取消信号能不能到达每个持有者，以及关闭流程能否确定性地完成。</p>
+<pre><code class="language-cpp">// BAD: shared_ptr soup — every callback extends lifetime indefinitely
+void handle_request(std::shared_ptr&lt;http_request&gt; req) {
+    auto ctx = std::make_shared&lt;request_context&gt;(req-&gt;parse_body());
+    ctx-&gt;db_future = db_.async_query(ctx-&gt;query, [ctx](auto result) {
+        ctx-&gt;result = result;
+        cache_.async_store(ctx-&gt;key, ctx-&gt;result, [ctx](auto status) {
+            ctx-&gt;respond(status);  // when does ctx die? who knows
+        });
+    });
+    // ctx is now kept alive by two lambdas, the future, and possibly
+    // a retry timer. cancellation cannot reach it. shutdown cannot
+    // drain it. memory profile is non-deterministic.
+}
+</code></pre>
+<p>正确做法是提取一个有明确归属的工作项，让它沿着流水线在清晰的交接点之间传递。</p>
+<pre><code class="language-cpp">// BETTER: owned work item with explicit lifetime boundaries
+struct request_work {
+    parsed_query query;
+    std::stop_token stop;
+    response_sink sink;  // move-only, writes exactly once
+};
+
+void handle_request(http_request&amp; req, std::stop_token stop) {
+    auto work = request_work{
+        .query = req.parse_body(),
+        .stop  = stop,
+        .sink  = req.take_response_sink(),
+    };
+    executor_.submit(std::move(work));
+    // work is now owned by the executor. cancellation reaches it
+    // through stop_token. shutdown drains the executor.
+}
+</code></pre>
+<p>有明确归属的工作项让设计问题浮出水面：哪些数据需要跨越请求边界存活、谁有权取消它，以及关闭时它最终归向何处。</p>
+<h2 id="启动要么交出一个可运行的服务要么干净地失败"><a class="header" href="#启动要么交出一个可运行的服务要么干净地失败">启动要么交出一个可运行的服务，要么干净地失败</a></h2>
+<p>很多服务故障在第一个请求到达之前就已经埋下了。配置只加载了一半；一个子系统正常，另一个还没起来；线程已经启动，健康状态却尚未建立；后台定时器在依赖校验完成前就开始跑了。进程之所以报告”ready”，仅仅是因为某个构造函数碰巧返回了。</p>
+<p>启动要回答的核心问题不是每个组件能否单独初始化，而是进程能否达到一个整体一致的运行状态。因此，启动应当按阶段组织，围绕依赖校验和显式的失败边界展开。</p>
+<p>常见且有效的启动顺序如下：</p>
+<ol>
+<li>加载并验证不可变配置。</li>
+<li>构造带有显式限制的资源拥有型适配器。</li>
+<li>校验对就绪性至关重要的下游依赖。</li>
+<li>只有在进程整体一致之后，才启动监听器和后台工作。</li>
+<li>只有前面步骤全部成功后，才发布就绪状态。</li>
+</ol>
+<p>在 C++23 中，启动路径用 <code>std::expected</code> 往往比异常更合适，因为启动过程天然会积累各种基础设施故障，而这些故障需要被归入稳定的运维类别。如果服务因配置文件格式错误、端口被占用或存储 schema 不兼容而启动失败，这些信息应当作为经过设计的启动失败暴露出来，而不是把实现内部碰巧泄漏的异常文本原样抛到最上层。</p>
+<p>代价是代码更啰嗦。<code>std::expected</code> 要求你逐一写出错误转换点。但在服务启动场景下，这笔开销通常值得——因为隐藏的异常路径会让进程状态更难以推理。至于叶子函数或内部辅助函数，如果包裹它们的边界足够清晰，用异常仍然没问题。关键在于：启动阶段对外暴露的必须是一个连贯统一的契约。</p>
+<h2 id="请求处理中借用数据就该是短命的"><a class="header" href="#请求处理中借用数据就该是短命的">请求处理中，借用数据就该是短命的</a></h2>
+<p>小型服务的一个典型错误，是把临时的请求数据悄悄变成长生命周期的内部状态。请求头变成了异步任务中的 <code>std::string_view</code> 成员；解析后的载荷视图被存进缓存；回调捕获了引用，而那些引用指向的对象早已随请求一起销毁。服务之所以”看起来没问题”，只是因为慢路径、重试路径或队列延迟还没来得及暴露这个错误。</p>
+<p>规则很简单：借用视图非常适合做同步检查，却不适合用作隐式存储。在请求路径内部，只要生命周期局部且明确，尽管放心使用 <code>std::string_view</code>、<code>std::span</code> 和范围视图；但一旦数据要跨越时间、线程、队列或重试边界，就必须在那之前将其转换为拥有所有权的表示。</p>
+<p>这正是服务代码受益于显式请求模型的原因之一。先把输入解析、校验成一个值类型，由它持有后台工作必须保留的数据。保持这个模型足够小，让复制成为一个可感知的成本；当设计上需要时间解耦时，再将它 move 进异步工作。</p>
+<p>示例项目中的 handler 函数（见 <code>examples/web-api/src/modules/handlers.cppm</code>）遵循了这一原则。每个 handler 工厂返回一个 <code>std::function&lt;Response(const Request&amp;)&gt;</code>——一个值类型，仅捕获对 repository 的引用。handler 通过 const 引用接收请求、提取所需数据（路径参数、解析后的 body）、执行操作、返回响应值。没有请求状态泄漏到函数调用之外：</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/handlers.cppm — 值类型 handler 设计
+[[nodiscard]] inline http::Handler
+get_task(TaskRepository&amp; repo) {
+    return [&amp;repo](const http::Request&amp; req) -&gt; http::Response {
+        auto segment = req.path_param_after("/tasks/");
+        if (!segment) {
+            return http::Response::error(400, R"({"error":"missing task id"})");
+        }
+        auto id_result = parse_task_id(*segment);
+        if (!id_result) {
+            return http::Response::error(
+                id_result.error().http_status(), id_result.error().to_json());
+        }
+        auto task = repo.find_by_id(*id_result);
+        if (!task) {
+            return http::Response::error(404,
+                std::format(R"({{"error":"task {} not found"}})", *id_result));
+        }
+        return http::Response::ok(task-&gt;to_json());
+    };
+}
+</code></pre>
+<p><code>path_param_after</code> 返回的借用 <code>string_view</code> 绝不会超出同步 handler 调用的范围。repository 返回的 <code>Task</code> 是值拷贝。响应以值构造并返回。没有生命周期歧义。</p>
+<p>这也是很多 C++ 服务代码库过度使用 <code>std::shared_ptr&lt;request_context&gt;</code> 的症结所在。共享所有权看起来像是应对异步生命周期的便捷后门，但它往往遮蔽了真正需要做出的设计决策：请求的哪些部分需要存活、归谁管、什么时候可以丢弃。对小型服务而言，提取一个有明确归属的工作项并 move 进队列，通常比把整个请求对象图的生命周期一股脑延长要好得多。</p>
+<h2 id="并发必须有界有主可取消"><a class="header" href="#并发必须有界有主可取消">并发必须有界、有主、可取消</a></h2>
+<p>服务的并发模型远比具体用了哪些并发原语更重要。小型服务很少需要大型自定义调度器，但有三样东西不可或缺。</p>
+<p>第一，并发工作量必须有上限。如果过载能直接转化为无限制的队列增长，你设计的就不是服务，而只是把故障推迟了。有界执行器、信号量、准入控制以及按请求分配的时间预算，比精巧的线程池内部实现更有价值。</p>
+<p>第二，工作必须有归属。分离线程和 fire-and-forget 任务很诱人，因为它们让局部代码显得更短；但它们同时也摧毁了关闭语义。既然服务能往队列里塞工作，它就应当知道工作何时开始、何时结束、取消信号如何送达。</p>
+<p>第三，取消必须作为常规模型的一部分，而不是事后补救。<code>std::jthread</code> 和 <code>std::stop_token</code> 在这方面很有帮助，因为它们把停止传播提升到了类型级契约。当然，它们并非万能——你仍然需要让工作单元在合理的边界点检查 token，也需要让存储或网络操作把取消映射为一致的错误。但它们至少把这个问题强制写进了代码，而不是留在注释里。</p>
+<h3 id="反模式阻塞事件循环"><a class="header" href="#反模式阻塞事件循环">反模式：阻塞事件循环</a></h3>
+<p>最常见的服务故障之一，是在本该驱动 I/O 或分发请求的线程上做同步阻塞操作。轻负载时一切看起来正常；流量一上来，事件循环卡在数据库调用、DNS 解析或文件读取里，整个服务随之崩塌。</p>
+<pre><code class="language-cpp">// BAD: synchronous blocking on the listener thread
+void on_request(http_request&amp; req) {
+    auto record = db_.query_sync(req.key());   // blocks for 5-200ms
+    auto enriched = enrich(record);             // CPU work, fine
+    auto blob = fs::read_file(enriched.path()); // blocks again
+    req.respond(200, serialize(blob));
+}
+// Under 50 concurrent requests, the listener thread is blocked
+// for the entire duration of each request. Tail latency explodes.
+// New connections queue at the OS level with no backpressure signal.
+</code></pre>
+<p>正确做法是把阻塞工作分派到有界执行器，让监听线程始终保持非阻塞。</p>
+<pre><code class="language-cpp">// BETTER: dispatch blocking work off the listener thread
+void on_request(http_request&amp; req) {
+    auto work = request_work{req.key(), req.take_response_sink()};
+    if (!executor_.try_submit(std::move(work))) {
+        req.respond(503, "overloaded");  // explicit rejection
+        metrics_.increment("request.rejected.overload");
+    }
+    // listener thread returns immediately, ready for next connection
+}
+
+// In the executor's worker threads:
+void process(request_work work) {
+    auto record = db_.query_sync(work.key);
+    auto enriched = enrich(record);
+    auto blob = fs::read_file(enriched.path());
+    work.sink.respond(200, serialize(blob));
+}
+</code></pre>
+<h3 id="反模式没有优雅关闭"><a class="header" href="#反模式没有优雅关闭">反模式：没有优雅关闭</a></h3>
+<p>缺乏显式关闭逻辑的服务，会导致 use-after-free、部分写入、孤儿连接，以及只能靠编排器发 <code>SIGKILL</code> 强杀的僵死进程。这类问题在开发环境里往往看不见，因为进程退出太快；但到了生产环境，正在处理中的工作和后台定时器会带来真实的竞态条件。</p>
+<pre><code class="language-cpp">// BAD: shutdown by destruction order and hope
+class service {
+    http_listener listener_;
+    database_pool db_;
+    std::vector&lt;std::jthread&gt; workers_;
+public:
+    ~service() {
+        // listener_ destructor closes the socket (maybe)
+        // workers_ destructors request stop and join (maybe)
+        // db_ destructor closes connections (maybe)
+        // but workers_ may still be using db_ when db_ destructs
+        // destruction order is reverse-of-declaration, so db_
+        // is destroyed BEFORE workers_ — use-after-free
+    }
+};
+</code></pre>
+<p>正确做法是把关闭变成一个显式的、有序的操作——先排空在途工作，再销毁资源。</p>
+<pre><code class="language-cpp">// BETTER: explicit drain-then-destroy shutdown
+class service {
+    database_pool db_;           // destroyed last
+    http_listener listener_;
+    bounded_executor executor_;  // owns worker threads
+    std::atomic&lt;bool&gt; stopping_{false};
+public:
+    void shutdown() noexcept {
+        stopping_.store(true, std::memory_order_relaxed);
+        listener_.stop_accepting();               // 1. stop new work
+        executor_.drain(std::chrono::seconds{5});  // 2. finish in-flight
+        db_.close();                               // 3. release deps
+        metrics_.flush();                          // 4. final telemetry
+    }
+    // destructor now only releases already-drained resources
+};
+</code></pre>
+<p>关键认识是：析构顺序是语言层面的机制，不是关闭策略。两者必须协同设计——凡是在途工作仍然依赖的资源，都必须先通过显式的排空逻辑处理完毕，然后才能开始拆除。</p>
+<p>示例项目展示了这一模式的干净版本。在 <code>examples/web-api/src/main.cpp</code> 中，信号处理函数设置一个原子标志；<code>Server::run_until()</code>（见 <code>examples/web-api/src/modules/http.cppm</code>）轮询该标志并将停止请求转发给 <code>std::jthread</code>：</p>
+<pre><code class="language-cpp">// examples/web-api/src/main.cpp — signal handler
+namespace {
+    std::atomic&lt;bool&gt; shutdown_requested{false};
+    extern "C" void signal_handler(int) {
+        shutdown_requested.store(true, std::memory_order_release);
+    }
+}
+
+// examples/web-api/src/modules/http.cppm — Server::run_until()
+void run_until(const std::atomic&lt;bool&gt;&amp; should_stop) {
+    std::jthread server_thread{[this](std::stop_token st) {
+        run(st);  // checks st.stop_requested() each accept loop iteration
+    }};
+    while (!should_stop.load(std::memory_order_acquire)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    server_thread.request_stop();
+    // jthread auto-joins on destruction
+}
+</code></pre>
+<p>流程是：SIGINT/SIGTERM 设置标志 → <code>run_until</code> 将停止转发到 jthread 的 <code>stop_source</code> → accept 循环退出 → jthread join → <code>run_until</code> 返回 → <code>main</code> 按声明的逆序销毁资源。每一步都是显式的、有序的、协作式的——没有脱管线程，不需要 <code>SIGKILL</code>。</p>
+<p>如果服务本身就适合做异步组合，协程确实能改善代码结构，尤其是 I/O 密集的请求路径。但如果引入协程只是为了省掉回调，而生命周期模型依旧模糊不清，那就是一笔亏本买卖。当一个协程帧捕获了借用的请求数据、执行器引用和取消状态，却找不到一个明确的所有者时，你只是把 bug 压缩了，并没有消除它。协程值得用来简化设计的前提是：所有权模型本身已经站得住脚。</p>
+<h2 id="背压是产品决策不是队列细节"><a class="header" href="#背压是产品决策不是队列细节">背压是产品决策，不是队列细节</a></h2>
+<p>在小型服务里，背压恰恰是局部技术选择变成用户可感知策略的临界点。系统饱和时该怎么办？让请求排队等待、立刻快速失败、丢掉非必要的工作、降级到陈旧数据，还是在有限等待后超时？如果答案是”队列继续涨”，那说明这个服务在运维层面还缺一个决策。</p>
+<p>现代 C++ 能帮你落地这些决策，但不会替你拍板。<code>std::expected</code> 可以把过载表达为稳定的错误类别；值类型工作项让队列开销一目了然；基于 <code>std::chrono</code> 的截止时间可以显式贯穿整个调用链；结构化取消让请求在调用方不再需要结果时及时放弃子任务。但这一切都不能替代“过载时该怎么办“这个决策本身。</p>
+<p>对于小型服务，一般建议优先选择显式拒绝，而非默默地把延迟越拖越高。一个有界队列配合清晰的拒绝指标，比一个”好心”吞下突发流量的队列更好运维——后者会一直吸收请求，直到内存和尾延迟变成别人的线上事故。代价是在高负载下更早地向用户暴露失败。尽管如此，这通常仍是正确的取舍：它保住了系统的整体形态，也让容量问题变得可度量。</p>
+<h3 id="中间件管道横切关注点的组合"><a class="header" href="#中间件管道横切关注点的组合">中间件管道：横切关注点的组合</a></h3>
+<p>示例项目的中间件系统（见 <code>examples/web-api/src/modules/middleware.cppm</code>）展示了横切关注点如何在彼此解耦、也不与 handler 逻辑耦合的前提下完成组合。<code>Middleware</code> 是一个 <code>std::function</code>，接受请求和下一个 handler，返回响应。<code>middleware::chain()</code> 将一系列中间件折叠到基础 handler 之上：</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/middleware.cppm
+template &lt;std::ranges::input_range R&gt;
+    requires std::same_as&lt;std::ranges::range_value_t&lt;R&gt;, Middleware&gt;
+[[nodiscard]] http::Handler
+chain(R&amp;&amp; middlewares, http::Handler base) {
+    http::Handler current = std::move(base);
+    for (auto it = std::ranges::rbegin(middlewares);
+         it != std::ranges::rend(middlewares); ++it)
+    {
+        current = apply(*it, std::move(current));
+    }
+    return current;
+}
+</code></pre>
+<p>在 <code>main.cpp</code> 中，管道以声明式方式组装：</p>
+<pre><code class="language-cpp">std::vector&lt;webapi::middleware::Middleware&gt; pipeline{
+    webapi::middleware::request_logger(),
+    webapi::middleware::require_json(),
+};
+auto handler = webapi::middleware::chain(pipeline, router.to_handler());
+</code></pre>
+<p>每个中间件都是独立的、可单独测试的，并且以值组合。添加新的横切关注点——限流、认证、追踪传播——只需向 vector 追加元素，而无需修改 handler 签名。这就是函数式装饰器模式应用于 HTTP 处理的实践：即使运维需求不断增长，服务结构也能保持扁平。</p>
+<h2 id="保持依赖边界狭窄且负责转换"><a class="header" href="#保持依赖边界狭窄且负责转换">保持依赖边界狭窄且负责转换</a></h2>
+<p>小型服务的内部代码往往要依赖数据库、RPC 客户端、文件系统、时钟和遥测厂商。常见的两种错误做法：一是上来就把它们全部抽象化，二是任由厂商类型在整个代码库里到处流窜。两种做法的长期后果都很糟糕。</p>
+<p>窄边界适配器是务实的中间路线。服务层应当依赖用服务自身语言表达的契约：持久化这条记录、获取这个快照、发送这个指标、发布这个事件。由适配器负责将其翻译为外部 API 调用、错误模型和内存分配策略。</p>
+<p>这为服务提供了一个统一的位置来规范超时策略、归类失败、补充可观测性字段，以及控制分配与复制决策。它同时也防止了传输层细节渗透到业务逻辑中。处理器拿到的应当是与领域相关的、服务能一致应对的失败类别。</p>
+<p>不要把这些接口过度泛化。小型服务需要的是薄端口，不是企业级的抽象帝国。适配器存在的目的是守住所有权和失败边界，而不是在进程内部模拟一个平台团队。</p>
+<h2 id="可观测性应当跟随服务形态"><a class="header" href="#可观测性应当跟随服务形态">可观测性应当跟随服务形态</a></h2>
+<p>当服务根、请求模型和并发模型都是显式的，可观测性自然水到渠成。请求标识、队列深度、活跃工作数、依赖延迟、取消计数、启动失败和关闭时长，都能自然地映射到代码中的具名边界上。反过来，如果代码库充斥着隐藏的全局变量和脱管的后台工作，遥测数据也会跟着变得含混不清——没人说得清工作从哪里开始、在哪里结束。</p>
+<p>一个小型服务通常至少应当暴露以下信号：</p>
+<ul>
+<li>按类别划分的启动成功或失败。</li>
+<li>请求速率、延迟直方图和失败类别。</li>
+<li>有界工作队列的深度和拒绝计数。</li>
+<li>下游依赖的延迟和超时计数。</li>
+<li>关闭时长，以及被取消的在途操作数量。</li>
+</ul>
+<p>超出这个范围的指标，都应当有对应的运维问题来支撑，而不是出于“万一用得上“的恐惧。目标不是采集最多的遥测数据，而是在服务过载、配置出错或卡在关闭流程中时，能尽快定位问题。</p>
+<h2 id="测试应针对生命周期而不仅仅是行为"><a class="header" href="#测试应针对生命周期而不仅仅是行为">测试应针对生命周期，而不仅仅是行为</a></h2>
+<p>对小型服务最有价值的测试，很少是”合法输入返回 200”这一类。真正有价值的是那些能在压力下验证生命周期行为的测试：非法配置能否阻止就绪、过载是否触发显式拒绝、已取消的工作是否不会提交半成品状态、关闭流程是否能排空在途任务且不引入 use-after-free 风险、依赖故障是否仍被正确归类。</p>
+<p>这类测试通常包括：针对适配器和边界转换的聚焦单元测试、围绕启动与关闭场景的集成测试、配合 sanitizer 运行以排查内存和并发隐患，以及在运维契约至关重要时对可观测性输出的断言。举例来说，如果选定的策略是”过载即拒绝”，那服务就应当暴露一个指标或结构化事件，用以证明该策略在线上确实生效。</p>
+<p>注意本章刻意没有重复的内容：测试分类体系、sanitizer 的用法、遥测流水线的搭建——这些在前面的章节已经讲过。本章的综合要点在于：服务的形态决定了这些工具能否产出有价值的证据。</p>
+<h2 id="这种形态在什么地方开始不够用"><a class="header" href="#这种形态在什么地方开始不够用">这种形态在什么地方开始不够用</a></h2>
+<p>本章的建议适用于真正意义上的小型服务：单进程、少量长生命周期依赖、有界的后台工作，以及一个团队仍然能把完整运行时模型装在脑子里的代码规模。再往上走一步，你可能就需要更显式的子系统所有权划分、更强的组件隔离、服务级准入控制，或者一个对生命周期管理已有成熟方案的专用异步框架。</p>
+<p>当领域主要受限于本章只略微提及的某个约束时，你也应选择不同的架构形态：超低延迟交易、硬实时系统、需要防范恶意扩展的插件宿主，或者拥有专用协议栈的公网服务器。同样的原则依然适用，但工程的重心会有所偏移。</p>
+<h2 id="要点总结"><a class="header" href="#要点总结">要点总结</a></h2>
+<p>一个好的小型 C++23 服务，应当围绕有明确归属的资源、显式的启动与关闭、有界的并发、短命的借用、窄边界的依赖适配器，以及与真实生命周期边界对齐的可观测性来构建。代码应当让人一眼看出进程拥有什么、工作如何被准入、取消如何传播，以及故障期间哪些状态仍然有效。</p>
+<p>这些取舍都是刻意为之的。显式边界会带来更多样板代码；有界队列会更早拒绝请求；值类型工作项可能比满是视图的设计多一些复制开销；窄适配器会增加边界转换代码。但和调试一个生命周期与过载行为全藏在实现细节里的服务相比，这些成本通常微不足道。</p>
+<p>复习问题：</p>
+<ul>
+<li>长生命周期服务资源的唯一所有权根在哪里？</li>
+<li>哪些请求数据跨越了时间或线程边界？在跨越之前，它们是否已转为拥有所有权的数据？</li>
+<li>并发工作在哪里被限定为有界？由此对应的显式过载策略是什么？</li>
+<li>取消信号如何送达在途工作？关闭完成后保证了哪些状态？</li>
+<li>哪些依赖故障被转换成了稳定的服务级错误类别，而非把供应商内部细节直接暴露出去？</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="20-observability-for-native-systems.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="22-building-a-reusable-library-in-modern-cpp.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="20-observability-for-native-systems.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="22-building-a-reusable-library-in-modern-cpp.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

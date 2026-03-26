@@ -1,0 +1,475 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Interface Design and Dependency Direction - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-a846e9dc.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/09-interface-design-and-dependency-direction.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="interface-design-and-dependency-direction"><a class="header" href="#interface-design-and-dependency-direction">Interface Design and Dependency Direction</a></h1>
+<p>This chapter assumes you already read function signature design, ownership, invariants, and failure boundaries. The question here is not how to write a function, but how to shape a boundary that survives team growth and system pressure.</p>
+<h2 id="the-production-problem"><a class="header" href="#the-production-problem">The Production Problem</a></h2>
+<p>Most interface damage does not come from obviously bad code. It comes from locally reasonable choices that harden into system-wide coupling. A storage layer returns database row types because that is what it already has. A service boundary takes a giant configuration object because future options might matter. A library accepts callbacks as <code>std::function</code> everywhere because it seems flexible. Six months later, tests require half the dependency graph, call sites leak transport concerns, and changing an implementation detail becomes a breaking change.</p>
+<p>This chapter is about source-level interface design: what a boundary exposes, which direction dependencies should point, and how to keep policy, ownership, and representation from leaking across layers. It is not a chapter about runtime dispatch mechanics; that belongs in the next chapter. It is not a chapter about binary compatibility or distribution; that belongs in the chapter after that. The focus here is narrower and more important: deciding what one part of the program is allowed to know about another.</p>
+<p>The core rule is simple: dependencies should point toward stable policy and domain meaning, not toward volatile implementation detail. In practice, that means interfaces should be built from concepts the caller already understands, not from the callee’s storage, transport, framework, or logging choices.</p>
+<h2 id="why-this-gets-expensive"><a class="header" href="#why-this-gets-expensive">Why This Gets Expensive</a></h2>
+<p>Bad dependency direction multiplies cost in ways that code review often misses.</p>
+<p>If domain logic depends directly on SQL row types, protobuf-generated classes, HTTP request wrappers, or filesystem traversal state, then every test, benchmark, and refactor must drag those details with it. The dependency graph becomes wider than the design requires. Build times increase because transitive includes and templates spread implementation detail everywhere. Review quality drops because boundary violations become normal. Most importantly, design choices that should have been local stop being local.</p>
+<p>The cost is not only compile time. It is also conceptual stability. A good interface can survive a database change, a queue replacement, or a logging rewrite. A bad one requires the rest of the codebase to relearn internal facts that were never their concern.</p>
+<h2 id="start-from-the-boundary-question"><a class="header" href="#start-from-the-boundary-question">Start From the Boundary Question</a></h2>
+<p>Before writing an interface, force the production question into one sentence.</p>
+<p>In a native service, the question is usually not “how do I expose the repository?” It is “how does the order workflow ask for customer credit state?” In a shared library, it is not “how do I surface the parser internals?” It is “what contract does the caller need in order to validate and transform incoming records?”</p>
+<p>That shift matters because it changes the shape of the types. Interfaces designed around implementation nouns tend to leak mechanisms. Interfaces designed around work and invariants tend to stay narrow.</p>
+<p>An interface should answer four questions clearly:</p>
+<ol>
+<li>What capability does the caller need?</li>
+<li>Which side owns data and lifetime?</li>
+<li>Where does failure get translated into the chapter-3 error model?</li>
+<li>Which policies are fixed here, and which remain caller choices?</li>
+</ol>
+<p>If those answers are vague, the interface is probably mixing layers.</p>
+<h2 id="dependency-direction-means-policy-direction"><a class="header" href="#dependency-direction-means-policy-direction">Dependency Direction Means Policy Direction</a></h2>
+<p>Dependency inversion is often explained mechanically: depend on abstractions, not concretions. That is correct and not sufficient. The useful test is whether the dependency arrow follows stable policy.</p>
+<p>In a service, business rules change slower than transport glue. Fraud policy should not depend on HTTP handlers. Order validation should not depend on SQL record wrappers. Domain logic can define the port it needs, and the database or network adapter can implement that port.</p>
+<p>That does not mean every boundary needs an abstract base class. Many do not. Sometimes the right boundary is a free function taking domain data. Sometimes it is a concept-constrained template in an internal library. Sometimes it is a value-type request and result object with no virtual dispatch anywhere. The design decision is not “where do I place an interface type?” It is “which side gets to name the contract?”</p>
+<p>The side with the more stable vocabulary should usually name it.</p>
+<h2 id="anti-pattern-interface-defined-by-the-dependency"><a class="header" href="#anti-pattern-interface-defined-by-the-dependency">Anti-pattern: Interface Defined by the Dependency</a></h2>
+<p>When implementation detail names the contract, the dependency arrow is already wrong.</p>
+<pre><code class="language-cpp">// Anti-pattern: domain code now depends on storage representation.
+struct AccountRow {
+	std::string id;
+	std::int64_t cents_available;
+	bool is_frozen;
+	std::string fraud_flag;
+};
+
+class AccountsTable {
+public:
+	virtual std::expected&lt;AccountRow, DbError&gt;
+	fetch_by_id(std::string_view id) = 0;
+	virtual ~AccountsTable() = default;
+};
+
+std::expected&lt;PaymentDecision, PaymentError&gt;
+authorize_payment(AccountsTable&amp; table, const PaymentRequest&amp; request);
+</code></pre>
+<p>This looks testable because it uses an abstract base class. It is still the wrong seam. The payment workflow should not know that available credit is stored as cents next to a fraud flag string loaded from a table row. The abstraction preserved the dependency but did not improve its direction.</p>
+<p>A better port is named by the workflow and returns the minimum stable facts the workflow needs.</p>
+<pre><code class="language-cpp">struct CreditState {
+	Money available;
+	bool frozen;
+	RiskLevel risk;
+};
+
+class CreditPolicyPort {
+public:
+	virtual std::expected&lt;CreditState, PaymentError&gt;
+	load_credit_state(AccountId account) = 0;
+	virtual ~CreditPolicyPort() = default;
+};
+
+std::expected&lt;PaymentDecision, PaymentError&gt;
+authorize_payment(CreditPolicyPort&amp; credit, const PaymentRequest&amp; request);
+</code></pre>
+<p>Now the workflow depends on domain meaning rather than storage shape. The adapter that talks to SQL does the translation. That translation is work, but it is the right work: contain volatility near the volatile thing.</p>
+<h2 id="anti-pattern-fat-interfaces-that-attract-everything-nearby"><a class="header" href="#anti-pattern-fat-interfaces-that-attract-everything-nearby">Anti-pattern: Fat Interfaces That Attract Everything Nearby</a></h2>
+<p>A bloated interface does not just violate aesthetics. It creates coupling gravity: every new feature gets bolted onto the existing surface because adding a method is easier than rethinking the boundary.</p>
+<pre><code class="language-cpp">// Anti-pattern: a "god interface" that mixes query, mutation, lifecycle,
+// metrics, and configuration concerns in one surface.
+class UserService {
+public:
+	virtual std::expected&lt;UserProfile, ServiceError&gt;
+	get_profile(UserId id) = 0;
+
+	virtual void update_profile(UserId id, const ProfilePatch&amp; patch) = 0;
+
+	virtual void ban_user(UserId id, std::string_view reason) = 0;
+
+	virtual std::vector&lt;AuditEntry&gt;
+	get_audit_log(UserId id, TimeRange range) = 0;
+
+	virtual void flush_cache() = 0;
+
+	virtual MetricsSnapshot get_metrics() const = 0;
+
+	virtual void set_rate_limit(RateLimitConfig config) = 0;
+
+	virtual ~UserService() = default;
+};
+</code></pre>
+<p>This interface has at least four unrelated axes of change: user data access, moderation policy, operational observability, and runtime configuration. A caller who only needs to read a profile now transitively depends on audit, caching, metrics, and rate-limiting types. Test doubles must implement seven methods to fake one. Adding a new moderation action forces recompilation of read-only consumers. The interface is not flexible. It is a dependency sink that makes every change expensive and every test fragile.</p>
+<p>The fix is to split along responsibility boundaries:</p>
+<pre><code class="language-cpp">class UserProfileQuery {
+public:
+	virtual std::expected&lt;UserProfile, ServiceError&gt;
+	get_profile(UserId id) = 0;
+	virtual ~UserProfileQuery() = default;
+};
+
+class ModerationActions {
+public:
+	virtual void ban_user(UserId id, std::string_view reason) = 0;
+	virtual std::vector&lt;AuditEntry&gt;
+	get_audit_log(UserId id, TimeRange range) = 0;
+	virtual ~ModerationActions() = default;
+};
+</code></pre>
+<p>Now read-only consumers depend only on <code>UserProfileQuery</code>, moderation tools depend on <code>ModerationActions</code>, and operational concerns live in yet another interface. Each can evolve independently. Test doubles are trivial.</p>
+<h2 id="anti-pattern-leaking-implementation-details-through-the-interface"><a class="header" href="#anti-pattern-leaking-implementation-details-through-the-interface">Anti-pattern: Leaking Implementation Details Through the Interface</a></h2>
+<p>Even a small interface can damage a system if it exposes the wrong types.</p>
+<pre><code class="language-cpp">// Anti-pattern: interface leaks the JSON library into every consumer.
+#include &lt;nlohmann/json.hpp&gt;
+
+class RetryConfigProvider {
+public:
+	virtual nlohmann::json load_retry_config() = 0;
+	virtual ~RetryConfigProvider() = default;
+};
+</code></pre>
+<p>Every translation unit that includes this header now depends on the JSON library, whether or not it cares about JSON. Changing to TOML, YAML, or a binary config format becomes a breaking change across the entire codebase. The JSON library’s compile time, macro definitions, and transitive includes spread into unrelated components. Worse, callers must navigate a JSON tree to extract retry parameters—initial backoff, max backoff, max attempts—scattering implicit schema knowledge throughout the codebase.</p>
+<p>The fix is to return domain-meaningful types:</p>
+<pre><code class="language-cpp">struct RetryConfig {
+	std::chrono::milliseconds initial_backoff;
+	std::chrono::milliseconds max_backoff;
+	std::uint32_t max_attempts;
+};
+
+class RetryConfigProvider {
+public:
+	virtual std::expected&lt;RetryConfig, ConfigError&gt;
+	load_retry_config() = 0;
+	virtual ~RetryConfigProvider() = default;
+};
+</code></pre>
+<p>Now the JSON dependency stays inside the adapter implementation. Consumers work with typed, validated values. The interface communicates domain meaning, not serialization format.</p>
+<h2 id="anti-pattern-wrong-abstraction-level"><a class="header" href="#anti-pattern-wrong-abstraction-level">Anti-pattern: Wrong Abstraction Level</a></h2>
+<p>Interfaces pitched at the wrong level of abstraction force callers to do work that should be encapsulated, or prevent them from doing work they need.</p>
+<pre><code class="language-cpp">// Anti-pattern: too low-level. Caller must assemble SQL semantics
+// even though this is supposed to abstract away storage.
+class DataStore {
+public:
+	virtual std::expected&lt;RowSet, DbError&gt;
+	execute_query(std::string_view sql) = 0;
+
+	virtual std::expected&lt;std::size_t, DbError&gt;
+	execute_update(std::string_view sql) = 0;
+
+	virtual ~DataStore() = default;
+};
+</code></pre>
+<p>This interface claims to abstract storage, but it exposes SQL as a string protocol. Callers must know the schema, construct correct SQL, and parse <code>RowSet</code> results. The abstraction prevents neither SQL injection nor schema coupling. It is a pass-through that adds indirection without reducing dependency.</p>
+<p>Conversely, an interface can be too high-level and prevent legitimate use:</p>
+<pre><code class="language-cpp">// Anti-pattern: too high-level. No way to paginate, filter,
+// or control what gets loaded.
+class OrderRepository {
+public:
+	virtual std::vector&lt;Order&gt; get_all_orders() = 0;
+	virtual ~OrderRepository() = default;
+};
+</code></pre>
+<p>The right abstraction level matches the operations the caller actually performs, using domain vocabulary and offering enough control to be efficient.</p>
+<h2 id="keep-interfaces-small-by-separating-commands-from-queries"><a class="header" href="#keep-interfaces-small-by-separating-commands-from-queries">Keep Interfaces Small by Separating Commands From Queries</a></h2>
+<p>Bloated interfaces usually come from mixing unrelated reasons to change. A boundary that both retrieves state, mutates state, emits audit events, opens transactions, and exposes metrics snapshots is not flexible. It is a dependency sink.</p>
+<p>Splitting commands from queries is often enough to recover clarity. Query paths usually want value-oriented request and result types, predictable cost, and no hidden mutation. Command paths usually want explicit ownership transfer, clear side effects, and strong failure semantics. Treating them as one interface encourages accidental coupling because callers start depending on whatever was convenient to put there last quarter.</p>
+<p>Smaller interfaces also help review quality. A reviewer can ask whether each function belongs to the same boundary at all. Once an interface becomes a bag of nearby operations, that question stops being easy.</p>
+<p>The <code>TaskRepository</code> in <code>examples/web-api/src/modules/repository.cppm</code> illustrates a narrow interface that stays focused. Its public surface is only CRUD: <code>create</code>, <code>find_by_id</code>, <code>find_all</code>, <code>find_completed</code>, <code>update</code>, <code>remove</code>, and <code>size</code>. There is no logging method, no configuration knob, no metric snapshot, no cache flush. Locking strategy (<code>std::shared_mutex</code>), storage representation (<code>std::vector&lt;Task&gt;</code>), and ID generation (<code>std::atomic&lt;TaskId&gt;</code>) are private. Callers depend on domain operations, not on how the repository happens to implement them.</p>
+<h2 id="data-shapes-accept-stable-views-return-owned-meaning"><a class="header" href="#data-shapes-accept-stable-views-return-owned-meaning">Data Shapes: Accept Stable Views, Return Owned Meaning</a></h2>
+<p>Chapter 4 covers local signature choices. At interface boundaries, the same rules become architectural.</p>
+<p>Inputs should usually accept non-owning views when the callee does not need to retain data: <code>std::string_view</code>, <code>std::span&lt;const std::byte&gt;</code>, spans of domain objects, or lightweight request structs referencing caller-owned data. That keeps call sites cheap and honest.</p>
+<p>Outputs should usually return owned values or domain objects with clear lifetimes. Returning a view into adapter-owned storage, a borrowed pointer into a cache line, or an iterator into internal state turns a boundary into a lifetime puzzle. That is rarely worth it.</p>
+<p>The asymmetry is deliberate. Borrow from callers when cost matters and retention does not. Return ownership when crossing back out, because the callee controls its internals and should not force callers to care how long those internals stay alive.</p>
+<p>There are exceptions. Hot-path parsers, zero-copy data pipelines, and memory-mapped processing stages may intentionally return views. When they do, the lifetime boundary must be part of the interface contract, not tribal knowledge. A type like <code>ParsedFrameView</code> tied to a specific buffer owner is much safer than leaking naked <code>std::string_view</code> or raw pointers and hoping reviewers notice the coupling.</p>
+<h2 id="do-not-smuggle-policy-through-optional-parameters"><a class="header" href="#do-not-smuggle-policy-through-optional-parameters">Do Not Smuggle Policy Through Optional Parameters</a></h2>
+<p>One of the fastest ways to make an interface unclear is to use configuration objects or default parameters to push policy decisions into places where callers cannot reason about them.</p>
+<p>If a function has flags such as <code>skip_cache</code>, <code>best_effort</code>, <code>emit_audit</code>, <code>allow_stale</code>, and <code>retry_count</code>, the function is probably doing too many jobs. The problem is not aesthetics. The problem is that callers can now form combinations whose semantics are unclear, untested, or operationally dangerous.</p>
+<p>Prefer one of three alternatives:</p>
+<ol>
+<li>Split the capability into separate operations with clearer names.</li>
+<li>Promote policy to an explicit type whose invalid states are impossible or obvious.</li>
+<li>Move policy selection up a layer so the lower-level interface stays deterministic.</li>
+</ol>
+<p>An interface is easier to evolve when policy is named explicitly instead of hidden in parameter soup.</p>
+<h2 id="testability-is-a-consequence-not-the-goal"><a class="header" href="#testability-is-a-consequence-not-the-goal">Testability Is a Consequence, Not the Goal</a></h2>
+<p>Teams often justify an interface by saying it improves testing. That is backward. The primary question is whether the boundary reflects the real design. If it does, testing usually gets easier. If it does not, test doubles only preserve the mistake.</p>
+<p>For example, introducing a repository interface solely so unit tests can fake database access is weak reasoning if the domain still depends on table-shaped data and transport-shaped errors. The tests may become easier to write while the design stays wrong.</p>
+<p>Good boundaries produce better tests because they isolate policy from mechanism. You can test business logic against simple fakes because the business logic asks for domain facts, not framework objects. You can integration-test the adapter separately because translation is contained in one place. This is a stronger outcome than “we can mock it now.”</p>
+<h2 id="use-concepts-and-templates-internally-not-as-public-escape-hatches"><a class="header" href="#use-concepts-and-templates-internally-not-as-public-escape-hatches">Use Concepts and Templates Internally, Not as Public Escape Hatches</a></h2>
+<p>Modern C++ makes it easy to encode interfaces as constraints rather than virtual classes. This is often the right choice inside a component or within a tightly controlled codebase. A constrained template can keep code allocation-free, inlineable, and more expressive than a deep hierarchy.</p>
+<p>But a public interface that tries to be everything through templates often stops being an interface at all. It becomes a policy surface, a compile-time integration mechanism, and a documentation burden at the same time. Error messages get worse, build dependencies widen, and call-site expectations become murky.</p>
+<p>Use concept-constrained interfaces when all of the following are true:</p>
+<ol>
+<li>The caller and callee are built together.</li>
+<li>The customization point is central to performance or representation.</li>
+<li>You can state the semantic contract clearly, not just the syntax contract.</li>
+</ol>
+<p>If those conditions do not hold, a smaller value-oriented API or a runtime boundary is often better.</p>
+<h2 id="failure-translation-belongs-at-the-boundary"><a class="header" href="#failure-translation-belongs-at-the-boundary">Failure Translation Belongs at the Boundary</a></h2>
+<p>An interface is also where failure semantics become explicit. If the adapter speaks SQL exceptions, gRPC status codes, or platform error values, that does not mean the rest of the system should.</p>
+<p>Translate failures as close to the volatile dependency as practical. The domain-facing interface should expose failure categories the caller can actually act on. This keeps business logic from depending on transport or vendor error taxonomies, and it makes logging and retry behavior much easier to reason about.</p>
+<p>Do not over-normalize into useless generic errors. “Operation failed” is not a boundary model. The point is to expose stable decision-relevant categories while containing unstable backend detail.</p>
+<p>The example project in <code>examples/web-api/</code> shows this pattern concretely. The <code>result_to_response()</code> function in <code>handlers.cppm</code> sits at the boundary between domain logic and HTTP transport:</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/handlers.cppm
+template &lt;json::JsonSerializable T&gt;
+[[nodiscard]] http::Response
+result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) {
+    if (result) {
+        return {.status = success_status, .body = result-&gt;to_json()};
+    }
+    return http::Response::error(result.error().http_status(),
+                                 result.error().to_json());
+}
+</code></pre>
+<p>Domain code works exclusively with <code>Result&lt;T&gt;</code> and <code>ErrorCode</code> from the error module. The HTTP status code mapping is defined once in <code>error.cppm</code> via <code>to_http_status()</code>, and the translation into an HTTP response happens at the handler layer. No domain type knows what an HTTP response looks like. No handler leaks domain error internals into the transport. The boundary translates, and each side speaks its own vocabulary.</p>
+<h2 id="when-not-to-abstract"><a class="header" href="#when-not-to-abstract">When Not to Abstract</a></h2>
+<p>Some code should depend directly on a concrete type. Over-abstraction creates indirection, hides cost, and makes simple paths harder to read.</p>
+<p>If a type is local to one subsystem, has one obvious implementation, and changing it would not produce a different deployment or test strategy, a direct dependency is often correct. Internal helper types, parsers, allocators scoped to a component, and single-backend pipeline stages do not become better because they grew ports.</p>
+<p>The test is not whether abstraction is theoretically possible. The test is whether a boundary isolates a real axis of change or policy. If not, keep the dependency concrete and local.</p>
+<h2 id="verification-and-review-questions"><a class="header" href="#verification-and-review-questions">Verification and Review Questions</a></h2>
+<p>Interface design should be reviewed with the same discipline as performance or concurrency.</p>
+<p>Ask these questions:</p>
+<ol>
+<li>Does the interface expose domain meaning or implementation detail?</li>
+<li>Are ownership and lifetime obvious at the boundary?</li>
+<li>Are failure types translated into something decision-relevant?</li>
+<li>Could a caller use this API correctly without knowing storage, transport, or framework internals?</li>
+<li>Does the dependency arrow point toward the more stable policy vocabulary?</li>
+<li>Is any abstraction here justified by a real axis of change, or only by a desire to mock?</li>
+</ol>
+<p>Verification is not only code review. Integration tests should exercise adapters at the actual boundary where translation happens. Build profiling is also useful: if a supposedly clean interface still drags large transitive dependencies everywhere, the design may be source-level coupling in disguise.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<p>Interface design is mostly about deciding what must not leak.</p>
+<p>Keep dependency direction aligned with stable policy, not convenient implementation. Accept cheap borrowed inputs when retention is unnecessary, but return owned meaning when crossing a boundary. Split interfaces by responsibility instead of building bags of operations. Translate failures where volatile dependencies enter the system. Abstract only where there is a real design seam.</p>
+<p>If a caller must understand your database schema, transport wrapper, framework handle, or internal storage lifetime in order to use your API correctly, the boundary is already doing too much. That is the signal to redesign before the coupling becomes normal.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="08-compile-time-programming-without-losing-your-mind.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="10-runtime-polymorphism-type-erasure-and-callbacks.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="08-compile-time-programming-without-losing-your-mind.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="10-runtime-polymorphism-type-erasure-and-callbacks.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

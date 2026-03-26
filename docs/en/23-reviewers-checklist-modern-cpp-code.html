@@ -1,0 +1,422 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Reviewer’s Checklist for Modern C++ Code - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-a846e9dc.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/23-reviewers-checklist-modern-cpp-code.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="reviewers-checklist-for-modern-c-code"><a class="header" href="#reviewers-checklist-for-modern-c-code">Reviewer’s Checklist for Modern C++ Code</a></h1>
+<p>Most code review failures in C++ are not failures of intelligence. They are failures of review posture. The reviewer follows the diff mechanically, comments on naming or formatting, maybe spots one local bug, and misses the system question the change actually introduced: new ownership across threads, a hidden allocation in a hot path, an exception boundary leak, a silently widened API contract, a queue with no admission control, a sanitizer lane that can no longer exercise the risky path.</p>
+<p>Modern C++ makes many expensive decisions visible, but only if reviewers ask the right questions. This closing chapter turns the rest of the book into a practical review routine. It is not a replacement for the appendix checklist, and it is not a style guide. It is the set of questions that should shape how an experienced reviewer reads a change in production C++.</p>
+<p>The central idea is simple: review for failure economics before review for local elegance. A line that looks tidy can still expand lifetime, weaken invariants, or increase operational cost. The checklist below is organized around the places where those failures usually hide.</p>
+<h2 id="first-pass-identify-what-kind-of-change-this-really-is"><a class="header" href="#first-pass-identify-what-kind-of-change-this-really-is">First Pass: Identify What Kind of Change This Really Is</a></h2>
+<p>Before reading line by line, classify the change. A reviewer who misclassifies the change asks the wrong questions.</p>
+<p>Is this primarily:</p>
+<ul>
+<li>a new ownership or lifetime path?</li>
+<li>an API or contract change?</li>
+<li>a concurrency or cancellation change?</li>
+<li>a data-layout or performance-sensitive change?</li>
+<li>a tooling, verification, or build-pipeline change?</li>
+<li>a service-behavior change with operational consequences?</li>
+</ul>
+<p>Many pull requests contain more than one category, but one usually dominates. Start there. If a change adds a background queue, it is not mainly a refactor. If a function now returns <code>std::string_view</code>, it is not merely a micro-optimization. If a library starts exposing a templated callback type in public headers, it is not only a convenience improvement. Review should center on the dominant risk first.</p>
+<p>This classification step also tells you what evidence to expect. An API change should come with contract and compatibility reasoning. A concurrency change should come with cancellation and shutdown evidence. A performance claim should come with measurement. A tooling change should explain which bug class becomes easier or harder to catch.</p>
+<h2 id="ownership-and-lifetime-questions"><a class="header" href="#ownership-and-lifetime-questions">Ownership and Lifetime Questions</a></h2>
+<p>Ownership review remains the highest-value pass in production C++ because lifetime bugs keep their talent for looking locally harmless. Ask these questions early.</p>
+<p>Who owns each new resource, and where does that ownership end? If the answer depends on reading five files and inferring framework behavior, the design is already weak. Ownership should usually be obvious from types, object graph, and construction sites.</p>
+<p>Did the change introduce borrowing across time? This includes storing <code>std::string_view</code>, <code>std::span</code>, iterators, references, or range views in state that may outlive the source object, request, frame, or container epoch. When the code crosses an async boundary, queue, callback, coroutine suspension, or detached thread, re-check every borrowed type aggressively.</p>
+<p>Did the change replace clear ownership with shared ownership as a convenience? <code>std::shared_ptr</code> is sometimes the right tool. It is also a common way to postpone a design decision. Reviewers should ask what concrete lifetime problem shared ownership solves here and whether a moved value, owned work item, or explicit parent owner would make the design easier to reason about.</p>
+<p>Were move and copy costs changed intentionally? Value semantics are powerful, but reviewers should still ask whether new copies are part of the contract or just accidental byproducts of interface design.</p>
+<p>Good review comments in this area are concrete. “This looks risky” is weak. “This queue now stores <code>std::string_view</code> derived from request-local storage, so queued work can outlive the buffer” is strong.</p>
+<h3 id="what-the-reviewer-should-flag-dangling-references"><a class="header" href="#what-the-reviewer-should-flag-dangling-references">What the reviewer should flag: dangling references</a></h3>
+<p>Dangling references are the single most productive category of bugs for reviewers to catch because they are invisible to the type system and often survive testing until a race or reallocation makes them observable.</p>
+<pre><code class="language-cpp">// FLAG THIS: dangling reference from temporary
+auto&amp; config = get_configs()["database"];
+// if get_configs() returns by value, the temporary map is destroyed
+// at the semicolon. config is now a dangling reference.
+// fix: auto config = get_configs()["database"];  (copy the value)
+
+// FLAG THIS: reference into a vector that may reallocate
+auto&amp; first = items.front();
+items.push_back(new_item);  // may reallocate, invalidating first
+use(first);                 // undefined behavior
+
+// FLAG THIS: string_view outliving its source
+std::string_view name = get_user().name();
+// if get_user() returns by value, the std::string inside the
+// temporary is destroyed. name now points to freed memory.
+// fix: std::string name = std::string{get_user().name()};
+
+// FLAG THIS: lambda capturing reference to local
+auto make_callback(request&amp; req) {
+    auto&amp; headers = req.headers();  // reference to req's member
+    return [&amp;headers]() {           // captures by reference
+        log(headers);               // dangling if req is destroyed
+    };
+    // fix: capture by value, or capture a copy of headers
+}
+</code></pre>
+<p>The reviewer’s question is always the same: does the referenced object provably outlive every use of the reference? If the answer requires reasoning about framework scheduling, queue timing, or caller discipline, the code should copy instead.</p>
+<h3 id="what-the-reviewer-should-flag-missing-noexcept-on-move-operations"><a class="header" href="#what-the-reviewer-should-flag-missing-noexcept-on-move-operations">What the reviewer should flag: missing noexcept on move operations</a></h3>
+<p>A move constructor or move assignment operator that is not marked <code>noexcept</code> silently degrades standard library container performance. <code>std::vector</code> will copy instead of move during reallocation if the move constructor can throw, because the strong exception guarantee requires it.</p>
+<pre><code class="language-cpp">// FLAG THIS: move constructor without noexcept
+class connection {
+    std::unique_ptr&lt;socket&gt; sock_;
+    std::string endpoint_;
+public:
+    connection(connection&amp;&amp; other)  // missing noexcept!
+        : sock_(std::move(other.sock_))
+        , endpoint_(std::move(other.endpoint_))
+    {}
+    // std::vector&lt;connection&gt; will COPY during reallocation
+    // instead of moving. For large vectors, this is a silent
+    // performance cliff — and may fail to compile if the type
+    // is move-only.
+};
+
+// CORRECT:
+connection(connection&amp;&amp; other) noexcept
+    : sock_(std::move(other.sock_))
+    , endpoint_(std::move(other.endpoint_))
+{}
+// now vector::push_back uses move during reallocation
+</code></pre>
+<p>This also applies to move assignment. Both <code>std::move_if_noexcept</code> and container implementations check <code>noexcept</code> at compile time. If either move operation is potentially throwing, the fallback is always more expensive.</p>
+<h3 id="what-the-reviewer-should-flag-exception-unsafe-resource-acquisition"><a class="header" href="#what-the-reviewer-should-flag-exception-unsafe-resource-acquisition">What the reviewer should flag: exception-unsafe resource acquisition</a></h3>
+<p>Resource leaks hide in code that acquires multiple resources without RAII guards, especially when the acquisitions are interleaved with operations that can throw.</p>
+<pre><code class="language-cpp">// FLAG THIS: raw acquire/release with throwing code between
+void setup_pipeline(config const&amp; cfg) {
+    auto* buf = allocate_buffer(cfg.buffer_size);  // raw allocation
+    auto fd = open_file(cfg.path);                 // may throw
+    auto conn = connect_to_db(cfg.db_url);         // may throw
+    register_pipeline(buf, fd, conn);
+    // if open_file throws, buf leaks
+    // if connect_to_db throws, buf leaks AND fd leaks
+}
+
+// CORRECT: RAII from the first acquisition
+void setup_pipeline(config const&amp; cfg) {
+    auto buf = std::unique_ptr&lt;std::byte[]&gt;(
+        allocate_buffer(cfg.buffer_size));
+    auto fd = owned_fd{open_file(cfg.path)};       // RAII wrapper
+    auto conn = connect_to_db(cfg.db_url);         // already RAII (or should be)
+    register_pipeline(buf.release(), fd.release(), std::move(conn));
+    // every intermediate throw is safe — destructors clean up
+}
+</code></pre>
+<p>The pattern to watch for is any gap between resource acquisition and RAII ownership. Even a single line of throwing code in that gap is a leak. Reviewers should also flag <code>new</code> expressions passed directly as function arguments, where an exception in another argument evaluation can leak the allocation before the smart pointer is constructed.</p>
+<h2 id="invariants-and-error-boundary-questions"><a class="header" href="#invariants-and-error-boundary-questions">Invariants and Error Boundary Questions</a></h2>
+<p>The next pass is about invalid state and failure shape. Does the change make invalid state easier to create, easier to observe, or harder to recover from? Construction paths, configuration objects, partial initialization, and mutation APIs are common places where invariants become weaker silently.</p>
+<p>Then ask how failure is reported. Are recoverable domain failures represented consistently, or did the change add a second error channel? Did a previously contained dependency error leak into a broader layer? Did a function marked <code>[[nodiscard]]</code> or returning <code>std::expected</code> gain call sites that ignore the result? If exceptions are involved, did the change widen the exception boundary accidentally?</p>
+<p>Reviewers should also examine rollback and cleanup behavior, especially around resource-owning operations. If the new path fails halfway through, what remains true? Are partially written files removed, transactions canceled, temporary state discarded, background work stopped, and telemetry still emitted in the right category?</p>
+<p>One useful discipline is to ask for the failure story in one sentence. “If dependency X times out after state Y is reserved, the request returns <code>dependency_timeout</code>, the reservation is released, and no background retry survives shutdown.” If the author cannot say that succinctly, the error boundary may not be clear enough yet.</p>
+<h2 id="interface-and-library-surface-questions"><a class="header" href="#interface-and-library-surface-questions">Interface and Library Surface Questions</a></h2>
+<p>Any public or widely shared interface deserves a separate review pass because local implementation quality does not compensate for a weak contract.</p>
+<p>Did parameter and return types become more honest or less honest? Returning <code>std::span&lt;const std::byte&gt;</code> may communicate borrowing clearly; returning a reference to internal mutable state may hide coupling. Accepting <code>std::string_view</code> may be right for read-only parse calls and wrong for objects that retain the string. Review should focus on what the signature now promises about ownership, cost, and failure.</p>
+<p>If templates, concepts, callbacks, or type erasure were added, why this form? Concepts can improve diagnostics and prevent nonsense instantiations, but they also expand compile-time surface. Type erasure can stabilize call sites, but may add allocation or indirect-call cost. New genericity should pay for itself.</p>
+<p>For library changes, ask whether the public surface leaked implementation detail. Did a new header expose a transport type, allocator strategy, synchronization primitive, or error type that callers should not have to know? Did a seemingly harmless inline helper change the ABI or source compatibility story? Did the docs or examples change with the contract, or is the new behavior discoverable only by reading the diff?</p>
+<p>Reviewing interfaces well means thinking like the next caller, not like the current author.</p>
+<h3 id="what-the-reviewer-should-flag-implicit-conversion-and-narrowing-in-apis"><a class="header" href="#what-the-reviewer-should-flag-implicit-conversion-and-narrowing-in-apis">What the reviewer should flag: implicit conversion and narrowing in APIs</a></h3>
+<p>Public interfaces that silently accept wrong types or narrow values are a source of bugs that survive unit tests and only appear under production data.</p>
+<pre><code class="language-cpp">// FLAG THIS: implicit conversion hides a bug
+class rate_limiter {
+public:
+    rate_limiter(int max_requests, int window_seconds);
+};
+
+// caller writes:
+rate_limiter limiter(30, 60);     // OK: 30 requests per 60 seconds
+rate_limiter limiter(60, 30);     // compiles fine, but the arguments
+                                   // are swapped — 60 req per 30s
+// no type safety distinguishes max_requests from window_seconds
+
+// BETTER: use distinct types or a builder
+struct max_requests { int value; };
+struct window_seconds { int value; };
+
+rate_limiter(max_requests max, window_seconds window);
+// rate_limiter limiter(window_seconds{60}, max_requests{30}); // compile error
+</code></pre>
+<pre><code class="language-cpp">// FLAG THIS: narrowing conversion in initialization
+void set_buffer_size(std::size_t bytes);
+
+int user_input = get_config_value("buffer_size");  // may be negative
+set_buffer_size(user_input);  // silent narrowing: -1 becomes SIZE_MAX
+// fix: validate before conversion, or use std::size_t throughout
+</code></pre>
+<h2 id="concurrency-time-and-shutdown-questions"><a class="header" href="#concurrency-time-and-shutdown-questions">Concurrency, Time, and Shutdown Questions</a></h2>
+<p>Concurrency review is mostly lifecycle review with time added. The key question is not whether the code uses the right primitive names. It is whether work remains owned and bounded as it moves.</p>
+<p>Ask whether the change introduced detached work, hidden threads, executor hops, or coroutine suspension points whose owner is not obvious. Ask how stop requests propagate. Ask whether deadlines and retries are explicit or hidden behind helper layers. Ask whether queue growth is bounded and what overload policy now applies.</p>
+<p>If a change touches locks or shared state, review contention and invariants together. Does the lock protect the full invariant or only some fields? Did a callback get invoked while a lock is held? Did statistics or cache updates introduce a race that will be rationalized later as benign? ThreadSanitizer may catch some of this. Review should still try to eliminate the ambiguity before runtime.</p>
+<p>Shutdown deserves its own question in almost every service or tool change: after this diff, what work can still be running when destruction begins, and how does it stop? If the answer is unclear, the review is not done.</p>
+<h2 id="data-layout-and-cost-model-questions"><a class="header" href="#data-layout-and-cost-model-questions">Data Layout and Cost Model Questions</a></h2>
+<p>Many performance bugs enter code review disguised as harmless abstraction. Reviewers should therefore ask where cost moved, not just whether the code “looks efficient.”</p>
+<p>Did the change add allocations on a hot path, widen objects that live in large containers, increase indirection, or turn a local value into heap-managed shared state? Did a range pipeline improve clarity while preserving lifetime, or did it create hidden iteration, temporary materialization, or dangling-view risk? Did a container choice change the memory and invalidation model in ways the author has not discussed?</p>
+<p>The standard for review here is evidence proportional to the claim. If the change says it improves performance, ask for benchmark or profile data. If it says the extra allocation is negligible, ask under which workload. If the answer is “it probably doesn’t matter,” decide whether this code is actually in a place where probably is acceptable.</p>
+<p>Not every change needs a benchmark. Performance-sensitive changes do need a cost model that survives basic questioning.</p>
+<h2 id="verification-and-delivery-questions"><a class="header" href="#verification-and-delivery-questions">Verification and Delivery Questions</a></h2>
+<p>Good C++ review continues past the source diff. The final pass is about whether the repository still has a credible way to prove the change sound.</p>
+<p>Which tests now cover the risky path? If the change adds a rollback branch, overload behavior, or host-library boundary, is there a test that exercises it deliberately? If the change affects memory, concurrency, or input handling, do sanitizer or fuzzing lanes still cover the path? If the build or CI configuration changed, did the diagnostic matrix become stronger or weaker?</p>
+<p>Operational changes deserve observability review as well. If the service now rejects work earlier, can operators distinguish that from dependency failure? If a library added new diagnostics, are they stable enough for hosts to consume? If crash or symbol handling changed, can the shipped artifact still be diagnosed later?</p>
+<p>This is also where reviewers should challenge missing evidence instead of reverse-engineering it themselves. Review is not unpaid archaeology. If a change requires a new test, benchmark, sanitizer run, or migration note, ask for it plainly.</p>
+<h2 id="how-to-write-useful-review-comments"><a class="header" href="#how-to-write-useful-review-comments">How To Write Useful Review Comments</a></h2>
+<p>A good review comment identifies the risk, the violated or unclear contract, and the evidence needed to resolve it. It does not merely express taste.</p>
+<p>Strong comments tend to look like this:</p>
+<ul>
+<li>“This callback captures <code>this</code> and is stored in work that can outlive shutdown. Who owns that lifetime after <code>request_stop()</code>?”</li>
+<li>“The public API now returns a <code>std::string_view</code> into parser-owned storage. Where is that storage guaranteed to outlive the caller’s use?”</li>
+<li>“This queue is bounded, but the overload behavior is still implicit. Do we reject, block, or drop optional work, and where is that surfaced operationally?”</li>
+<li>“The change claims a latency win. Which benchmark or profile run demonstrates that the new allocation pattern is better under realistic input sizes?”</li>
+</ul>
+<p>Weak comments are vague, purely stylistic, or framed as personal preference when the issue is actually semantic.</p>
+<p>Reviewers should also say when evidence is sufficient. If ownership is clear, tests hit the risky path, and the contract is improved, state that. Good review is not only about blocking changes. It is about making the reasoning around acceptance explicit.</p>
+<h2 id="when-to-block-the-change"><a class="header" href="#when-to-block-the-change">When To Block the Change</a></h2>
+<p>Not every unresolved issue deserves a hard stop. Some do.</p>
+<p>Block the change when ownership is unclear, when borrowed state may outlive its source, when the failure contract is inconsistent, when concurrency is unbounded or shutdown is undefined, when a public interface change lacks compatibility reasoning, when a performance claim lacks required evidence, or when the verification story no longer exercises the risky path.</p>
+<p>Do not block merely because you would have written the code differently. Modern C++ already has enough accidental complexity. Review should not add another layer of taste-driven friction.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<p>The most effective C++ reviewers read for ownership, failure shape, interface honesty, concurrency lifecycle, cost movement, and verification evidence before they read for local elegance. They classify the change first, ask questions tied to production risk, and insist on evidence where the code alone is not enough.</p>
+<p>That posture is what turns the rest of this book into day-to-day engineering behavior. The point of precise ownership models, explicit failure boundaries, bounded concurrency, honest APIs, and diagnostic discipline is not that they look modern. It is that they let a reviewer explain why a change is safe, risky, or incomplete in concrete terms.</p>
+<p>Review questions:</p>
+<ul>
+<li>What is the dominant production risk introduced by this change, and did the review focus there first?</li>
+<li>Which ownership, lifetime, or borrowing assumptions now cross time, threads, or API boundaries?</li>
+<li>How did the change alter failure reporting, rollback guarantees, or invariant preservation?</li>
+<li>What cost model changed, and what evidence supports any performance or efficiency claim?</li>
+<li>Which tests, sanitizer lanes, diagnostics, or operational signals now prove the risky behavior remains sound?</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="22-building-a-reusable-library-in-modern-cpp.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="appendices/cpp23-feature-index-by-engineering-use.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="22-building-a-reusable-library-in-modern-cpp.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="appendices/cpp23-feature-index-by-engineering-use.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

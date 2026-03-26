@@ -1,0 +1,446 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>范围、视图与生成器 - 现代 C++ 实战</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="面向有经验程序员的现代 C++ 生产实践指南：所有权、接口、失败边界、并发、性能与验证。">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-8b875a01.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">现代 C++ 实战</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice/edit/main/translations/zh-CN/chapters/chapters/07-ranges-views-and-generators.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="范围视图与生成器"><a class="header" href="#范围视图与生成器">范围、视图与生成器</a></h1>
+<p>Range 和 generator 之所以吸引人，是因为它们能把迭代压缩成类似数据流的写法。这种写法有时确实是生产代码所需要的；但有时，它也会把生命周期 bug、隐性开销和难以调试的惰性行为悄悄引入原本简单直白的代码。</p>
+<p>值得思考的问题不是 range pipeline 是否优雅，而是：惰性组合在什么场景下比普通循环更能揭示工作的结构？又在什么场景下反而会掩盖所有权、错误处理和性能开销？C++23 提供了强大的 range 机制和用于拉取式序列的 <code>std::generator</code>，但它们都不应成为一切迭代的默认写法。</p>
+<p>本章的示例都取自真实场景：导出前过滤日志、在批处理作业中转换数据行、将分页数据源或协程驱动的数据源包装为拉取式序列。这些场景面临的设计压力是相同的——工作随时间陆续到达，代码需要表达一连串转换，而风险在于延迟执行、借用状态，以及”数据究竟存放在哪里”变得模糊不清。</p>
+<h2 id="只有当数据流是主线时pipeline-才值得使用"><a class="header" href="#只有当数据流是主线时pipeline-才值得使用">只有当数据流是主线时，pipeline 才值得使用</a></h2>
+<p>很多任务用普通循环就够了。循环的执行顺序一目了然，副作用一清二楚，单步调试也很方便。Range pipeline 真正有价值的场景，是工作的本质结构可以概括为”取一个序列，筛掉部分元素，对留下的做转换，最后物化或消费结果”。</p>
+<p>假设一个日志导出 worker 收到一批已解析的记录，需要从中挑出与安全相关的条目，投影到导出 schema 后发送出去。先来看 C++20 之前手写迭代器的写法：</p>
+<pre><code class="language-cpp">// Pre-C++20: manual iterator loop with filter + transform
+std::vector&lt;ExportRow&gt; export_rows;
+for (auto it = records.begin(); it != records.end(); ++it) {
+    if (it-&gt;severity &gt;= Severity::warning &amp;&amp; !it-&gt;redacted) {
+        ExportRow row;
+        row.timestamp = it-&gt;timestamp;
+        row.service   = it-&gt;service;
+        row.message   = it-&gt;message;
+        export_rows.push_back(row);
+    }
+}
+</code></pre>
+<p>这个版本能用，但过滤逻辑和转换逻辑揉在了同一个循环体里。读者得先看懂 <code>if</code> 才知道保留了什么，再看懂循环体才知道产出了什么。场景一复杂，这类循环就会堆满嵌套条件、提前 <code>continue</code>、索引运算和手工记账，数据流反而看不清了。基于索引的变体（<code>for (size_t i = 0; i &lt; records.size(); ++i)</code>）更是 off-by-one 错误的重灾区，尤其当循环体还要修改容器、或索引身兼多职时。</p>
+<p>Range 版本在结构上把关注点分离开了：</p>
+<pre><code class="language-cpp">auto export_rows = records
+| std::views::filter([](const LogRecord&amp; r) {
+  return r.severity &gt;= Severity::warning &amp;&amp; !r.redacted;
+  })
+| std::views::transform([](const LogRecord&amp; r) {
+  return ExportRow{
+  .timestamp = r.timestamp,
+  .service = r.service,
+  .message = r.message,
+  };
+  })
+| std::ranges::to&lt;std::vector&gt;();
+</code></pre>
+<p>这就是好的 range 代码——pipeline 本身就是业务逻辑。没有棘手的就地修改，源对象的生命周期不存在歧义，末尾有一个清晰的物化点。中间存储在概念上就不需要存在，省掉它既提升了清晰度，也降低了开销。</p>
+<p>再拿它和另一类循环比较：那种循环要更新共享计数器、发送 metric、原地修改记录，还要有条件地重试下游写入。在那种场景下，pipeline 反而会把最关键的部分——执行顺序和副作用——藏起来。一旦计算本身是有状态且副作用密集的，range 语法并不能提升可读性。</p>
+<p>C++20 之前还有一个常见模式值得一看，就是用于原地过滤的 “erase-remove” 惯用法：</p>
+<pre><code class="language-cpp">// Pre-C++20 erase-remove idiom
+records.erase(
+    std::remove_if(records.begin(), records.end(),
+                   [](const LogRecord&amp; r) {
+                       return r.severity &lt; Severity::warning || r.redacted;
+                   }),
+    records.end());
+</code></pre>
+<p>这段代码是正确的，但写错它实在太容易了。漏掉传给 <code>erase</code> 的 <code>.end()</code> 参数是个经典坑——编译能过，但”已删除”的元素还留在容器里。逻辑也是反直觉的：你指定的是”要移除什么”而非”要保留什么”，谓词很容易写反。C++20 引入的 <code>std::erase_if</code> 简化了这个问题，而 range pipeline 则通过生成新视图而非原地修改，从根本上绕开了它。</p>
+<p>配套项目 <code>examples/web-api/</code> 中有一个简洁但有代表性的例子。在 <code>repository.cppm</code> 中，<code>find_completed</code> 方法使用 <code>views::filter</code> pipeline 按完成状态过滤任务：</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/repository.cppm
+[[nodiscard]] std::vector&lt;Task&gt; find_completed(bool completed) const {
+    std::shared_lock lock{mutex_};
+    auto view = tasks_
+        | std::views::filter([completed](const Task&amp; t) {
+              return t.completed == completed;
+          });
+    return {view.begin(), view.end()};
+}
+</code></pre>
+<p>Pipeline 本身就是业务逻辑——按谓词过滤，然后在跨越 API 边界之前物化为拥有型结果。不存在生命周期歧义：锁在整个过程中保持源数据存活，返回值则是独立的 <code>vector</code>。</p>
+<p>原则很简单：对序列做线性数据流处理时，用 range pipeline；如果重点是控制流、就地修改或操作步骤，就用循环。</p>
+<h2 id="视图是借用惰性会让-bug-延迟暴露"><a class="header" href="#视图是借用惰性会让-bug-延迟暴露">视图是借用，惰性会让 bug 延迟暴露</a></h2>
+<p>生产环境中 range 最棘手的 bug，不在算法，而在生命周期。视图通常不持有数据所有权，惰性 pipeline 又把实际工作推迟到迭代时才执行。这就导致视图的构造位置和 bug 的暴露位置可能相距甚远。</p>
+<p>来看一个请求处理代码中常见的反模式：</p>
+<pre><code class="language-cpp">auto tenant_ids() {
+return load_tenants()
+| std::views::transform([](const Tenant&amp; t) {
+  return std::string_view{t.id};
+  }); // BUG: returned view depends on destroyed temporary container
+}
+</code></pre>
+<p>代码看着很干净，但它是错的。<code>load_tenants()</code> 返回的是一个拥有数据的临时容器，视图 pipeline 借用了这个容器。函数返回时临时对象已经销毁，视图就变成了一颗延时炸弹。</p>
+<p>这是视图的核心设计原则：数据的拥有者必须比视图活得更久，而且这层关系必须让读者一眼就能看出来。如果生命周期关系需要仔细推敲才能理清，说明这个抽象已经过度了。</p>
+<p>以下是几种安全的做法：</p>
+<ul>
+<li>在同一个局部作用域内构建并消费 pipeline，确保拥有者显然还活着。</li>
+<li>跨越边界之前，先物化为拥有型结果。</li>
+<li>当调用方无法合理地追踪源对象的生命周期时，直接返回拥有型 range 或领域对象。</li>
+<li>当序列是逐步生成而非借用自已有存储时，使用 <code>std::generator</code> 或其他拥有型抽象。</li>
+</ul>
+<p>借用本身没有问题，隐蔽的借用才是隐患。</p>
+<h2 id="不要随意把深层惰性-pipeline-暴露为公共-api"><a class="header" href="#不要随意把深层惰性-pipeline-暴露为公共-api">不要随意把深层惰性 pipeline 暴露为公共 API</a></h2>
+<p>在模块内部，range 往往是很好的胶水代码。但到了子系统边界，就得格外谨慎。公共 API 返回一个层层嵌套的视图栈，暴露给调用方的就不只是一个序列，而是一整套生命周期假设、迭代器类别行为、求值时机，甚至可能出人意料的失效规则。</p>
+<p>对于一个只想拿到”过滤后的记录”的调用方来说，这些语义负担太重了。</p>
+<p>在库或大型服务的边界上，先想清楚调用方到底需要什么。</p>
+<ul>
+<li>需要拥有型结果？直接返回。</li>
+<li>需要对昂贵或分页数据做拉取式遍历？考虑用 generator。</li>
+<li>需要可定制的遍历并保持调用侧控制权？提供基于回调的 visitor，或专门设计的迭代器抽象。</li>
+</ul>
+<p>返回惰性组合视图最合适的场景，是在一个局部实现区域内——同一个团队拥有接口两侧，生命周期链条短到一眼就能看清。</p>
+<p>配套项目中有两个保持在安全边界内的 range 设计。首先，<code>json.cppm</code> 定义了一个函数模板，接受任何元素满足 <code>JsonSerializable</code> 的 <code>input_range</code>，将 range 约束与 concept 结合使用：</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/json.cppm
+template &lt;std::ranges::input_range R&gt;
+    requires JsonSerializable&lt;std::ranges::range_value_t&lt;R&gt;&gt;
+[[nodiscard]] std::string serialize_array(R&amp;&amp; range) {
+    std::string result = "[";
+    bool first = true;
+    for (const auto&amp; item : range) {
+        if (!first) result += ',';
+        result += item.to_json();
+        first = false;
+    }
+    result += ']';
+    return result;
+}
+</code></pre>
+<p>函数返回拥有型的 <code>std::string</code>——没有惰性视图逃逸出边界。Range 约束确保只有可序列化类型的集合才被接受，约束违反时的错误信息会指向 concept 名称，而非循环体内部。</p>
+<p>其次，<code>middleware.cppm</code> 使用 <code>std::ranges::rbegin</code> 和 <code>std::ranges::rend</code> 反向迭代中间件集合，确保列表中第一个中间件包裹在最外层：</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/middleware.cppm
+template &lt;std::ranges::input_range R&gt;
+    requires std::same_as&lt;std::ranges::range_value_t&lt;R&gt;, Middleware&gt;
+[[nodiscard]] http::Handler
+chain(R&amp;&amp; middlewares, http::Handler base) {
+    http::Handler current = std::move(base);
+    for (auto it = std::ranges::rbegin(middlewares);
+         it != std::ranges::rend(middlewares); ++it)
+    {
+        current = apply(*it, std::move(current));
+    }
+    return current;
+}
+</code></pre>
+<p>这是在局部算法内善用 range 工具的好例子：反向迭代的意图通过 <code>rbegin</code>/<code>rend</code> 清晰表达，而非依赖索引运算，函数产出的也是拥有型结果。</p>
+<p>同样的谨慎也适用于 pipeline 中的 <code>string_view</code> 和 <code>span</code>。转换步骤产生的借用切片，只要源对象的生命周期是局部且显而易见的，就没有问题。但如果这些切片被跨线程传递、排入队列留待后续处理，或者被缓存起来，就很危险了。</p>
+<h2 id="stdgenerator-适用于拉取式数据源不是用来替代每一个循环的"><a class="header" href="#stdgenerator-适用于拉取式数据源不是用来替代每一个循环的"><code>std::generator</code> 适用于拉取式数据源，不是用来替代每一个循环的</a></h2>
+<p>C++23 的 <code>std::generator</code> 之所以有用，是因为有些序列天生不适合”先全部存下来再遍历”。它们是增量产生的：分页数据库扫描、目录遍历、分块文件读取、带重试的轮询，以及随着字节到达而逐条产出完整消息的协议解码器。</p>
+<p>这正是 generator 能改变设计方式的场景。它让生产者可以在产出元素之间保留状态，既不需要把调用方推入回调反转的泥潭，也不需要手写迭代器类。</p>
+<p>从远程 API 分页读取数据的批处理作业就是一个典型例子。在 generator 出现之前，要表达增量式的分页获取序列，要么用回调反转，要么手写迭代器类：</p>
+<pre><code class="language-cpp">// Pre-C++23: hand-written iterator for paged results
+class PagedResultIterator {
+public:
+    using value_type = Row;
+    using difference_type = std::ptrdiff_t;
+
+    PagedResultIterator() = default; // sentinel
+    explicit PagedResultIterator(Client&amp; client)
+        : client_(&amp;client) { fetch_next_page(); }
+
+    const Row&amp; operator*() const { return rows_[index_]; }
+    PagedResultIterator&amp; operator++() {
+        if (++index_ &gt;= rows_.size()) {
+            if (next_token_.empty()) { client_ = nullptr; return *this; }
+            fetch_next_page();
+        }
+        return *this;
+    }
+    bool operator==(const PagedResultIterator&amp; other) const {
+        return client_ == other.client_;
+    }
+
+private:
+    void fetch_next_page() {
+        auto page = client_-&gt;fetch(next_token_);
+        rows_ = std::move(page.rows);
+        next_token_ = std::move(page.next_token);
+        index_ = 0;
+    }
+
+    Client* client_ = nullptr;
+    std::vector&lt;Row&gt; rows_;
+    std::string next_token_;
+    std::size_t index_ = 0;
+};
+</code></pre>
+<p>大约四十行样板代码，就为了表达一件事：”逐页获取，逐行产出”。换成 <code>std::generator</code>，同样的逻辑只需要：</p>
+<pre><code class="language-cpp">std::generator&lt;Row&gt; paged_rows(Client&amp; client) {
+    std::string token;
+    do {
+        auto page = client.fetch(token);
+        for (auto&amp; row : page.rows)
+            co_yield std::move(row);
+        token = std::move(page.next_token);
+    } while (!token.empty());
+}
+</code></pre>
+<p>Generator 版本把所有状态（page token、当前 buffer、当前位置）都隐含在协程帧里，控制流一目了然。反观手写迭代器版本，sentinel 比较、索引记账、边界处的页面抓取逻辑全靠手工维护，稍有不慎就会引入微妙错误。</p>
+<p>如果先把所有行全部物化再处理，既浪费内存，又推迟了第一条有用数据的产出。Generator 则可以逐行产出，同时把 page token、buffer 和重试状态封装在生产者内部。</p>
+<p>话虽如此，generator 毕竟是协程机制，随之而来的是挂起点、帧生命周期管理，以及因实现和优化策略不同而变化的分配开销。它们并非零成本，调试起来也比”一个局部 vector 加一个循环”更麻烦。只有当增量生产确实是问题的本质结构时才值得使用，不要仅仅因为时髦就拿它替代普通容器。</p>
+<p>这里还涉及另一个边界问题：generator 产出的是拥有型值，还是指向内部 buffer 的借用引用？产出借用引用并非不可以，但前提是跨越挂起点的生命周期关系足够显式、易于推理。很多时候，产出较小的拥有型值是更安全的选择。</p>
+<p>如果你的目标工具链对 <code>std::generator</code> 的标准库支持尚不完整，上述设计指导同样适用于任何等价的协程驱动 generator 类型。关键在于结构设计，而非具体的厂商实现。</p>
+<h2 id="惰性虽好但可观测性和错误处理可能更重要"><a class="header" href="#惰性虽好但可观测性和错误处理可能更重要">惰性虽好，但可观测性和错误处理可能更重要</a></h2>
+<p>惰性 pipeline 的诱人之处在于把工作推迟到真正需要时才执行，这通常确实有用。但它也带来一个副作用：插桩、异常或 <code>expected</code> 的传播、失败归因，都可能比读者预期的要晚得多。</p>
+<p>以日志处理路径为例：一个按需过滤、解析、充实和序列化的 pipeline 看上去很优雅，但从运维角度看，它可能把故障扩散到最终消费者身上。解析失败时，错误该归到哪一步？需要统计被丢弃的记录数时，计数器该在哪里递增？当链路追踪需要分阶段计时时，一个融合的惰性 pipeline 里，“阶段“又该怎么界定？</p>
+<p>这就是物化点存在的意义。把一条长 pipeline 拆成若干具名阶段，中间用拥有型结果衔接，往往能让系统更易观察、更好推理，哪怕代价是多一点内存。并非所有临时分配都是浪费——有些正是你挂载指标、隔离故障、让调试器停在正确位置的基础。</p>
+<p>不要把惰性等同于高效。融合操作有时能减少工作量，但有时也会阻碍并行化、干扰分支预测，或者只是让最昂贵的环节更难被发现。应该对整条路径做 benchmark，而不是想当然地认为 pipeline 形式一定更快。</p>
+<h2 id="range-和-generator-不再适用的场景"><a class="header" href="#range-和-generator-不再适用的场景">Range 和 generator 不再适用的场景</a></h2>
+<p>以下情况 range 不是好选择：就地修改是核心逻辑、控制流不规则、提前退出伴随重要副作用，或者算法已经被外部 I/O 和锁操作主导。以下情况 generator 也不是好选择：用普通容器返回结果既便宜又简单、序列需要反复遍历，或者协程跨子系统的生命周期比一个局部 buffer 更难理清。</p>
+<p>还有一种常见的误区：把 pipeline 当成性能秀场。在不稳定的借用状态上串五个 adaptor，并不比一个用三个好名字变量写成的循环更高明。真正胜出的设计，是所有权、成本和失败行为都能轻松说清楚的设计。</p>
+<h2 id="验证与评审"><a class="header" href="#验证与评审">验证与评审</a></h2>
+<p>Range 和 generator 在代码评审时值得专门关注以下问题：</p>
+<ul>
+<li>视图遍历的数据由谁拥有？在整个迭代过程中，拥有者是否确定还存活？</li>
+<li>惰性工作实际在哪里执行？这个执行时机对错误处理和指标采集是否可接受？</li>
+<li>是否有刻意设置的物化点，用于让所有权或可观测性变得显式？</li>
+<li>换成普通循环，控制流和副作用是否会更清晰？</li>
+<li>Generator 产出的是拥有型值还是借用值？该生命周期跨越挂起点后是否仍然有效？</li>
+</ul>
+<p>动态工具在这方面很有价值。AddressSanitizer 和 UndefinedBehaviorSanitizer 能有效地在运行时暴露视图的生命周期错误。对于以吞吐量为由引入 pipeline 的场景，benchmark 也必不可少。但代码评审仍然是最主要的防线，因为很多惰性相关的生命周期 bug，只要沿着所有权链条认真追踪一遍，在结构上就是显而易见的。</p>
+<h2 id="要点"><a class="header" href="#要点">要点</a></h2>
+<ul>
+<li>当线性数据流是主线、副作用只是次要因素时，使用 range pipeline。</li>
+<li>始终把视图当作借用抽象看待——数据拥有者必须明确可见且保持存活。</li>
+<li>除非生命周期契约确实清晰，否则不要把深层惰性 pipeline 暴露到宽泛的 API 边界之外。</li>
+<li>用 generator 表达增量产生的序列，不要拿它当普通容器的时髦替代品。</li>
+<li>当可观测性、错误隔离或生命周期清晰度比极致惰性更重要时，果断插入物化点。</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="06-generic-code-with-concepts-and-constraints.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="08-compile-time-programming-without-losing-your-mind.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="06-generic-code-with-concepts-and-constraints.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="08-compile-time-programming-without-losing-your-mind.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,10 @@
+# mdBook build output
+site/
+.worktrees/
+.vscode
+
+# C++ build artifacts
+build/
+examples/*/build/
+compile_commands.json
+a.out
