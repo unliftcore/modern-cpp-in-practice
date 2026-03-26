@@ -4,7 +4,7 @@
 
 #include <cassert>
 #include <format>
-#include <iostream>
+#include <print>
 #include <string>
 
 import webapi.http;
@@ -104,6 +104,6 @@ int main() {
     test_method_mismatch();
     test_multiple_routes();
 
-    std::cout << "All router tests passed\n";
+    std::println("All router tests passed");
     return 0;
 }

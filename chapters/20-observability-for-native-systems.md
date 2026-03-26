@@ -31,26 +31,26 @@ To make the value concrete, consider a service that processes file uploads. A us
 
 ```cpp
 void handle_upload(const http_request& req) {
-	std::cout << "INFO: Processing upload" << std::endl;
+	std::println("INFO: Processing upload");
 
-	std::cout << "INFO: Starting validation" << std::endl;
+	std::println("INFO: Starting validation");
 	auto validation = validate(req);
 	if (!validation) {
-		std::cerr << "ERROR: Validation failed: "
-		          << validation.error().message() << std::endl;
+		std::println(stderr, "ERROR: Validation failed: {}",
+		             validation.error().message());
 		return;
 	}
 
-	std::cout << "INFO: Storing file" << std::endl;
+	std::println("INFO: Storing file");
 	auto store_result = store(req);
 	if (!store_result) {
-		std::cerr << "ERROR: Store failed: "
-		          << store_result.error().message() << std::endl;
+		std::println(stderr, "ERROR: Store failed: {}",
+		             store_result.error().message());
 		return;
 	}
 
 	notify(req);
-	std::cout << "INFO: Upload complete" << std::endl;
+	std::println("INFO: Upload complete");
 }
 ```
 
@@ -145,7 +145,7 @@ return [](const http::Request& req, const http::Handler& next) -> http::Response
     auto elapsed = std::chrono::steady_clock::now() - start;
     auto ms = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
 
-    std::cout << std::format("[{}] {} {} → {} ({} μs)\n",
+    std::println("[{}] {} {} → {} ({} μs)",
         "LOG",
         http::method_to_string(req.method),
         req.path,

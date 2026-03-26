@@ -3,7 +3,7 @@
 // ============================================================================
 
 #include <cassert>
-#include <iostream>
+#include <print>
 #include <string>
 #include <vector>
 
@@ -86,6 +86,6 @@ int main() {
     test_serialize_array_multiple();
     test_concept_satisfaction();
 
-    std::cout << "All JSON tests passed\n";
+    std::println("All JSON tests passed");
     return 0;
 }

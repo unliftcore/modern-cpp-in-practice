@@ -4,7 +4,7 @@
 // ============================================================================
 
 #include <cassert>
-#include <iostream>
+#include <print>
 #include <string>
 
 import webapi.error;
@@ -88,6 +88,6 @@ int main() {
     test_task_from_json_missing_title();
     test_task_equality();
 
-    std::cout << "All task tests passed\n";
+    std::println("All task tests passed");
     return 0;
 }

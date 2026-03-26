@@ -12,7 +12,7 @@
 //   • std::function               — type-erased callable storage
 //   • std::move                   — efficient handler composition
 //   • Concepts                    — constrain middleware signatures
-//   • std::format                 — logging output
+//   • std::println               — logging output
 //   • std::chrono                 — timing middleware
 //   • [[nodiscard]]               — prevent silent drops
 // ============================================================================
@@ -20,9 +20,8 @@ module;
 
 #include <chrono>
 #include <concepts>
-#include <format>
 #include <functional>
-#include <iostream>
+#include <print>
 #include <ranges>
 #include <string>
 #include <utility>
@@ -70,7 +69,7 @@ inline Middleware request_logger() {
         auto elapsed = std::chrono::steady_clock::now() - start;
         auto ms = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
 
-        std::cout << std::format("[{}] {} {} → {} ({} μs)\n",
+        std::println("[{}] {} {} → {} ({} μs)",
             "LOG",
             http::method_to_string(req.method),
             req.path,
