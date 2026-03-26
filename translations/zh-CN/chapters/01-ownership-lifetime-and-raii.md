@@ -30,103 +30,184 @@ RAII 的本质是：把资源绑定到一个对象的生命周期上，由该对
 
 ### 没有 RAII 会发生什么
 
-在展示 RAII 模式之前，有必要先完整看一遍手工方式——因为生产代码库里至今仍有长得一模一样的代码。
+在展示 RAII 模式之前，有必要先完整看一遍更接近真实情况的手工方式。下面这个反面示例是故意写得有缺陷的，因为生产代码库里至今仍有长得一模一样的代码。
 
 ```cpp
-// Manual resource management: C-style socket handling.
-void serve_request(const Config& config) {
-socket_t sock = ::open_socket(config.port());
-if (sock == invalid_socket) {
-throw NetworkError{"bind failed"};
+socket_t create_server_socket(std::uint16_t port) {
+	socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
+	if (server == invalid_socket) {
+		throw NetworkError{"socket failed"};
+	}
+
+	int opt = 1;
+	if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+		::close_socket(server);
+		throw NetworkError{"setsockopt failed"};
+	}
+
+	sockaddr_in addr{};
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = INADDR_ANY;
+	addr.sin_port = htons(port);
+
+	if (::bind(server, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+		::close_socket(server);
+		throw NetworkError{"bind failed"};
+	}
+
+	if (::listen(server, 16) < 0) {
+		::close_socket(server);
+		throw NetworkError{"listen failed"};
+	}
+
+	return server; // RISK: caller now owns the raw descriptor by convention
 }
 
-char* buffer = new char[config.buffer_size()]; // second resource
+void serve_once(std::uint16_t port) {
+	socket_t server = create_server_socket(port);
+	socket_t client = invalid_socket;
 
-auto* sub = event_bus::subscribe("health_check"); // third resource
+	try {
+		sockaddr_in client_addr{};
+		socket_length addr_len = sizeof(client_addr);
+		client = ::accept(server,
+		                  reinterpret_cast<sockaddr*>(&client_addr),
+		                  &addr_len);
+		if (client == invalid_socket) {
+			::close_socket(server); // BUG: server will be closed twice (here + in catch)
+			throw NetworkError{"accept failed"};
+		}
 
-// -- any throw between here and the cleanup block leaks all three --
+		std::array<char, 8192> buffer{};
+		auto n = read_from_socket(client, buffer.data(), buffer.size());
+		if (n <= 0) {
+			::close_socket(client);
+			::close_socket(server);
+			return;
+		}
 
-process(sock, buffer, sub); // may throw
+		process_request(client, std::string_view{buffer.data(), static_cast<std::size_t>(n)}); // RISK: any throw must preserve cleanup correctness
 
-event_bus::unsubscribe(sub);
-delete[] buffer;
-::close_socket(sock);
+		::close_socket(client);
+		::close_socket(server);
+	} catch (...) {
+		if (client != invalid_socket) {
+			::close_socket(client);
+		}
+		::close_socket(server);
+		throw;
+	}
 }
 ```
 
 问题会迅速叠加起来：
 
-1. **异常不安全。** 如果 `process` 抛异常，或者 `event_bus::subscribe` 在 buffer 分配之后抛异常，先前获取的资源就会悄悄泄漏。为每次获取都套上 `try`/`catch` 会形成层层嵌套的清理阶梯，既痛苦又容易出错。
+1. **清理逻辑会重复。** `::close_socket(server)` 同时出现在设置 helper、正常路径、提前返回路径和异常路径里。退出点越多，重复就越多。
 
-2. **重复释放风险。** 如果后续的维护改动加了一个提前返回或第二条调用路径，开发者可能对 `buffer` 多调一次 `delete[]`，或对已关闭的句柄再调一次 `::close_socket`。这两类错误在编译期都发现不了。
+2. **重复最终会变成 bug。** `accept` 失败路径在抛异常前已经关闭了 `server`，而 `catch` 块又会再关一次。手工所有权逻辑在维护过程中很容易就会漂移成这样。
 
-3. **拆除顺序敏感。** 每往函数里多加一个资源，就必须更新所有退出路径。三个资源时，部分获取状态的组合就已经不少了；到五六个的时候，清理逻辑的存在感会超过函数本身的业务逻辑。
+3. **异常安全依赖纪律。** `process_request` 可能抛异常。以后只要有人在“获取资源”和“手工清理”之间多插一段代码，就必须重新想一遍当时哪些描述符还活着。
 
-4. **难以承受维护压力。** 代码评审无法局部验证清理的正确性——评审者必须追踪函数中的每一条路径，确认每个资源都恰好被释放一次。这不可持续。
+4. **转移是隐式的。** `create_server_socket()` 返回的是裸 `socket_t`，所以所有权只能靠调用方和被调方之间的约定维持，而不是由类型系统表达。
+
+5. **评审变成全局推理。** 想确认代码正确，评审者就得检查整段函数，确认每一条退出路径都把每个描述符恰好关闭一次。
 
 RAII 方案从结构上消除了这些问题：每个资源都由一个拥有它的对象持有，析构函数负责释放，剩下的交给栈展开。
 
-来看一个服务组件的例子，它需要一个 socket 和一个对内部事件流的临时订阅。
+本书配套的 web-api 示例项目里已经有我们真正想讲的例子。`examples/web-api/src/modules/http.cppm` 中的 `Socket` 类包装了一个文件描述符，并把所有权规则直接写进了类型里：
 
 ```cpp
-class SocketHandle {
-public:
-SocketHandle() = default;
-explicit SocketHandle(socket_t fd) noexcept : fd_(fd) {}
-
-SocketHandle(const SocketHandle&) = delete;
-auto operator=(const SocketHandle&) -> SocketHandle& = delete;
-
-SocketHandle(SocketHandle&& other) noexcept
-: fd_(std::exchange(other.fd_, invalid_socket)) {}
-
-auto operator=(SocketHandle&& other) noexcept -> SocketHandle& {
-if (this != &other) {
-reset();
-fd_ = std::exchange(other.fd_, invalid_socket);
-}
-return *this;
-}
-
-~SocketHandle() { reset(); }
-
-auto get() const noexcept -> socket_t { return fd_; }
-
-void reset() noexcept {
-if (fd_ != invalid_socket) {
-::close_socket(fd_);
-fd_ = invalid_socket;
-}
-}
-
-private:
-socket_t fd_ = invalid_socket;
-};
-```
-
-写这个类型不是为了展示移动语义，而是为了让 socket 的所有权变得单一、显式、异常安全。析构函数即清理策略；移动操作定义了转移方式；禁止复制，因为复制所有权本身就是错的。
-
-本书配套的 web-api 示例项目中，`http.cppm` 里的 `Socket` 类就是这一模式的真实实现——禁止复制、通过 `std::exchange` 实现移动、析构函数调用 `::close`：
-
-```cpp
-// 摘自 examples/web-api/src/modules/http.cppm
+// From examples/web-api/src/modules/http.cppm
 class Socket {
-    explicit Socket(int fd) noexcept : fd_{fd} {}
+public:
+    Socket() = default;
+    explicit Socket(socket_handle fd) noexcept : fd_{fd} {}
+
     Socket(const Socket&) = delete;
-    Socket(Socket&& other) noexcept : fd_{std::exchange(other.fd_, -1)} {}
-    ~Socket() { close(); }
+    Socket& operator=(const Socket&) = delete;
+
+    Socket(Socket&& other) noexcept
+        : fd_{std::exchange(other.fd_, invalid_socket_handle)} {}
+
+    Socket& operator=(Socket&& other) noexcept {
+        if (this != &other) {
+            close(); // release what this object currently owns
+            fd_ = std::exchange(other.fd_, invalid_socket_handle);
+        }
+        return *this;
+    }
+
+    ~Socket() { close(); } // automatic release on every exit path
+
+    [[nodiscard]] socket_handle fd() const noexcept { return fd_; }
+    [[nodiscard]] bool valid() const noexcept { return fd_ != invalid_socket_handle; }
+    explicit operator bool() const noexcept { return valid(); }
 
     void close() noexcept {
-        if (fd_ >= 0) { ::close(fd_); fd_ = -1; }
+        if (fd_ != invalid_socket_handle) {
+            close_socket(fd_);
+            fd_ = invalid_socket_handle;
+        }
     }
+
 private:
-    int fd_{-1};
+    socket_handle fd_{invalid_socket_handle};
 };
 ```
 
-这个 `Socket` 贯穿于整个服务器实现中。例如 `create_server_socket()` 执行多步骤的 socket 设置（创建、`setsockopt`、`bind`、`listen`），并按值返回一个 `Socket`。如果任何一步失败，已获取的文件描述符会在局部 `Socket` 析构时被自动清理。
+光这个类就足够把 RAII 的核心讲清楚：
 
-同样的模式适用于各种非内存资源。作用域注册令牌在析构时注销；事务对象不显式提交就回滚；joined-thread 包装器在析构时 join，或者拒绝在仍可 join 的状态下被销毁。一旦代码库建立起这种思维方式，清理路径就重新回归局部，不再散落于各处错误处理之中。
+- **获取** 发生在构造时：`Socket sock{::socket(...)};`
+- **所有权是独占的**，因为复制被禁用了。
+- **转移是显式的**，因为移动通过 `std::exchange` 把源对象清空。
+- **释放是自动的**，因为析构函数总会调用 `close()`。
+
+同一个模块中的周边代码还展示了它在真实使用中是如何工作的。下面是一段局部摘录：只保留了与所有权相关的代码，辅助声明和无关的错误处理细节为了便于阅读被省略了。
+
+```cpp
+[[nodiscard]] Socket create_server_socket() const {
+    Socket sock{::socket(AF_INET, SOCK_STREAM, 0)}; // ownership starts here
+    if (!sock) return {};
+
+    int opt = 1;
+    if (::setsockopt(sock.fd(), SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        return {}; // sock is destroyed here, so the descriptor closes automatically
+    }
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port_);
+    if (::bind(sock.fd(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+        return {}; // same: failure path still releases the descriptor
+    }
+
+    if (::listen(sock.fd(), 16) < 0) {
+        return {};
+    }
+
+    return sock; // move or copy elision transfers ownership to the caller
+}
+
+Socket client{::accept(server_sock.fd(), ...)}; // accepted socket now has an owner
+handle_connection(std::move(client));           // explicit ownership transfer
+
+void handle_connection(Socket client) const {
+    std::array<char, 8192> buf{};
+    auto n = read_from_socket(client.fd(), buf.data(), buf.size());
+    if (n <= 0) return;
+
+    Response resp = handler_(req); // request parsing omitted here
+    auto data = resp.serialize();
+    (void)write_to_socket(client.fd(), data.data(), static_cast<int>(data.size()));
+} // client goes out of scope here and closes automatically
+```
+
+在 `handle_connection(std::move(client))` 之后，调用方那边的 `client` 就不再拥有这个描述符了。移动构造函数已经把它的文件描述符交换成 `invalid_socket_handle`，所以之后这个被移动过的对象析构时也不会出事。任意时刻，所有权都只存在于一个对象里。
+
+注意那些消失掉的东西：没有清理阶梯，没有主要职责是收尾的 `try`/`catch`，也没有“这个描述符现在到底归谁管”的口头约定。类型本身就携带了策略。这才是 RAII 的现实价值。
+
+同样的模式适用于各种非内存资源。作用域注册令牌在析构时注销；事务对象不显式提交就回滚；joined-thread 包装器在析构时 join，或者拒绝在仍可 join 的状态下被销毁。一旦代码库建立起这种思维方式，清理路径就重新回归局部，不再散落于各处错误处理中。
 
 ## 反模式：靠约定清理
 

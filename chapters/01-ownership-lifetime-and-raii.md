@@ -28,7 +28,7 @@ Many programmers first encounter RAII as "use smart pointers instead of manual `
 
 RAII means tying a resource to the lifetime of an object whose destructor releases it. The resource might be memory. It might just as easily be a file descriptor, a kernel event, a transaction lock, or a metrics registration that must be unregistered before shutdown completes.
 
-### Anti-pattern: Manual Socket Lifetime in Control Flow
+### What Happens Without RAII
 
 Before illustrating the RAII pattern, it is worth seeing the manual approach in a fuller form. The following anti-pattern is intentionally buggy, because production codebases still contain code that looks exactly like this.
 
