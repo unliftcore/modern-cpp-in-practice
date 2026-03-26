@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-a846e9dc.js";
+            window.path_to_searchindex_js = "searchindex-810527eb.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -369,7 +369,7 @@ extern "C" void signal_handler(int /*sig*/) {
         // select() with 1-second timeout, then check stop again
         // accept and handle connection ...
     }
-    std::cout &lt;&lt; "Server shutting down gracefully\n";
+    std::println("Server shutting down gracefully");
 }
 </code></pre>
 <p>The ownership chain is clear: <code>main</code> owns the <code>Server</code>, the <code>Server</code> owns the <code>jthread</code>, and the <code>jthread</code> owns the <code>stop_source</code>. When Ctrl+C arrives, the signal handler sets the atomic flag, <code>run_until</code> observes it and calls <code>request_stop()</code>, the accept loop exits on the next iteration, and the <code>jthread</code> destructor joins the thread. No detached work, no orphaned connections, no race between shutdown and in-flight requests. This is structured concurrency applied to a real service lifecycle.</p>

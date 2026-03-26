@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -182,7 +182,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="不自欺的基准测试与性能剖析"><a class="header" href="#不自欺的基准测试与性能剖析">不自欺的基准测试与性能剖析</a></h1>
-<h2 id="生产中的问题"><a class="header" href="#生产中的问题">生产中的问题</a></h2>
+<h2 id="生产问题"><a class="header" href="#生产问题">生产问题</a></h2>
 <p>团队一旦把数字误当成证据，性能讨论的代价就会急剧上升。基准测试号称有 20% 的收益，生产服务却纹丝未动。Profiler 指向某个热点函数，真正的瓶颈却是锁争用或 off-CPU 等待。回归悄悄混进主干——要么因为基准测试选错了输入形状，要么因为有人”优化”了编译器早已删掉的无用计算。</p>
 <p>本章的主题是测量纪律。前几章谈的是数据表示与成本建模，而这里要回答的问题不一样：怎样才能拿到足够有力的证据，来决定是否改代码、是否值得引入复杂度、或是否该否决一个看似有效的优化？这需要严谨的基准测试设计、对 profiler 的基本功，以及不被漂亮图表蒙蔽因果判断的定力。</p>
 <p>现代 C++ 的性能工作尤其容易自欺欺人，因为语言本身提供了大量强力的局部优化手段：容器类型、所有权模型、内联边界、allocator 策略、range pipeline、协程结构、类型擦除方案，都可以随手调整。其中有些改动确实有效，但很多根本不起作用。测量，就是用来区分两者的。</p>

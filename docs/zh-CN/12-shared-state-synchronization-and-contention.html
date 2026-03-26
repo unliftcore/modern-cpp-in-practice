@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -326,7 +326,7 @@ public:
 <p>锁保护的不是变量，而是不变量。</p>
 <p>这一区分至关重要，因为生产环境中的对象很少在单个字段层面出错。真正出问题的场景是：多个字段必须一起修改，而某个线程恰好在修改之间观察到了中间状态。</p>
 <p>连接池的正确性不在于 <code>available_count</code> 是不是原子的，而在于并发访问下以下关系始终成立：已借出的连接不会同时出现在空闲列表中；已关闭的连接不会被重新分发；当有可用资源时，等待者能被唤醒。这些才是不变量。如果设计没有明确列出这些不变量，同步边界就已经定义不清了。</p>
-<p>正因如此，粗粒度加锁有时反而更优。如果一把 mutex 能干净地覆盖一个完整的不变量域，它可能比几把细粒度锁更好——后者容易导致不可能的中间状态，或者要求脆弱的锁顺序。细粒度加锁并不天然高级，它往往只是更难审查。</p>
+<p>正因如此，粗粒度加锁有时反而更优。如果一把 mutex 能干净地覆盖一个完整的不变量域，它可能比几把细粒度锁更好——后者容易导致不可能的中间状态，或者要求脆弱的锁顺序。细粒度加锁不见得更优，往往只是更难审查。</p>
 <h2 id="反模式不断膨胀的服务对象外面包一把锁"><a class="header" href="#反模式不断膨胀的服务对象外面包一把锁">反模式：不断膨胀的服务对象外面包一把锁</a></h2>
 <p>最常见的失败模式不是”没有同步”，而是”一把起初看着合理的锁，随着功能迭代逐渐变成了整个服务的瓶颈”。</p>
 <pre><code class="language-cpp">// Anti-pattern: one mutex protects unrelated invariants and long operations.

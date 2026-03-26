@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -370,7 +370,7 @@ TEST(config_survives_input_destruction)
 <li>在某个 schema 版本里合法、在另一个版本里非法的输入，尤其是涉及版本协商的场景。</li>
 </ul>
 <p>示例项目中有这几种模式的具体实践。在 <code>examples/web-api/tests/test_http.cpp</code> 中，<code>test_parse_request_malformed()</code> 向解析器喂入字符串 <code>"not a valid request"</code>，断言 <code>parse_request()</code> 返回 <code>std::nullopt</code> 而非崩溃或产出半初始化的 <code>Request</code>。这正是那种能抓住“默认假设输入格式正确“的解析器 bug 的畸形输入边界测试。同一文件还测试了 header 缺失的情况（<code>test_header_missing()</code>），确认返回 <code>std::optional</code> 的 <code>header()</code> 方法在 header 不存在时能正确处理缺失，而非返回悬空 view 或默认构造的字符串。</p>
-<p>在 <code>examples/web-api/tests/test_task.cpp</code> 中，边界验证测试同样值得关注。<code>test_task_validation_rejects_empty_title()</code> 和 <code>test_task_validation_rejects_long_title()</code>（后者构造了一个 257 字符的字符串）验证了领域不变量在极端值处依然成立。这些不是实现顺序测试——它们断言的是业务规则：task 标题必须非空且在长度上限内，并且错误通过 <code>std::expected</code> 以正确的 <code>ErrorCode::bad_request</code> 报告，而非被吞掉或转化为异常。</p>
+<p>在 <code>examples/web-api/tests/test_task.cpp</code> 中，边界验证测试同样值得关注。<code>test_task_validation_rejects_empty_title()</code> 和 <code>test_task_validation_rejects_long_title()</code>（后者构造了一个 257 字符的字符串）验证了领域不变量在极端值处依然成立。这些不是验证调用顺序的测试——它们断言的是业务规则：task 标题必须非空且在长度上限内，并且错误通过 <code>std::expected</code> 以正确的 <code>ErrorCode::bad_request</code> 报告，而非被吞掉或转化为异常。</p>
 <h2 id="失败注入比更多-mock-更有价值"><a class="header" href="#失败注入比更多-mock-更有价值">失败注入比更多 mock 更有价值</a></h2>
 <p>C++ 的错误路径，恰恰是所有权错误演变为生产事故的温床。只测成功路径，就等于默认错误处理代码无需审查。</p>
 <p>务实的做法是确定性故障注入。在组件跨越资源边界或调度边界的地方引入故障：文件打开、rename、有界组件内部的内存分配、任务提交、定时器到期、下游 RPC 调用、持久化提交。然后验证操作结束后系统仍处于有效状态。</p>

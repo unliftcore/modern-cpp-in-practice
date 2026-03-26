@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -184,7 +184,7 @@
                         <h1 id="参数传递返回类型与-api-接口设计"><a class="header" href="#参数传递返回类型与-api-接口设计">参数传递、返回类型与 API 接口设计</a></h1>
 <p>在 C++ 中，函数签名承载的信息往往超出作者的本意。它不仅说明了被调用方是借用还是保留数据，通常还隐含着 null 是否有意义、能否修改、会不会发生拷贝、失败算不算正常控制流等语义。一旦签名传达了错误的语义，哪怕实现本身在局部是正确的，API 用起来仍然代价高昂、审查起来仍然困难重重。</p>
 <p>本章聚焦的正是这层语义接口。我们的目标不是死记”X 一律按 Y 传递”之类的教条，而是学会选择恰当的参数和返回形式，在调用方需要做决策的边界上，如实传达所有权、生命周期、可变性、可空性与开销。</p>
-<p>这一边界视角使本章区别于前后各章。第 1 章讨论了谁拥有资源，第 2 章讨论了模型中有哪些对象，第 3 章讨论了错误应当如何跨越边界。本章的问题更具体，也更实用：在这些设计决策已经确定的前提下，函数签名该怎么写，才能让调用契约一目了然？</p>
+<p>这一边界视角让本章有别于前后各章。第 1 章讨论了谁拥有资源，第 2 章讨论了模型中有哪些对象，第 3 章讨论了错误应当如何跨越边界。本章的问题更具体，也更实用：在这些设计决策已经确定的前提下，函数签名该怎么写，才能让调用契约一目了然？</p>
 <h2 id="签名是契约不是类型检查仪式"><a class="header" href="#签名是契约不是类型检查仪式">签名是契约，不是类型检查仪式</a></h2>
 <p>很多糟糕的 C++ API，根源在于把签名仅仅看作”能通过编译的最小类型集合”。这种做法忽略了一个事实：参数和返回值的选择本身就是带有约束力的文档。</p>
 <p>以一个解析器边界为例。</p>
@@ -203,7 +203,7 @@
 <pre><code class="language-cpp">[[nodiscard]] inline std::optional&lt;Request&gt;
 parse_request(std::string_view raw);
 </code></pre>
-<p>函数接受一个指向栈 buffer 的 <code>string_view</code>，解析出 method、path、headers 和 body，返回一个成员全部为 <code>std::string</code> 的 <code>Request</code>——完全拥有自己的数据。调用方的 buffer 在函数返回后即可立即复用或销毁。这种“借用输入、拥有输出“的契约，仅从签名就能看清。</p>
+<p>函数接受一个指向栈 buffer 的 <code>string_view</code>，解析出 method、path、headers 和 body，返回一个成员全部为 <code>std::string</code> 的 <code>Request</code>——完全拥有自己的数据。调用方的 buffer 函数返回后即可复用或销毁。这种“借用输入、拥有输出“的契约，仅从签名就能看清。</p>
 <p>差别不在于风格是否讲究，而在于调用方能否不翻看实现就理解契约。</p>
 <h2 id="借用参数应当看起来就是借用"><a class="header" href="#借用参数应当看起来就是借用">借用参数应当看起来就是借用</a></h2>
 <p>如果函数在调用期间只读取调用方的数据、不做保留，签名就应该直接体现借用语义。</p>
@@ -246,7 +246,7 @@ private:
 std::string prefix_; // owning -- no lifetime dependency on caller
 };
 </code></pre>
-<p>由此可得一条简洁实用的代码审查准则：凡是参数类型标明了借用，实现中若要保留数据，就必须通过显式拷贝或转换为拥有类型来完成。</p>
+<p>由此得出一条简洁实用的审查准则：凡是参数类型标明了借用，实现中若要保留数据，就必须通过显式拷贝或转换为拥有类型来完成。</p>
 <h2 id="当被调用方反正需要自己的副本时就按值传递"><a class="header" href="#当被调用方反正需要自己的副本时就按值传递">当被调用方反正需要自己的副本时，就按值传递</a></h2>
 <p>现代 C++ 中最实用的模式之一，就是在被调用方需要存储或拥有参数时，直接按值传递。对于那些被灌输了”拷贝能省则省”观念的开发者来说，这往往令人意外。</p>
 <p>以一个需要存储租户名的请求对象为例：</p>
@@ -330,7 +330,7 @@ auto avg = average(readings);
 <h2 id="返回有意义的值而非存储的副产品"><a class="header" href="#返回有意义的值而非存储的副产品">返回有意义的值，而非存储的副产品</a></h2>
 <p>返回类型应当和参数一样严谨。核心问题是：调用方应该得到一个拥有所有权的值、一个借用访问，还是一个像 <code>expected</code> 或 <code>optional</code> 那样承载决策信息的包装类型？</p>
 <p>对于很多 API 来说，即使涉及一次 move，返回拥有所有权的值仍然是最干净的设计。它让生命周期保持局部化，让组合更容易，也避免了调用方对内部存储的依赖。C++23 的 move 语义已经让值返回在大多数场景下足够廉价，清晰性带来的收益完全值得。</p>
-<p>借用返回类型只在源对象的生命周期显而易见、足够稳定，而且确实属于契约一部分时才适合。返回指向内部存储的 <code>std::string_view</code>，前提是该存储的生存期明显长于 view，且调用方可以安全地依赖这一点。在较宽的接口边界上，这通常不是好的权衡——因为它把生命周期推理的负担导出了被调用方本可自行消化的范围。</p>
+<p>借用返回类型只在源对象的生命周期显而易见、足够稳定，而且确实属于契约一部分时才适合。返回指向内部存储的 <code>std::string_view</code>，前提是该存储的生存期明显长于 view，且调用方可以安全地依赖这一点。在较宽的接口边界上，这通常不是好的权衡——因为它把生命周期推理的负担推给了调用方，而这本是被调用方可以自行消化的。</p>
 <p>可选性和失败也应当在返回类型中显式表达，而不是靠哨兵值偷偷传递。搜索操作返回”也许找到了”，适合用 <code>std::optional&lt;T&gt;</code>，或者在生命周期语义需要时用观察者指针。解析或加载操作的失败如果关乎后续决策，适合用 <code>std::expected&lt;T, E&gt;</code>。失败时返回空字符串或 <code>-1</code> 的函数，通常是把 API 设计得比实际需要更弱了。</p>
 <h2 id="反模式一个签名背后藏着多个故事"><a class="header" href="#反模式一个签名背后藏着多个故事">反模式：一个签名背后藏着多个故事</a></h2>
 <p>这类 API 在很多代码库中依然大行其道，因为它看起来很灵活。</p>

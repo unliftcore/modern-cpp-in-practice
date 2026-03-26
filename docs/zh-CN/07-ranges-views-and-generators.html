@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -183,7 +183,7 @@
                     <main>
                         <h1 id="范围视图与生成器"><a class="header" href="#范围视图与生成器">范围、视图与生成器</a></h1>
 <p>Range 和 generator 之所以吸引人，是因为它们能把迭代压缩成类似数据流的写法。这种写法有时确实是生产代码所需要的；但有时，它也会把生命周期 bug、隐性开销和难以调试的惰性行为悄悄引入原本简单直白的代码。</p>
-<p>值得思考的问题不是 range pipeline 是否优雅，而是：惰性组合在什么场景下比普通循环更能揭示工作的结构？又在什么场景下反而会掩盖所有权、错误处理和性能开销？C++23 提供了强大的 range 机制和用于拉取式序列的 <code>std::generator</code>，但它们都不应成为一切迭代的默认写法。</p>
+<p>真正要问的不是 range pipeline 是否优雅，而是：惰性组合在什么场景下比普通循环更能揭示工作的结构？又在什么场景下反而会掩盖所有权、错误处理和性能开销？C++23 提供了强大的 range 机制和用于拉取式序列的 <code>std::generator</code>，但它们都不应成为一切迭代的默认写法。</p>
 <p>本章的示例都取自真实场景：导出前过滤日志、在批处理作业中转换数据行、将分页数据源或协程驱动的数据源包装为拉取式序列。这些场景面临的设计压力是相同的——工作随时间陆续到达，代码需要表达一连串转换，而风险在于延迟执行、借用状态，以及”数据究竟存放在哪里”变得模糊不清。</p>
 <h2 id="只有当数据流是主线时pipeline-才值得使用"><a class="header" href="#只有当数据流是主线时pipeline-才值得使用">只有当数据流是主线时，pipeline 才值得使用</a></h2>
 <p>很多任务用普通循环就够了。循环的执行顺序一目了然，副作用一清二楚，单步调试也很方便。Range pipeline 真正有价值的场景，是工作的本质结构可以概括为”取一个序列，筛掉部分元素，对留下的做转换，最后物化或消费结果”。</p>
@@ -215,8 +215,8 @@ for (auto it = records.begin(); it != records.end(); ++it) {
   })
 | std::ranges::to&lt;std::vector&gt;();
 </code></pre>
-<p>这就是好的 range 代码——pipeline 本身就是业务逻辑。没有棘手的就地修改，源对象的生命周期不存在歧义，末尾有一个清晰的物化点。中间存储在概念上就不需要存在，省掉它既提升了清晰度，也降低了开销。</p>
-<p>再拿它和另一类循环比较：那种循环要更新共享计数器、发送 metric、原地修改记录，还要有条件地重试下游写入。在那种场景下，pipeline 反而会把最关键的部分——执行顺序和副作用——藏起来。一旦计算本身是有状态且副作用密集的，range 语法并不能提升可读性。</p>
+<p>这就是好的 range 代码——pipeline 本身就是业务逻辑。没有棘手的就地修改，源对象的生命周期不存在歧义，末尾有一个清晰的物化点。概念上根本不需要中间存储，省掉它既提升了清晰度，也降低了开销。</p>
+<p>再拿它和另一类循环比较：那种循环要更新共享计数器、发送 metric、原地修改记录，还要有条件地重试下游写入。在那种场景下，pipeline 反而会把最关键的部分——执行顺序和副作用——藏起来。一旦计算本身有状态、副作用又多，range 语法并不能提升可读性。</p>
 <p>C++20 之前还有一个常见模式值得一看，就是用于原地过滤的 “erase-remove” 惯用法：</p>
 <pre><code class="language-cpp">// Pre-C++20 erase-remove idiom
 records.erase(
@@ -302,7 +302,7 @@ chain(R&amp;&amp; middlewares, http::Handler base) {
     return current;
 }
 </code></pre>
-<p>这是在局部算法内善用 range 工具的好例子：反向迭代的意图通过 <code>rbegin</code>/<code>rend</code> 清晰表达，而非依赖索引运算，函数产出的也是拥有型结果。</p>
+<p>这是在局部算法内善用 range 工具的好例子：用 <code>rbegin</code>/<code>rend</code> 清晰表达了反向迭代意图，而非依赖索引运算，函数产出的也是拥有型结果。</p>
 <p>同样的谨慎也适用于 pipeline 中的 <code>string_view</code> 和 <code>span</code>。转换步骤产生的借用切片，只要源对象的生命周期是局部且显而易见的，就没有问题。但如果这些切片被跨线程传递、排入队列留待后续处理，或者被缓存起来，就很危险了。</p>
 <h2 id="stdgenerator-适用于拉取式数据源不是用来替代每一个循环的"><a class="header" href="#stdgenerator-适用于拉取式数据源不是用来替代每一个循环的"><code>std::generator</code> 适用于拉取式数据源，不是用来替代每一个循环的</a></h2>
 <p>C++23 的 <code>std::generator</code> 之所以有用，是因为有些序列天生不适合”先全部存下来再遍历”。它们是增量产生的：分页数据库扫描、目录遍历、分块文件读取、带重试的轮询，以及随着字节到达而逐条产出完整消息的协议解码器。</p>

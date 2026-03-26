@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -363,7 +363,7 @@ void wire(EventSource&amp; source, Session&amp; session) {
 </code></pre>
 <p>问题不仅是引用捕获本身，而在于 API 根本没交代 handler 的去向：是只在一次操作中借用，还是存到注销为止？会不会被并发调用，或者在析构期间调用？抽象追求了泛化，却没给出可用的契约。</p>
 <p>更好的设计会把所有权和生命周期模型写在明面上。如果回调会被保留，注册就应返回一个 handle 或注册对象，用它的生命周期来管控订阅关系。如果回调是同步的，API 就不该为了显得通用而接收拥有型的擦除 callable。</p>
-<p><code>examples/web-api/</code> 的 <code>main.cpp</code> 展示了对引用捕获的作用域生命周期纪律。<code>TaskRepository</code> 在 router 和 handler 之前声明，server 最后声明。因为 C++ 按构造的逆序销毁局部变量，所以 repository 一定比所有捕获了其引用的 handler 和中间件活得更久。这个顺序不是偶然的——它是确保擦除 callable 中捕获的 <code>repo</code> 引用永远不会悬垂的结构性保证。当回调以引用方式捕获外部对象时，包围作用域必须保证被引用对象比 callable 活得更久。<code>main()</code> 中的声明顺序，就是这个保证所在的位置。</p>
+<p><code>examples/web-api/</code> 的 <code>main.cpp</code> 展示了对引用捕获的作用域生命周期纪律。<code>TaskRepository</code> 在 router 和 handler 之前声明，server 最后声明。因为 C++ 按构造的逆序销毁局部变量，所以 repository 一定比所有捕获了其引用的 handler 和中间件活得更久。这个顺序不是偶然的——它是确保擦除 callable 中捕获的 <code>repo</code> 引用永远不会悬垂的结构性保证。当回调以引用方式捕获外部对象时，包围作用域必须保证被引用对象比 callable 活得更久。<code>main()</code> 中的声明顺序，正是这一保证的落脚点。</p>
 <h2 id="虚协议还是擦除-callable"><a class="header" href="#虚协议还是擦除-callable">虚协议还是擦除 callable？</a></h2>
 <p>这里有一条实用的判断原则。</p>
 <p>如果行为天然可以描述为一组具名操作或有意义的状态转换，就选虚接口。带有 <code>record_counter</code>、<code>record_histogram</code> 和 <code>flush</code> 的 metrics sink 是对象协议；带有 <code>get</code>、<code>put</code> 和 <code>remove</code> 的存储后端也是对象协议。</p>

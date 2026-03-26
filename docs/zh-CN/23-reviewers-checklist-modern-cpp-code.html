@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -354,7 +354,7 @@ set_buffer_size(user_input);  // silent narrowing: -1 becomes SIZE_MAX
 <h2 id="要点总结"><a class="header" href="#要点总结">要点总结</a></h2>
 <p>最高效的 C++ 评审者，会先审查所有权、失败形态、接口诚实性、并发生命周期、成本流向和验证证据，然后才去看局部优雅。他们先给改动分类，再围绕生产风险提问，并在仅靠代码本身撑不起结论的地方，坚持索要证据。</p>
 <p>正是这种审查态度，才能把本书的内容转化为日常工程实践。精确的所有权模型、显式的失败边界、有界并发、诚实的 API 和严格的诊断纪律，之所以重要，不是因为它们”看起来现代”，而是因为它们让评审者能够用具体的语言说清楚：这次改动为什么安全、为什么有风险、或者为什么还不完整。</p>
-<p>Review questions:</p>
+<p>复习问题：</p>
 <ul>
 <li>这次改动引入的主导性生产风险是什么，评审是否先聚焦在那里？</li>
 <li>哪些所有权、生命周期或借用假设现在跨越了时间、线程或 API 边界？</li>
