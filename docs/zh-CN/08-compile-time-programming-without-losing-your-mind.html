@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -258,7 +258,7 @@ constexpr auto crc_table = build_crc_table();
 </code></pre>
 <p>这两个函数都是用普通控制流表达的编译期查找表，不需要任何模板机制，误用时的诊断信息清晰，运行时也可以正常调试。这正是 <code>constexpr</code> 的甜蜜点：输入来自一个小的静态集合，映射关系足够稳定，编译期求值增加了安全性而没有带来复杂性。</p>
 <h2 id="只有当延迟失败本身就是设计-bug-时才使用-consteval"><a class="header" href="#只有当延迟失败本身就是设计-bug-时才使用-consteval">只有当延迟失败本身就是设计 bug 时，才使用 <code>consteval</code></a></h2>
-<p><code>consteval</code> 比 <code>constexpr</code> 更严格：它强制要求在编译期求值。如果允许运行时回退，某些绝不该混进生产环境的配置错误就可能被掩盖，那就应该用 <code>consteval</code>。</p>
+<p><code>consteval</code> 比 <code>constexpr</code> 更严格：它强制要求在编译期求值。如果放任运行时回退，会把某种你绝不想让它混进生产环境的配置错误掩盖掉，那就应该用 <code>consteval</code>。</p>
 <p>举个例子：某个线路协议子系统有一组固定的消息描述符，每个描述符必须有唯一的 opcode 和受限的 payload 大小。这些约束不是动态业务逻辑，而是程序静态结构的一部分。在编译期就发现重复 opcode，显然好过启动时才暴露问题——更别说等到集成测试中因为路由 bug 才发现了。</p>
 <pre><code class="language-cpp">struct MessageDescriptor {
 std::uint16_t opcode;

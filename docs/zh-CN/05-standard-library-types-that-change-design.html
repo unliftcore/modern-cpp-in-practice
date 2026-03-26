@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -182,7 +182,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="改变设计的标准库类型"><a class="header" href="#改变设计的标准库类型">改变设计的标准库类型</a></h1>
-<p>标准库真正重要的时刻，不是充当工具层，而是它开始改变 API 所能表达的含义。在生产级 C++ 中，这种转变集中体现在一小组词汇类型上。它们让借用关系变得显式，把缺失和失败区分开来，表达封闭的备选集合，也避免了所有权信息散落在函数签名中。</p>
+<p>标准库真正重要的时刻，不是充当工具层，而是它开始改变 API 所能表达的含义。在生产级 C++ 中，这种转变集中体现在一小组词汇类型上。它们使借用关系显式化，将缺失与失败区分开来，表达封闭的备选集合，并避免所有权信息散落在每个函数签名中。</p>
 <p>本章不打算逐一浏览头文件。要讨论的问题更聚焦，也更实用：在 C++23 代码库中，哪些标准类型应该改变你编写日常代码的设计方式？这些类型又会在哪些场景下产生误导或带来额外开销？</p>
 <p>问题在边界处最为突出。一个典型服务的流程是：从网络解析字节，将借来的文本交给校验环节，构造领域值，记录局部失败，最后将结果写入存储或发往下游服务。如果这些步骤全靠裸指针、哨兵值和重容器的函数签名来表达，代码虽然能编译，但契约仍然是模糊的。读者不得不从实现细节中去猜测所有权、生命周期、可空性和错误含义——而这些信息恰恰最不应该被藏在实现里。</p>
 <h2 id="借用类型会改变-api-形状"><a class="header" href="#借用类型会改变-api-形状">借用类型会改变 API 形状</a></h2>
@@ -235,7 +235,7 @@ std::string_view tenant_;
 <p>示例项目清晰地演示了这种“借用到拥有“的转换。在 <code>examples/web-api/src/modules/task.cppm</code> 中，<code>Task::from_json</code> 接受一个 <code>string_view</code> 来借用原始 JSON body，但返回的 <code>optional&lt;Task&gt;</code> 的 <code>std::string</code> 成员独立拥有自己的数据：</p>
 <pre><code class="language-cpp">[[nodiscard]] static std::optional&lt;Task&gt; from_json(std::string_view sv);
 </code></pre>
-<p>函数从借来的输入中提取字段值，move 进拥有型字符串，返回一个自包含的 <code>Task</code>。调用方的 buffer 在函数返回后可以立即复用或销毁。这正是前文所述的模式：检查时借用，存储时拥有。</p>
+<p>函数从借来的输入中提取字段值，move 进拥有型字符串，返回一个完全自给自足的 <code>Task</code>。调用方的 buffer 在函数返回后可以立即复用或销毁。这正是前文所述的模式：检查时借用，存储时拥有。</p>
 <p>实践中有一个简单好用的评审准则：这个对象只是看一下调用方的数据，还是需要留下来长期持有？如果是后者，用借用类型做成员变量就已经值得警惕了。</p>
 <h2 id="optionalexpected-和-variant-解决的是不同问题"><a class="header" href="#optionalexpected-和-variant-解决的是不同问题"><code>optional</code>、<code>expected</code> 和 <code>variant</code> 解决的是不同问题</a></h2>
 <p>把某一种词汇类型当作万能方案，生产代码的维护成本就会迅速攀升。<code>std::optional</code>、<code>std::expected</code> 和 <code>std::variant</code> 各自建模的语义截然不同。在它们之间做选择是设计决策，不是风格偏好。</p>
@@ -287,9 +287,9 @@ void process(const Value&amp; v) {
 }
 </code></pre>
 <p><code>union</code> 虽然能存放数据，但语言本身并不保证 <code>kind</code> 与当前激活成员保持同步。每新增一个备选项，就得手动更新所有 <code>switch</code> 分支，而编译器也未必会对遗漏发出警告。<code>std::variant</code> 将当前激活的备选项纳入类型的运行时状态，重新赋值时自动正确析构旧值；配合 <code>std::visit</code>，编译器还能在分支遗漏时给出警告。</p>
-<p>假设一个配置加载器有三种可能的结果：没找到覆盖项、解析出了有效覆盖项、或者拒绝了格式错误的输入。三者在语义上截然不同。把它们硬塞进 <code>optional&lt;Config&gt;</code> 就丢掉了”格式错误为何被拒绝”的信息。返回 <code>expected&lt;optional&lt;Config&gt;, ConfigError&gt;</code> 看起来有点重，但它精确表述了契约：缺失是正常的，格式错误才是失败。</p>
-<p>在服务边界上，同样的精确性也至关重要。如果内部客户端库返回 <code>variant&lt;Response, RetryAfter, Redirect&gt;</code>，调用方就可以对合法的协议结果做模式匹配。而如果返回的是 <code>expected&lt;Response, Error&gt;</code>，那么重试和重定向就算属于正常控制流，也会被错误地归入异常路径。</p>
-<p>示例项目在领域边界上采用了这一方式。在 <code>examples/web-api/src/modules/error.cppm</code> 中，一个项目级的类型别名让这一模式在整个代码库中保持一致：</p>
+<p>假设一个配置加载器有三种可能的结果：没找到覆盖项、解析出了有效覆盖项、或者拒绝了格式错误的输入。三者在语义上截然不同。把它们硬塞进 <code>optional&lt;Config&gt;</code> 就丢掉了”格式错误为何被拒绝”的信息。返回 <code>expected&lt;optional&lt;Config&gt;, ConfigError&gt;</code> 看起来稍显沉重，但它精确表述了契约：缺失是正常的，格式错误才是失败。</p>
+<p>在服务边界上，同样的精确性也至关重要。如果内部客户端库返回 <code>variant&lt;Response, RetryAfter, Redirect&gt;</code>，调用方就可以对合法的协议结果进行模式匹配。而如果返回的是 <code>expected&lt;Response, Error&gt;</code>，那么重试和重定向就算属于正常控制流，也会被错误地归入异常路径。</p>
+<p>示例项目在领域边界上采用了这一方式。在 <code>examples/web-api/src/modules/error.cppm</code> 中，一个项目级别名让这一模式在整个代码库中保持一致：</p>
 <pre><code class="language-cpp">template &lt;typename T&gt;
 using Result = std::expected&lt;T, Error&gt;;
 </code></pre>

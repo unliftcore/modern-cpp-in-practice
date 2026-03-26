@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -348,7 +348,7 @@ virtual ~OrderRepository() = default;
 <p>把命令和查询分开，往往就能恢复清晰度。查询路径想要的是值类型的请求和结果、可预测的开销、没有隐藏的副作用。命令路径想要的是显式的所有权转移、明确的副作用和严格的失败语义。硬塞成一个接口，就是在纵容偶然耦合——调用方迟早会依赖上个季度顺手塞进去的某个方法。</p>
 <p>接口越小，评审也越容易。评审者可以直接问：这里的每个函数到底属不属于同一个边界？而一旦接口沦为”附近操作的大杂烩”，这个问题就很难回答了。</p>
 <p><code>examples/web-api/src/modules/repository.cppm</code> 中的 <code>TaskRepository</code> 就是一个保持聚焦的窄接口。它的公共面只有 CRUD 操作：<code>create</code>、<code>find_by_id</code>、<code>find_all</code>、<code>find_completed</code>、<code>update</code>、<code>remove</code> 和 <code>size</code>。没有日志方法，没有配置开关，没有 metric 快照，没有缓存刷新。锁策略（<code>std::shared_mutex</code>）、存储表示（<code>std::vector&lt;Task&gt;</code>）、ID 生成（<code>std::atomic&lt;TaskId&gt;</code>）全部是 private 的。调用方依赖的是领域操作，而不是 repository 碰巧如何实现它们。</p>
-<h2 id="数据形状接受稳定视图返回拥有型领域值"><a class="header" href="#数据形状接受稳定视图返回拥有型领域值">数据形状：接受稳定视图，返回拥有型领域值</a></h2>
+<h2 id="数据形状接受稳定视图返回拥有型含义"><a class="header" href="#数据形状接受稳定视图返回拥有型含义">数据形状：接受稳定视图，返回拥有型含义</a></h2>
 <p>第 4 章讨论的是局部的签名选择。到了接口边界，同样的规则就升格为架构规则。</p>
 <p>如果被调用方不需要保留数据，输入通常应接受非拥有视图：<code>std::string_view</code>、<code>std::span&lt;const std::byte&gt;</code>、领域对象的 span，或者引用调用方所持数据的轻量请求结构体。这样调用点既便宜又坦诚。</p>
 <p>输出通常应返回拥有型值或生命周期明确的领域对象。如果返回的是指向 adapter 内部存储的视图、指向 cache line 的借用指针、指向内部状态的迭代器，那就把边界变成了生命周期谜题，很少值得这么做。</p>
@@ -413,7 +413,7 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <p>验证不只靠代码评审。集成测试应当覆盖真正发生转换的 adapter 边界。构建性能分析同样有价值：如果一个看似干净的接口仍然把大量传递性依赖拖得到处都是，那这个设计很可能只是给源码级耦合披了层伪装。</p>
 <h2 id="要点"><a class="header" href="#要点">要点</a></h2>
 <p>接口设计说到底，就是决定什么东西绝不能泄漏出去。</p>
-<p>依赖方向要对齐稳定策略，而非一时方便的实现。无需留存数据时，接受廉价的借用输入；跨边界返回时，交出拥有型领域值。按职责拆分接口，而非堆砌一堆操作。在易变依赖进入系统的位置完成失败转换。只在真实的设计接缝处做抽象。</p>
+<p>依赖方向要对齐稳定策略，而非一时方便的实现。无需留存数据时，接受廉价的借用输入；跨边界返回时，交出拥有型的领域含义。按职责拆分接口，而非堆砌一堆操作。在易变依赖进入系统的位置完成失败转换。只在真实的设计接缝处做抽象。</p>
 <p>如果调用方想正确使用你的 API，却不得不了解你的数据库 schema、传输包装类型、框架句柄或内部存储的生命周期，那这个边界承载的东西就已经太多了。趁耦合还没变成常态，赶紧重新设计。</p>
 
                     </main>

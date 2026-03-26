@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -183,7 +183,7 @@
                     <main>
                         <h1 id="数据布局容器与内存行为"><a class="header" href="#数据布局容器与内存行为">数据布局、容器与内存行为</a></h1>
 <h2 id="生产问题"><a class="header" href="#生产问题">生产问题</a></h2>
-<p>C++ 中的许多性能问题，表面上看是算法选择之争，实则是数据表示的失败。团队还在讨论某次查找该是 $O(1)$ 还是 $O(\log n)$，真正的问题早已暴露在别处——热路径上堆节点的逐一遍历、过多缓存行的触碰、每次迭代中冷字段的无谓搬运。编译器无法弥补糟糕的数据形状，它只能在既有的形状上做有限的优化。</p>
+<p>C++ 中的许多性能问题，表面上看是算法选择之争，实则是数据表示的失败。团队还在讨论某次查找该是 $O(1)$ 还是 $O(\log n)$，真正的问题早已暴露在别处——热路径上堆节点的逐一遍历、过多缓存行的触碰、每次迭代中冷字段的无谓搬运。编译器无法弥补糟糕的数据形状，它只能在既定形状上做些微不足道的优化。</p>
 <p>本章关注的正是决定数据如何驻留在内存中的一系列决策：容器选择、元素布局、迭代顺序、失效行为，以及视图如何在不掩盖生命周期的前提下暴露存储数据。重点不在于抽象地讨论”哪个容器最快”，而是一个更具体、也更有价值的问题：在你实际构建的系统中，什么样的数据表示能让核心操作足够高效？</p>
 <p>回答这个问题时，要以真实的负载压力为参照。想象一下：一个管理着数百万路由条目的请求路由器、一条持续摄取高密度时序样本的遥测 pipeline、一个每帧都要扫描组件状态的游戏或模拟更新循环，或者一个逐批遍历事件的分析作业。在这些系统中，容器选择绝不只是实现细节，而是性能契约的一部分。</p>
 <h2 id="当-big-o-不再解释运行时间"><a class="header" href="#当-big-o-不再解释运行时间">当 Big-O 不再解释运行时间</a></h2>
@@ -198,7 +198,7 @@
 <p>如果这些问题没有答案，容器选择就只能靠经验传闻。</p>
 <h2 id="默认优先连续存储"><a class="header" href="#默认优先连续存储">默认优先连续存储</a></h2>
 <p>对于频繁遍历的数据，连续存储应当是默认起点。<code>std::vector</code>、<code>std::array</code>、<code>std::span</code>、<code>std::mdspan</code>、flat buffer 和列式数组屡屡胜出，因为硬件天然偏爱可预测的访问模式。顺序扫描使处理器能够高效 prefetch、摊薄 TLB 开销，并保持简单的分支行为。这种硬件层面的优势，往往比理论上”更高级”的数据结构所带来的算法优势更大。</p>
-<p>差距十分明显。以一个简单的例子来说明：对元素数量相同的 <code>std::vector&lt;int&gt;</code> 和 <code>std::list&lt;int&gt;</code> 分别求和：</p>
+<p>这种差异并不微妙。以一个简单的例子来说明：对元素数量相同的 <code>std::vector&lt;int&gt;</code> 和 <code>std::list&lt;int&gt;</code> 分别求和：</p>
 <pre><code class="language-cpp">#include &lt;list&gt;
 #include &lt;vector&gt;
 #include &lt;numeric&gt;
@@ -217,7 +217,7 @@ std::int64_t sum_list(const std::list&lt;int&gt;&amp; l) {
 }
 </code></pre>
 <p>在典型硬件上处理一百万个元素时，纯遍历场景下 vector 版本通常比 list 版本快 10-50 倍。list 固然有每节点开销（大多数实现中每个元素附带两个指针，外加 allocator 元数据），但主导成本不在空间上——真正的瓶颈在于：推进到下一个节点时需要加载一个指针，而该指针指向的地址对 prefetcher 来说完全不可预测。每一步都可能触发一次 last-level cache miss，代价 50-100 ns；反观 vector 扫描，由于硬件 prefetcher 能识别顺序访问模式，几乎每次都能命中 L1 或 L2 缓存。</p>
-<p>这并不是刻意构造的最坏场景，而是 <code>std::list</code> 在通用 allocator 下随时间分配节点的常态。即便换用 pool allocator 使节点在内存中更加连续，效果也有限——next-pointer 的间接跳转和每节点的额外开销依然无法消除。</p>
+<p>这并不是刻意构造的最坏场景，而是 <code>std::list</code> 在通用 allocator 下随时间分配节点的常态。即便换用 pool allocator 使节点在内存中更加连续，改善也只是部分的——next-pointer 的间接跳转和每节点的额外开销依然无法消除。</p>
 <p>正因如此，许多高性能设计初看起来都很“朴素“：把记录存进 <code>std::vector</code>，排序一次，之后通过二分查找或批量扫描来响应查询；热数据保持紧凑；用粗粒度批处理重建索引，而不是增量维护 pointer-rich 结构；尽可能将随机访问转化为规则性的顺序访问。</p>
 <p>这并不是说 <code>std::vector</code> 放之四海而皆准，而是说举证责任通常在非连续方案一侧。如果确实需要 node-based 或 hash-based 结构，理由应当具体明确：变更过程中需要迭代器稳定、确实存在大量中间位置的插入、需要并发所有权模式、外部 handle 必须在容器变更后仍然有效，或者查找模式的规模和稀疏度确实大到让 hashing 物有所值。</p>
 <h2 id="容器编码的是权衡不只是操作"><a class="header" href="#容器编码的是权衡不只是操作">容器编码的是权衡，不只是操作</a></h2>
@@ -294,13 +294,13 @@ double mid_price_sum_soa(const TickColumns&amp; ticks) {
 <p>一个实用的折中方案是 hot/cold splitting，而非完全转向 SoA：保留一个只包含热路径所需字段的紧凑”热” struct，冷字段则放进一个按相同下标索引的并行 side table。</p>
 <p>这种表示并不因为”看起来更现代”就天然更好。它的优势只在特定条件下成立：负载确实会反复独立处理各列，或者紧凑的数值列能显著改善内存行为。如果下游逻辑频繁需要包含多个相关字段的完整 tick 对象，那么数据拼装的成本或代码清晰度的损失，完全可能抵消布局上的收益。</p>
 <h2 id="稳定-handle-很昂贵先问你是否真的需要它们"><a class="header" href="#稳定-handle-很昂贵先问你是否真的需要它们">稳定 handle 很昂贵；先问你是否真的需要它们</a></h2>
-<p>许多糟糕的数据表示，根源在于一个未被明言的隐含需求：地址稳定性。代码把裸指针或引用存入容器元素，于是容器的选择不再由访问成本驱动，而被生命周期和失效问题所绑架。这往往把设计推向 node-based 结构——地址是稳定了，其他所有路径上的局部性却全面恶化。</p>
+<p>许多糟糕的数据表示，根源在于一个没有被明确提出的隐含需求：地址稳定性。代码把裸指针或引用存入容器元素，于是容器的选择不再由访问成本驱动，而被生命周期和失效问题所绑架。这往往把设计推向 node-based 结构——地址是稳定了，其他所有路径上的局部性却全面恶化。</p>
 <p>有时这种权衡确实合理。但更多时候，深层问题在于系统把对象身份与物理地址耦合在了一起。如果组件需要持久的外部引用，应当使用显式 handle、带 generation counter 的索引，或指向稳定间接层的 key。这样既能让底层存储保持紧凑和可移动，又能保证外部引用的安全性。</p>
 <p>这当然不是零成本的——handle 会引入额外的查找步骤、校验逻辑，以及围绕过期引用的错误处理。但这些成本是显式且局部化的，通常好过为了满足少数长生命周期的 alias，就让整个数据层都被迫使用 pointer-stable 容器。</p>
 <h2 id="失效规则是-api-设计的一部分"><a class="header" href="#失效规则是-api-设计的一部分">失效规则是 API 设计的一部分</a></h2>
 <p>容器不仅是存储机制，它还隐含地创造或破坏 API 保证。返回一个指向 <code>std::vector&lt;T&gt;</code> 内部的 <code>std::span&lt;T&gt;</code>，等于告诉调用方：只有在底层存储仍然存活、且未发生导致失效的变更时，这个视图才有效。返回哈希表中的迭代器，则把 rehash 敏感性暴露给了调用方。返回 node 容器中的引用，则暴露了关于对象生命周期和同步的隐含假设。</p>
 <p>这就是为什么数据表示与接口设计无法彻底分开。如果一个模块希望保留在内部进行压缩、排序、重建或重新分配的自由，就不该轻易向外暴露原始迭代器或长生命周期引用。当实现需要移动数据的自由时，应优先采用返回值、短生命周期的回调式访问、拷贝出的摘要，或 opaque handle。</p>
-<p>ranges 让非拥有访问的表达更整洁，但也更容易被误用。一条 view pipeline 表面上看起来是纯函数式的，背后却可能引用着生命周期比 pipeline 更短的存储。如果底层数据位于临时 buffer、query object 或请求级 arena 中，那么一个写得再漂亮的 range 表达式，本质上仍然是生命周期 bug。归根结底，存储模型才是第一位的。</p>
+<p>ranges 让非拥有访问的表达更整洁，但也更容易被误用。一条 view pipeline 表面上看起来是纯函数式的，背后却可能借用了某段生命周期比 pipeline 本身更短的存储。如果底层数据位于临时 buffer、query object 或请求级 arena 中，那么一个写得再漂亮的 range 表达式，本质上仍然是生命周期 bug。归根结底，存储模型才是第一位的。</p>
 <h2 id="在热路径上稠密数据胜过聪明的对象模型"><a class="header" href="#在热路径上稠密数据胜过聪明的对象模型">在热路径上，稠密数据胜过聪明的对象模型</a></h2>
 <p>当团队过于字面地对问题领域建模时，数据密集型系统的性能往往会急剧退化。比如一个日志处理阶段，因为领域“听起来很面向对象“，就被建成了由对象图、virtual method 和分散所有权构成的体系。结果在高负载下，profiler 暴露出的瓶颈不是昂贵的算术运算，而是大量的缓存未命中和 allocator 抖动。</p>
 <p>在热路径上，应优先选择能让主要遍历操作既简单又稠密的数据表示。举几个例子：数据包分类器可以把解析后的头字段存入紧凑数组，罕见的扩展数据另行存放；推荐引擎可以把不可变的 item 特征与请求级的评分 buffer 分离；订单簿在价格区间有界的情况下，可以把价格档位放入按归一化 tick 偏移量索引的连续数组，而非使用堆节点构成的树。</p>

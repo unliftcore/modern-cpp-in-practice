@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -398,7 +398,7 @@ namespace v1 {
 <li>有没有线程安全保证，如果有，保证到什么程度。</li>
 <li>版本和兼容性方面，哪些承诺是真的。</li>
 </ul>
-<p>简短、看起来像生产代码的示例在这里最有用，尤其是那些同时展示了错误处理路径和配置边界的示例。大而全的教程式演练通常帮助不大。文档的目的，是让另一个团队不用打听内部”口耳相传”的知识，也能顺利集成。</p>
+<p>简短的、看起来像生产代码的示例在这里最有用，尤其是那些同时展示了错误处理路径和配置边界的示例。大而全的教程式演练通常帮助不大。文档的目的，是让另一个团队不用打听内部”口耳相传”的知识，也能顺利集成。</p>
 <p>性能方面的说法同样需要克制。不要笼统地说库”很快”，而要讲清楚：测了什么场景、在什么负载下、跟什么基线对比、成本模型对哪些因素敏感。解析库的性能往往与分配策略、输入大小分布和失败率密切相关，这些都应当直说。</p>
 <h2 id="验证应当匹配库的公开承诺"><a class="header" href="#验证应当匹配库的公开承诺">验证应当匹配库的公开承诺</a></h2>
 <p>可复用库需要比末端应用组件更严格的验证纪律，因为调用者没办法审查你的全部假设。测试应当直接对应公开承诺。</p>

@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -346,7 +346,7 @@ void submit_work_fixed(const Config&amp; cfg,
 </code></pre>
 <p>规则不是”永远别用 <code>std::shared_ptr</code>”，而是：不要用共享所有权来逃避生命周期思考。对象有明确的所有者和借用者时，就用唯一所有者加引用或视图来表达。<code>std::shared_ptr</code> 应该留给那些确实需要共享、且生命周期无法静态确定的场景。另外，当 <code>const&amp;</code> 或裸引用就够用时，千万别按值传 <code>std::shared_ptr</code>——每次拷贝都是一次毫无收益的原子往返。</p>
 <p>示例项目对这一原则的实践值得参考。在 <code>examples/web-api/src/modules/handlers.cppm</code> 中，每个 handler 工厂（如 <code>list_tasks()</code>、<code>get_task()</code>、<code>create_task()</code>）都通过引用接收 <code>TaskRepository&amp;</code>，并在返回的 lambda 中以引用方式捕获。repository 由 <code>main()</code> 持有，生命周期覆盖所有 handler，因此完全不需要 <code>std::shared_ptr&lt;TaskRepository&gt;</code>。这样每次请求都避免了原子引用计数的开销，handler 的捕获也更紧凑——只是一个普通指针，而不是两指针宽的 <code>shared_ptr</code> 外加控制块。</p>
-<p>还有一些零碎但容易忽视的开销：<code>std::shared_ptr</code> 自身就有两个指针宽（对象指针 + 控制块指针），是裸指针的两倍大。容器里装 <code>std::shared_ptr</code> 时缓存密度自然更差。弱引用计数又多出一个原子变量。控制块里存放的自定义 deleter 还会在析构时引入一层类型擦除间接调用。</p>
+<p>还有一些逐步累积的成本：<code>std::shared_ptr</code> 自身就有两个指针宽（对象指针 + 控制块指针），是裸指针的两倍大。容器里装 <code>std::shared_ptr</code> 时缓存密度自然更差。弱引用计数又多出一个原子变量。控制块里存放的自定义 deleter 还会在析构时引入一层类型擦除间接调用。</p>
 <h2 id="隐式分配是设计异味"><a class="header" href="#隐式分配是设计异味">隐式分配是设计异味</a></h2>
 <p>现代 C++ 提供了大量抽象，但只有当成本模型在代码评审中仍然可见时，这些抽象才用得安心。问题不在于抽象本身，而在于：有些抽象的分配行为是隐式的、随负载变化的，或者以团队从未关注过的实现定义方式发生。</p>
 <p><code>std::string</code> 可能分配堆内存，也可能靠 small-string 优化放在栈上。<code>std::function</code> 对大 callable 可能分配，对小的则未必。类型擦除 wrapper、协程帧、regex 引擎、locale 相关的格式化，以及基于 stream 的组合，都可能在调用点完全看不出来的情况下触发分配。</p>

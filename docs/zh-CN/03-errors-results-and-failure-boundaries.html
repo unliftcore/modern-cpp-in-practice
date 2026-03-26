@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -301,7 +301,7 @@ throw; // RISK: some failures logged here, some rethrown, signature hides both
 }
 </code></pre>
 <p>这个函数用起来代价很高：调用方既不知道 <code>false</code> 到底代表什么，也不知道哪些失败已经记过日志了，更不知道自己还需不需要补充上下文。如果好几层都是这个套路，事故排查时就会同时面对一片噪音和一堆信息空白。</p>
-<p>边界代码应当只选择一种传递方式、一种日志策略。要么函数返回结构化失败，把日志交给能附加请求上下文的上层来写；要么就在本层彻底处理失败，并在契约中写明白。两者一混用，重复日志和遗漏决策就会混入系统。</p>
+<p>边界代码应当只选择一种传递方式、一种日志策略。要么函数返回结构化失败，把日志交给能附加请求上下文的上层来写；要么就在本层彻底处理失败，并在契约中写明白。两者混用，正是重复日志和遗漏决策混入系统的根源。</p>
 <h2 id="反模式未检查返回值导致静默失败"><a class="header" href="#反模式未检查返回值导致静默失败">反模式：未检查返回值导致静默失败</a></h2>
 <p>副作用问题还有一种更隐蔽的变体：把失败悄悄转成默认值，不给调用方留下任何线索。</p>
 <pre><code class="language-cpp">// Anti-pattern: failure becomes a silent default.
@@ -367,7 +367,7 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <p>错误策略应当因生命周期阶段而异。</p>
 <p>构造函数通常很适合用异常，因为”部分构造 + RAII”是 C++ 最强大的组合之一。一个持有资源却无法进入有效状态的对象，本就不该被创建出来。返回一个半初始化的对象再附带一个状态码，几乎不会更好。</p>
 <p>析构函数则恰好相反。在析构过程中抛异常通常要么是灾难性的，要么从设计上就被禁止。如果清理操作确实可能失败并且后果不可忽视，类型设计上就应该提供显式的 <code>close</code>、<code>flush</code> 或 <code>commit</code> 方法，趁对象还处于受控状态时报告错误。析构函数则退化为尽力清理的最后一道防线。</p>
-<p>启动又有所不同。进程启动期间的配置加载、依赖初始化和端口绑定，往往只有一种合理的失败策略：输出清晰的诊断信息，然后让进程退出。这并不是说每个启动辅助函数都该调 <code>std::exit</code>，而是说顶层启动边界应当掌握这个决策权，底层只需返回足够结构化的信息，让失败原因一目了然。</p>
+<p>启动又是另一种特殊场景。进程启动期间的配置加载、依赖初始化和端口绑定，往往只有一种合理的失败策略：输出清晰的诊断信息，然后让进程退出。这并不是说每个启动辅助函数都该调 <code>std::exit</code>，而是说顶层启动边界应当掌握这个决策权，底层只需返回足够结构化的信息，让失败原因一目了然。</p>
 <h2 id="诊断必须丰富但不能传染"><a class="header" href="#诊断必须丰富但不能传染">诊断必须丰富，但不能传染</a></h2>
 <p>好的错误处理保留上下文，差的错误处理则把拼装上下文的代码塞进每个分支，直到主逻辑被淹没。</p>
 <p>有用的失败信息通常包括：</p>
@@ -386,7 +386,7 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <p>这条规则无论和 <code>expected</code> 风格的边界还是异常转换都能很好地配合。底层负责保留信息，边界层负责分类、附加上下文、决定恢复方式，并且只记录一次。</p>
 <h2 id="契约违反不只是另一条错误路径"><a class="header" href="#契约违反不只是另一条错误路径">契约违反不只是另一条错误路径</a></h2>
 <p>有些失败说明程序收到了坏输入，另一些则说明程序自身违背了自己的假设。</p>
-<p>如果某个不变量本应在更早阶段就已成立，此刻却不成立，或者代码走到了一个理论上不可达的状态，那么把它当成又一种可恢复的业务错误来处理，往往只会掩盖更深层的 bug。这不一定要求立刻终止进程，但确实需要用不同于普通验证失败的方式来对待。</p>
+<p>如果某个本应在更早阶段就被保证成立的不变量此刻不成立了，或者代码走到了一个理论上不可达的状态，那么把它当成又一种可恢复的业务错误来处理，往往只会掩盖更深层的 bug。这不一定要求立刻终止进程，但确实需要用不同于普通验证失败的方式来对待。</p>
 <p>好的代码库会把这些区分显式化：输入失败就建模为输入失败，后端不可用就建模为环境失败，内部不变量被破坏则作为 bug 暴露出来，而不是被塞进”操作失败”的通用代码路径里一笔带过。</p>
 <h2 id="验证与评审"><a class="header" href="#验证与评审">验证与评审</a></h2>
 <p>失败处理应当作为系统级属性来评审，而不是逐个函数孤立地看。</p>

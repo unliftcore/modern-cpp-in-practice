@@ -29,7 +29,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -181,11 +181,11 @@
                     <main>
                         <h1 id="前言"><a class="header" href="#前言">前言</a></h1>
 <p>本书是一份面向生产环境的现代 C++23 实践指南，不是语言教程，也不是现代化改造手记。目标读者是这样的程序员：熟悉软件的构建、测试、发布和调试流程，但需要一套可靠的方法论，在真实的设计压力下做出合理的 C++ 决策。本书关注的不是语法罗列，而是所有权、生命周期、接口设计、错误边界、并发、数据布局、性能度量与验证。</p>
-<p>本书假定你不需要别人教你写循环或配置编辑器。你真正需要的帮助在于：一个函数应该用 <code>std::string_view</code> 还是 <code>std::span&lt;const std::byte&gt;</code> 来借用数据？所有权应该在哪里转移？遇到错误时应该抛异常还是返回 <code>std::expected</code>？什么时候用 range 管道能让算法意图更清晰？什么时候协程帧会变成生命周期隐患？什么证据才足以证明性能确实提升了？如果你想要的是特性巡览、入门教程或按头文件编排的参考手册，那这本书不适合你。</p>
-<p>这一前提是有意为之。你不必是 C++ 专家，但你得是一名有经验的工程师——能读懂有一定复杂度的代码，能推敲 API 的行为，能跨子系统追踪控制流，并且日常打交道的就是测试、调试、性能优化和工程取舍。本书正是为这样的读者而写。</p>
+<p>本书假定你不需要别人教你写循环或配置编辑器。你真正需要的帮助在于：一个函数应该用 <code>std::string_view</code> 还是 <code>std::span&lt;const std::byte&gt;</code> 来借用数据？所有权应该在哪里转移？遇到错误时应该抛异常还是返回 <code>std::expected</code>？什么时候用 range 管道能让算法意图更清晰？什么时候协程帧会变成生命周期隐患？凭什么证据才能站得住脚地声称性能有所提升？如果你想要的是特性巡览、入门教程或按头文件编排的参考手册，那这本书不适合你。</p>
+<p>这一前提是有意为之。你不必是 C++ 专家，但你得是一名有经验的工程师——能读懂有一定复杂度的代码，能对 API 进行推理，能跨子系统追踪控制流，并且日常打交道的就是测试、调试、性能优化和工程取舍。本书正是为这样的读者而写。</p>
 <p>全书共分七个部分。第一、二部分建立心智模型和日常概念体系，为写出可审查的代码打下基础。第三部分向外延伸，涵盖接口、多态、库、模块以及 ABI 的现实约束。第四、五部分讨论并发、数据布局、内存分配与性能测量。第六部分关注验证与诊断工具链，确保原生系统的行为可追溯、可验证。第七部分以完整的生产实例收尾：一个服务、一个可复用库，以及一套代码评审工作流。</p>
-<p>之所以采用这样的结构，是因为 C++ 中代价高昂的故障很少是局部性的。一个服务用 <code>shared_ptr</code> 延续请求状态的生命，把工作扇出到后台任务，靠副作用记录错误，结果在关停时卡死。一个库在边界处接受借用的 view，却把它留存到调用方的生命周期之外。一次性能重构消除了一次拷贝，却在别处悄悄引入了锁争用和分配器压力。单独看，每个局部决策都可能是合理的；但当所有权、时序、错误传播和成本模型交织在一起时，问题就会暴露出来。</p>
-<p>未定义行为（UB）是另一条贯穿全书的压力线，而不是关在某一章里一次性讲完。悬空引用、数据竞争、失效的迭代器，或是一条悄悄活过了数据源的 view 管道——这些都可能让一个看似合理的设计仅在开启优化、承受高负载或切换工具链时才暴露问题。所有权、并发、性能和工具链相关章节各自讨论了与本领域最密切相关的 UB 风险。请把对 UB 的警觉当作串联全书的主线，而不是某处一贴即忘的警告标签。</p>
+<p>之所以采用这样的结构，是因为 C++ 中代价高昂的故障很少是局部性的。一个服务用 <code>shared_ptr</code> 延续请求状态的生命，把工作扇出到后台任务，靠副作用记录错误，结果在关停时卡死。一个库在边界处接受借用的 view，却把它存储到调用方生命周期结束之后。一次性能重构消除了一次拷贝，却在别处悄悄引入了锁争用和分配器压力。单独看，每个局部决策都可能是合理的；但当所有权、时序、错误传播和成本模型交织在一起时，问题就会暴露出来。</p>
+<p>未定义行为（UB）是另一条贯穿全书的压力线，而非被隔离在某一章中一次性交代。悬空引用、数据竞争、失效的迭代器，或是一条悄悄活过了数据源的 view 管道——这些都可能让一个看似合理的设计仅在开启优化、承受高负载或切换工具链时才暴露问题。所有权、并发、性能和工具链相关章节各自讨论了与本领域最密切相关的 UB 风险。请把对 UB 的警觉当作串联全书的主线，而不是某处一贴即忘的警告标签。</p>
 <h2 id="如何阅读本书"><a class="header" href="#如何阅读本书">如何阅读本书</a></h2>
 <p>你可以从头到尾顺序阅读。各部分的编排旨在逐层构建判断力：先讲所有权与不变量，再讲日常库和语言工具，然后是架构、并发、性能、验证，最后是完整的生产模式。不过，如果你已经明确要解决的问题类别，也完全可以直接跳到对应章节：</p>
 <div class="table-wrapper">
@@ -203,35 +203,35 @@
 </tbody>
 </table>
 </div>
-<p>每章开头都会列出前置知识要求，所以你可以直接从问题所在处切入，只在需要时回头补充背景。附录提供了精炼的辅助材料：面向决策的特性索引、工具链与诊断配置基线、简明的代码评审检查清单，以及本书核心术语的规范词汇表。</p>
+<p>每章开头都会列出前置知识要求，所以你可以直接从问题所在处切入，只在需要时回头补充背景。附录提供了精炼的辅助材料：以决策为导向的特性索引、工具链与诊断配置基线、简明的代码评审检查清单，以及本书核心术语的规范词汇表。</p>
 <p>本书以 C++23 为主要基线。只有当 C++26 会改变你当下的决策，或能显著降低现有模式的开销时，才会提及它。引入这些前瞻性内容，是为了让建议经得起近期发展的检验，而非把本书变成标准演进的评论文章。</p>
-<p>如果本书达到了预期效果，它带给你的将不只是一套术语。你应该能审视一个设计或一份 diff，讲清其中的权衡：它换来了什么，冒了什么风险，给调用方或运维带来了哪些承诺，以及需要什么证据才能证明这个选择站得住脚。这就是”知道现代 C++ 有哪些特性”与”真正用好现代 C++”之间的差距。</p>
+<p>如果本书达到了预期效果，它带给你的将不只是一套术语。你应该能够审视一个设计或一份 diff，清晰地阐明其中的权衡：它换来了什么，冒了什么风险，给调用方或运维带来了哪些承诺，以及需要什么证据才能证明这个选择站得住脚。这就是”知道现代 C++ 有哪些特性”与”真正用好现代 C++”之间的差距。</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="全书导图"><a class="header" href="#全书导图">全书导图</a></h1>
 <p>本书的组织线索，是生产环境中 C++ 代码在设计不够清晰时最容易付出高昂代价的那些环节。全书从所有权、不变量、失败边界和 API 形态讲起，因为后续的架构决策能否经受评审，取决于这些基础是否扎实。在此之上，依次展开改变日常设计方式的库与语言工具、接口与打包、并发与性能、验证与可观测性，最终汇聚为完整的生产模式。</p>
-<p>未定义行为是一条贯穿全书的主线，而非路线图上的独立章节。所有权部分讨论生命周期与别名风险；并发部分讨论数据竞争、关闭缺陷以及生命周期超出所有者的工作；数据与性能部分讨论失效、布局、局部性，以及薄弱测量带来的虚假信心；验证部分则介绍相关的工具链与运行时信号——它们能捕获单靠代码评审发现不了的问题。</p>
+<p>未定义行为是一条贯穿全书的主线，而非路线图上的独立章节。所有权部分讨论生命周期与别名风险；并发部分讨论数据竞争、关闭缺陷以及生命周期超出其所有者的工作；数据与性能部分讨论失效、布局、局部性，以及薄弱测量带来的虚假信心；验证部分则介绍那些能捕获仅靠代码评审无法发现的问题的工具链与运行时信号。</p>
 <h2 id="第一部分核心心智模型"><a class="header" href="#第一部分核心心智模型">第一部分：核心心智模型</a></h2>
 <p>第一部分建立全书赖以展开的核心词汇：所有权、生命周期、值语义、不变量、失败边界，以及函数签名如何传达成本与持有语义。如果这些概念还不够清晰，后续章节的讨论就容易沦为风格偏好之争，而非工程决策的推演。</p>
 <h2 id="第二部分编写现代-c-代码"><a class="header" href="#第二部分编写现代-c-代码">第二部分：编写现代 C++ 代码</a></h2>
 <p>第二部分介绍那些足以改变 C++23 日常编码方式的标准库与语言工具：借用类型、结果类型与替代类型、概念（concepts）、范围（ranges）、生成器（generators），以及适度使用的编译期计算。重点不在于逐一罗列语言特性，而在于辨明哪些工具真正影响了契约设计、评审负担和成本模型。</p>
 <h2 id="第三部分接口库与架构"><a class="header" href="#第三部分接口库与架构">第三部分：接口、库与架构</a></h2>
-<p>第三部分从局部代码扩展到子系统与包的边界。核心问题是：一旦引入回调、类型擦除、模块、打包和 ABI 约束，接口能否继续如实兑现承诺。这也是局部设计的优雅与长期可组合性开始产生张力的地方。</p>
+<p>第三部分从局部代码扩展到子系统与包的边界。核心问题是：一旦引入回调、类型擦除、模块、打包和 ABI 约束，接口是否依然忠实地反映其承诺。这也是局部设计的优雅开始与长期可组合性产生张力的地方。</p>
 <h2 id="第四部分并发与异步系统"><a class="header" href="#第四部分并发与异步系统">第四部分：并发与异步系统</a></h2>
-<p>第四部分将并发视为跨越时间维度的所有权问题。共享状态、协程挂起、取消与背压，都作为生命周期与吞吐量问题来讨论，而非原语的罗列。目标是让异步工作做到有界、有主、可停止。</p>
+<p>第四部分将并发视为跨越时间维度的所有权问题。共享状态、协程挂起、取消与背压，都被作为生命周期与吞吐量问题来讨论，而非原语的罗列。目标是让异步工作做到有界、有主、可停止。</p>
 <h2 id="第五部分数据内存与性能"><a class="header" href="#第五部分数据内存与性能">第五部分：数据、内存与性能</a></h2>
-<p>第五部分关注数据表示的决策如何转化为运行时行为。数据布局、容器选择、分配策略、局部性和测量纪律，在这里整合为一条完整的成本链条，而非一组彼此孤立的优化技巧。</p>
+<p>第五部分关注数据表示的决策如何转化为运行时行为。数据布局、容器选择、分配策略、局部性和测量纪律，在这里被整合为一条完整的成本链条，而非一组彼此孤立的优化技巧。</p>
 <h2 id="第六部分验证与交付"><a class="header" href="#第六部分验证与交付">第六部分：验证与交付</a></h2>
 <p>第六部分介绍在设计方案确定之后，如何让原生系统持续保持可信：针对边界失败的测试、sanitizer 与静态分析流水线、构建诊断，以及运行中系统的可观测性。重点在于证据的质量，而非为了打勾而打勾。</p>
 <h2 id="第七部分生产模式"><a class="header" href="#第七部分生产模式">第七部分：生产模式</a></h2>
-<p>第七部分将前面各章的内容落实到完整的工程场景中。第 21 章展示服务边界——所有权、准入控制、优雅关闭和遥测在这里必须协调一致。第 22 章聚焦可复用库，库的契约必须经得起其他团队的检验。第 23 章以一套评审者工作流收尾，将全书内容转化为日常代码评审的实践方法。</p>
+<p>第七部分将前面各章的内容落实到完整的工程场景中。第 21 章展示服务边界——所有权、准入控制、优雅关闭和遥测在这里必须协调一致。第 22 章聚焦可复用库，其契约必须经得起其他团队的检验。第 23 章以一套评审者工作流收尾，将全书内容转化为日常代码评审的实践方法。</p>
 <h2 id="附录"><a class="header" href="#附录">附录</a></h2>
-<p>附录刻意保持精简，提供面向决策的特性索引、参考工具链与诊断基线、简版评审检查清单，以及统一全书核心术语的术语表。目的是加速实际工作，而非充当第二本教科书。</p>
+<p>附录刻意保持精简，提供面向决策的特性索引、参考工具链与诊断基线、简版评审检查清单，以及统一全书核心术语的术语表。其目的是加速实际工作，而非充当第二本教科书。</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="所有权生命周期与-raii"><a class="header" href="#所有权生命周期与-raii">所有权、生命周期与 RAII</a></h1>
 <p>写现代 C++ 时，首先要面对的生产问题不是”这该不该做成一个类”，也不是”这里能不能零拷贝”。问题更简单，也更危险：谁拥有这个资源？它能保持有效多久？当正常流程走不通了，谁来保证清理？</p>
 <p>这个问题首先针对内存，但内存只是冰山一角。真实系统需要管理的资源远不止于此：socket、文件描述符、互斥量、线程 join、临时目录、遥测注册、进程句柄、映射文件、事务作用域、关闭钩子……C++ 给了你充分的自由，也给了你充分的机会把这些全都搞砸。之所以把所有权放在第一章，不是因为它在学术上很基础，而是因为所有权一旦不清晰，后面的设计就根本无法放心地做评审。</p>
 <p>在生产环境中，代价高昂的故障往往不会在调用点上表现得很显眼。一个服务启动了后台 flush，捕获了指向请求状态的裸指针，部署时偶尔崩一下。连接池在错误的线程上被关闭，因为最后一个 <code>shared_ptr</code> 恰好在一个没人当成关闭流程的回调里被释放。初始化路径构建了三个资源才建了一半，第四个抛异常时第二个就泄漏了。这些都不是语法问题——它们是所有权问题，最终演变成了运维事故。</p>
-<p>RAII 至今仍是现代 C++ 能把这些情况处理干净的核心原因。它不是靠惯性留下来的老古董，而是一种让资源生命周期能与作用域、异常、提前返回和部分构造自然组合的机制。用好了，RAII 会让清理变得毫无存在感——这正是你想要的效果。</p>
+<p>RAII 至今仍是现代 C++ 能把这些情况处理干净的核心原因。它不是靠惯性留下来的老古董，而是一种让资源生命周期能与作用域、异常、提前返回和部分构造自然组合的机制。用好了，RAII 会让清理变得毫无存在感——这恰恰就是你想要的效果。</p>
 <h2 id="所有权必须一目了然"><a class="header" href="#所有权必须一目了然">所有权必须一目了然</a></h2>
 <p>所有权是一种契约，不是实现细节。评审者应该能指着任意一个类型或成员，迅速回答三个问题：</p>
 <ol>
@@ -246,178 +246,96 @@
 <p>很多程序员第一次接触 RAII，是通过”用智能指针代替手写 <code>delete</code>”这句话。方向大致没错，但格局太小了。</p>
 <p>RAII 的本质是：把资源绑定到一个对象的生命周期上，由该对象的析构函数负责释放。资源可以是内存，但也完全可以是文件描述符、内核事件、事务锁，或者必须在关闭完成前注销的指标注册。</p>
 <h3 id="没有-raii-会发生什么"><a class="header" href="#没有-raii-会发生什么">没有 RAII 会发生什么</a></h3>
-<p>在展示 RAII 模式之前，有必要先完整看一遍更接近真实情况的手工方式。下面这个反面示例是故意写得有缺陷的，因为生产代码库里至今仍有长得一模一样的代码。</p>
-<pre><code class="language-cpp">socket_t create_server_socket(std::uint16_t port) {
-	socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
-	if (server == invalid_socket) {
-		throw NetworkError{"socket failed"};
-	}
-
-	int opt = 1;
-	if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"setsockopt failed"};
-	}
-
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons(port);
-
-	if (::bind(server, reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"bind failed"};
-	}
-
-	if (::listen(server, 16) &lt; 0) {
-		::close_socket(server);
-		throw NetworkError{"listen failed"};
-	}
-
-	return server; // RISK: caller now owns the raw descriptor by convention
+<p>在展示 RAII 模式之前，有必要先完整看一遍手工方式——因为生产代码库里至今仍有长得一模一样的代码。</p>
+<pre><code class="language-cpp">// Manual resource management: C-style socket handling.
+void serve_request(const Config&amp; config) {
+socket_t sock = ::open_socket(config.port());
+if (sock == invalid_socket) {
+throw NetworkError{"bind failed"};
 }
 
-void serve_once(std::uint16_t port) {
-	socket_t server = create_server_socket(port);
-	socket_t client = invalid_socket;
+char* buffer = new char[config.buffer_size()]; // second resource
 
-	try {
-		sockaddr_in client_addr{};
-		socket_length addr_len = sizeof(client_addr);
-		client = ::accept(server,
-		                  reinterpret_cast&lt;sockaddr*&gt;(&amp;client_addr),
-		                  &amp;addr_len);
-		if (client == invalid_socket) {
-			::close_socket(server); // BUG: server will be closed twice (here + in catch)
-			throw NetworkError{"accept failed"};
-		}
+auto* sub = event_bus::subscribe("health_check"); // third resource
 
-		std::array&lt;char, 8192&gt; buffer{};
-		auto n = read_from_socket(client, buffer.data(), buffer.size());
-		if (n &lt;= 0) {
-			::close_socket(client);
-			::close_socket(server);
-			return;
-		}
+// -- any throw between here and the cleanup block leaks all three --
 
-		process_request(client, std::string_view{buffer.data(), static_cast&lt;std::size_t&gt;(n)}); // RISK: any throw must preserve cleanup correctness
+process(sock, buffer, sub); // may throw
 
-		::close_socket(client);
-		::close_socket(server);
-	} catch (...) {
-		if (client != invalid_socket) {
-			::close_socket(client);
-		}
-		::close_socket(server);
-		throw;
-	}
+event_bus::unsubscribe(sub);
+delete[] buffer;
+::close_socket(sock);
 }
 </code></pre>
 <p>问题会迅速叠加起来：</p>
 <ol>
 <li>
-<p><strong>清理逻辑会重复。</strong> <code>::close_socket(server)</code> 同时出现在设置 helper、正常路径、提前返回路径和异常路径里。退出点越多，重复就越多。</p>
+<p><strong>异常不安全。</strong> 如果 <code>process</code> 抛异常，或者 <code>event_bus::subscribe</code> 在 buffer 分配之后抛异常，先前获取的资源就会悄悄泄漏。为每次获取都套上 <code>try</code>/<code>catch</code> 会形成层层嵌套的清理阶梯，既痛苦又容易出错。</p>
 </li>
 <li>
-<p><strong>重复最终会变成 bug。</strong> <code>accept</code> 失败路径在抛异常前已经关闭了 <code>server</code>，而 <code>catch</code> 块又会再关一次。手工所有权逻辑在维护过程中很容易就会漂移成这样。</p>
+<p><strong>重复释放风险。</strong> 如果后续的维护改动加了一个提前返回或第二条调用路径，开发者可能对 <code>buffer</code> 多调一次 <code>delete[]</code>，或对已关闭的句柄再调一次 <code>::close_socket</code>。这两类错误在编译期都发现不了。</p>
 </li>
 <li>
-<p><strong>异常安全依赖纪律。</strong> <code>process_request</code> 可能抛异常。以后只要有人在“获取资源”和“手工清理”之间多插一段代码，就必须重新想一遍当时哪些描述符还活着。</p>
+<p><strong>拆除顺序敏感。</strong> 每往函数里多加一个资源，就必须更新所有退出路径。三个资源时，部分获取状态的组合就已经不少了；到五六个的时候，清理逻辑的存在感会超过函数本身的业务逻辑。</p>
 </li>
 <li>
-<p><strong>转移是隐式的。</strong> <code>create_server_socket()</code> 返回的是裸 <code>socket_t</code>，所以所有权只能靠调用方和被调方之间的约定维持，而不是由类型系统表达。</p>
-</li>
-<li>
-<p><strong>评审变成全局推理。</strong> 想确认代码正确，评审者就得检查整段函数，确认每一条退出路径都把每个描述符恰好关闭一次。</p>
+<p><strong>难以承受维护压力。</strong> 代码评审无法局部验证清理的正确性——评审者必须追踪函数中的每一条路径，确认每个资源都恰好被释放一次。这不可持续。</p>
 </li>
 </ol>
 <p>RAII 方案从结构上消除了这些问题：每个资源都由一个拥有它的对象持有，析构函数负责释放，剩下的交给栈展开。</p>
-<p>本书配套的 web-api 示例项目里已经有我们真正想讲的例子。<code>examples/web-api/src/modules/http.cppm</code> 中的 <code>Socket</code> 类包装了一个文件描述符，并把所有权规则直接写进了类型里：</p>
-<pre><code class="language-cpp">// From examples/web-api/src/modules/http.cppm
-class Socket {
+<p>来看一个服务组件的例子，它需要一个 socket 和一个对内部事件流的临时订阅。</p>
+<pre><code class="language-cpp">class SocketHandle {
 public:
-    Socket() = default;
-    explicit Socket(socket_handle fd) noexcept : fd_{fd} {}
+SocketHandle() = default;
+explicit SocketHandle(socket_t fd) noexcept : fd_(fd) {}
 
-    Socket(const Socket&amp;) = delete;
-    Socket&amp; operator=(const Socket&amp;) = delete;
+SocketHandle(const SocketHandle&amp;) = delete;
+auto operator=(const SocketHandle&amp;) -&gt; SocketHandle&amp; = delete;
 
-    Socket(Socket&amp;&amp; other) noexcept
-        : fd_{std::exchange(other.fd_, invalid_socket_handle)} {}
+SocketHandle(SocketHandle&amp;&amp; other) noexcept
+: fd_(std::exchange(other.fd_, invalid_socket)) {}
 
-    Socket&amp; operator=(Socket&amp;&amp; other) noexcept {
-        if (this != &amp;other) {
-            close(); // release what this object currently owns
-            fd_ = std::exchange(other.fd_, invalid_socket_handle);
-        }
-        return *this;
-    }
-
-    ~Socket() { close(); } // automatic release on every exit path
-
-    [[nodiscard]] socket_handle fd() const noexcept { return fd_; }
-    [[nodiscard]] bool valid() const noexcept { return fd_ != invalid_socket_handle; }
-    explicit operator bool() const noexcept { return valid(); }
-
-    void close() noexcept {
-        if (fd_ != invalid_socket_handle) {
-            close_socket(fd_);
-            fd_ = invalid_socket_handle;
-        }
-    }
-
-private:
-    socket_handle fd_{invalid_socket_handle};
-};
-</code></pre>
-<p>光这个类就足够把 RAII 的核心讲清楚：</p>
-<ul>
-<li><strong>获取</strong> 发生在构造时：<code>Socket sock{::socket(...)};</code></li>
-<li><strong>所有权是独占的</strong>，因为复制被禁用了。</li>
-<li><strong>转移是显式的</strong>，因为移动通过 <code>std::exchange</code> 把源对象清空。</li>
-<li><strong>释放是自动的</strong>，因为析构函数总会调用 <code>close()</code>。</li>
-</ul>
-<p>同一个模块中的周边代码还展示了它在真实使用中是如何工作的。下面是一段局部摘录：只保留了与所有权相关的代码，辅助声明和无关的错误处理细节为了便于阅读被省略了。</p>
-<pre><code class="language-cpp">[[nodiscard]] Socket create_server_socket() const {
-    Socket sock{::socket(AF_INET, SOCK_STREAM, 0)}; // ownership starts here
-    if (!sock) return {};
-
-    int opt = 1;
-    if (::setsockopt(sock.fd(), SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
-        return {}; // sock is destroyed here, so the descriptor closes automatically
-    }
-
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(port_);
-    if (::bind(sock.fd(), reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
-        return {}; // same: failure path still releases the descriptor
-    }
-
-    if (::listen(sock.fd(), 16) &lt; 0) {
-        return {};
-    }
-
-    return sock; // move or copy elision transfers ownership to the caller
+auto operator=(SocketHandle&amp;&amp; other) noexcept -&gt; SocketHandle&amp; {
+if (this != &amp;other) {
+reset();
+fd_ = std::exchange(other.fd_, invalid_socket);
+}
+return *this;
 }
 
-Socket client{::accept(server_sock.fd(), ...)}; // 为简洁起见，省略了客户端地址相关参数
-handle_connection(std::move(client));           // explicit ownership transfer
+~SocketHandle() { reset(); }
 
-void handle_connection(Socket client) const {
-    std::array&lt;char, 8192&gt; buf{};
-    auto n = read_from_socket(client.fd(), buf.data(), buf.size());
-    if (n &lt;= 0) return;
+auto get() const noexcept -&gt; socket_t { return fd_; }
 
-    Response resp = handler_(req); // request parsing omitted here
-    auto data = resp.serialize();
-    (void)write_to_socket(client.fd(), data.data(), static_cast&lt;int&gt;(data.size()));
-} // client goes out of scope here and closes automatically
+void reset() noexcept {
+if (fd_ != invalid_socket) {
+::close_socket(fd_);
+fd_ = invalid_socket;
+}
+}
+
+private:
+socket_t fd_ = invalid_socket;
+};
 </code></pre>
-<p>在 <code>handle_connection(std::move(client))</code> 之后，调用方那边的 <code>client</code> 就不再拥有这个描述符了。移动构造函数已经把它的文件描述符交换成 <code>invalid_socket_handle</code>，所以之后这个被移动过的对象析构时也不会出事。任意时刻，所有权都只存在于一个对象里。</p>
-<p>注意那些消失掉的东西：没有清理阶梯，没有主要职责是收尾的 <code>try</code>/<code>catch</code>，也没有“这个描述符现在到底归谁管”的口头约定。类型本身就携带了策略。这才是 RAII 的现实价值。</p>
-<p>同样的模式适用于各种非内存资源。作用域注册令牌在析构时注销；事务对象不显式提交就回滚；joined-thread 包装器在析构时 join，或者拒绝在仍可 join 的状态下被销毁。一旦代码库建立起这种思维方式，清理路径就重新回归局部，不再散落于各处错误处理中。</p>
+<p>写这个类型不是为了展示移动语义，而是为了让 socket 的所有权变得单一、显式、异常安全。析构函数即清理策略；移动操作定义了转移方式；禁止复制，因为复制所有权本身就是错的。</p>
+<p>本书配套的 web-api 示例项目中，<code>http.cppm</code> 里的 <code>Socket</code> 类就是这一模式的真实实现——禁止复制、通过 <code>std::exchange</code> 实现移动、析构函数调用 <code>::close</code>：</p>
+<pre><code class="language-cpp">// 摘自 examples/web-api/src/modules/http.cppm
+class Socket {
+    explicit Socket(int fd) noexcept : fd_{fd} {}
+    Socket(const Socket&amp;) = delete;
+    Socket(Socket&amp;&amp; other) noexcept : fd_{std::exchange(other.fd_, -1)} {}
+    ~Socket() { close(); }
+
+    void close() noexcept {
+        if (fd_ &gt;= 0) { ::close(fd_); fd_ = -1; }
+    }
+private:
+    int fd_{-1};
+};
+</code></pre>
+<p>这个 <code>Socket</code> 贯穿于整个服务器实现中。例如 <code>create_server_socket()</code> 执行多步骤的 socket 设置（创建、<code>setsockopt</code>、<code>bind</code>、<code>listen</code>），并按值返回一个 <code>Socket</code>。如果任何一步失败，已获取的文件描述符会在局部 <code>Socket</code> 析构时被自动清理。</p>
+<p>同样的模式适用于各种非内存资源。作用域注册令牌在析构时注销；事务对象不显式提交就回滚；joined-thread 包装器在析构时 join，或者拒绝在仍可 join 的状态下被销毁。一旦代码库建立起这种思维方式，清理路径就重新回归局部，不再散落于各处错误处理之中。</p>
 <h2 id="反模式靠约定清理"><a class="header" href="#反模式靠约定清理">反模式：靠约定清理</a></h2>
 <p>RAII 的替代方案通常不是”手工清理但做到完美无缺”，而是靠约定来清理——这就意味着一有压力，清理就会被跳过。</p>
 <pre><code class="language-cpp">// Anti-pattern: ownership and cleanup are split across control flow.
@@ -460,7 +378,7 @@ publisher.send(*payload);
 <h2 id="独占所有权应当是默认选择"><a class="header" href="#独占所有权应当是默认选择">独占所有权应当是默认选择</a></h2>
 <p>在设计良好的系统中，大多数资源在任意时刻都只有一个显而易见的所有者。请求对象拥有解析后的载荷，连接对象拥有它的 socket，批处理拥有它的 buffer。独占所有权理应成为默认的思维方式。</p>
 <p>落实到代码中，就是优先使用普通对象成员，无法直接内嵌时再用 <code>std::unique_ptr</code>。<code>unique_ptr</code> 并不意味着设计有多复杂，它只是说明所有权的转移和销毁都是显式的。它与容器、工厂和错误路径的组合也很自然，因为 moved-from 状态是良定义的，单一所有权自始至终保持单一。</p>
-<p>共享所有权应该是有意为之的例外。确实有合理的场景：异步扇出中多个组件需要让同一份不可变状态保持存活；图状结构中确实存在共享生命周期；缓存条目在多个使用者持有期间必须有效。但 <code>shared_ptr</code> 不是万能的安全毯。它会改变销毁时机，在许多实现中带来原子引用计数的开销，还经常掩盖真正的问题：为什么没有任何一个组件能明确充当所有者？</p>
+<p>共享所有权应被视为有意为之的例外。确实有合理的场景：异步扇出中多个组件需要让同一份不可变状态保持存活；图状结构中确实存在共享生命周期；缓存条目在多个使用者持有期间必须有效。但 <code>shared_ptr</code> 不是万能的安全毯。它会改变销毁时机，在许多实现中带来原子引用计数的开销，还经常掩盖真正的问题：为什么没有任何一个组件能明确充当所有者？</p>
 <p>评审中如果在边界处发现了 <code>shared_ptr</code>，应该追问一个具体的问题：究竟是什么样的生命周期关系，让独占所有权行不通？如果答案含糊不清，那这个共享所有权多半只是在给一个从未想清楚资源归属的设计打补丁。</p>
 <p>一个常见的症状是关闭时机的不确定性。当最后一个持有资源的 <code>shared_ptr</code> 从某个不可预期的回调或线程中被释放，析构函数就会在不可预期的时间和位置执行：</p>
 <pre><code class="language-cpp">// Risky: destruction timing depends on which callback finishes last.
@@ -480,7 +398,7 @@ conn-&gt;send(shard_ping()); // last lambda to finish destroys conn
 <p>所有权关系再清晰的系统，也少不了非拥有式的访问。算法需要检查调用方拥有的 buffer，验证逻辑需要读取请求元数据，迭代器和视图需要在不拷贝的前提下遍历存储。借用是正常的，错误在于让借用的状态活过了所有者，或者让借用关系变得不可见。</p>
 <p>现代 C++ 提供了表达借用的类型工具：引用、明确用作观察者的指针、<code>std::span</code> 和 <code>std::string_view</code>。它们很有帮助，但光靠类型本身不能保证设计正确。一个长生命周期对象里的 view 成员，如果真正的所有者在别处，仍然是生命周期隐患。回调捕获了栈上状态的引用，延后执行时照样出问题。</p>
 <p>并发场景下风险更大。被捕获进后台工作的裸指针或 <code>string_view</code> 绝非无害的小优化——它是跨越时间的借用，有效性取决于调度时序和关闭顺序。</p>
-<p>由此得出一条简明的所有权准则：拥有类型可以自由跨越时间边界；借用类型只有在所有者明显比使用方更强壮、更长命时，才可以跨越时间边界。如果你无法迅速证明这一点，就应该选择拷贝或转移所有权。</p>
+<p>由此可以总结出一条简明的所有权准则：拥有类型可以自由跨越时间边界；借用类型只有在所有者明显比使用方更强壮、更长命时，才可以跨越时间边界。如果你无法迅速证明这一点，就应该选择拷贝或转移所有权。</p>
 <h2 id="移动语义定义的是转移而非单纯的优化"><a class="header" href="#移动语义定义的是转移而非单纯的优化">移动语义定义的是转移，而非单纯的优化</a></h2>
 <p>移动语义通常被当作性能话题来讲，但在实践中，它首先是一个所有权话题。</p>
 <p>对一个对象执行移动，就是宣告资源换了主人：源对象依然有效，但不再对原来的资源负责。正因如此，工厂、容器和流水线各阶段才能在不为每个类型另造一套转移 API 的前提下组合起来。</p>
@@ -573,7 +491,7 @@ int main() {
 <li>移动操作是否保持了单一所有权和安全销毁？</li>
 <li>关闭流程是否依赖了超出资源释放范围的析构副作用？</li>
 </ol>
-<p>动态工具仍然不可或缺。AddressSanitizer 能捕获大量 use-after-free 问题；Leak Sanitizer 和平台诊断工具能发现遗漏的释放路径；ThreadSanitizer 在生命周期错误因关闭期间的竞态条件而暴露时尤其有用。不过，只有当类型系统本身已经把所有权表达清楚时，这些工具才最有效。</p>
+<p>动态工具仍然不可或缺。AddressSanitizer 能捕获大量 use-after-free 问题；Leak Sanitizer 和平台诊断工具能发现遗漏的释放路径；ThreadSanitizer 在生命周期错误因关闭期间的竞态条件而暴露时尤其有用。不过，只有当类型系统本身已经把所有权表达清楚时，这些工具才能发挥最大的威力。</p>
 <h2 id="要点"><a class="header" href="#要点">要点</a></h2>
 <ul>
 <li>把所有权当作契约来对待——它必须在类型和对象结构中清晰可见。</li>
@@ -582,18 +500,18 @@ int main() {
 <li>先把移动语义理解为所有权转移规则，再把它当作性能优化手段。</li>
 <li>对关闭路径和部分构造路径的审查力度，应该和对稳态运行路径一样。</li>
 </ul>
-<p>如果一个资源可能泄漏、重复释放、销毁后仍被访问，或在错误的线程上销毁，那问题往往早在崩溃发生之前就埋下了——埋在所有权被留为隐式的那一刻。</p>
+<p>如果一个资源可能被泄漏、被重复释放、在销毁后被访问、或者在错误的线程上被销毁，那问题往往早在崩溃发生之前就埋下了——埋在所有权被留为隐式的那一刻。</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="值身份与不变量"><a class="header" href="#值身份与不变量">值、身份与不变量</a></h1>
 <p>所有权理清之后，接下来的问题就从机械层面转向了语义层面：这个对象究竟应该是什么？</p>
 <p>如果把每个类型都当成”附带方法的可变状态”来处理，现代 C++ 代码就会比它本该有的更难写。有些对象是值——它们代表一段自包含的含义，通常可以整体复制或替换，也应该便于比较和测试。有些对象则携带身份——它们对应一个特定的会话、账户、worker 或连接，即使字段随时间变化，其连续性仍然重要。如果在一个含糊的类型里混用这两种角色，就会冒出一堆看似无关的 bug：错误的相等性判断、不稳定的缓存键、意外的别名、糟糕的并发行为，以及说不清”改完之后到底还是不是同一个东西”的 API。</p>
-<p>本章要讨论的，是如何让这两种分类保持清晰，并通过不变量的强制来保证类型在压力下仍然可信。参数传递和所有权转移机制不在本章范围内，那些留给其他章节。这里的重点是建模：什么时候应该把类型设计成值，什么时候必须显式保留身份，以及不变量如何防止对象图退化为一堆松散的字段。</p>
+<p>本章要讨论的，是如何让这两种分类保持清晰，并通过不变量的强制来保证类型在压力下仍然可信。参数传递和所有权转移机制不在本章范围内，那些内容属于别处。这里的重点是建模：什么时候应该把类型设计成值，什么时候必须显式保留身份，以及不变量如何防止对象图退化为一堆松散的字段。</p>
 <h2 id="值与实体解决的是不同问题"><a class="header" href="#值与实体解决的是不同问题">值与实体解决的是不同问题</a></h2>
 <p>值由其内容定义，而非由来源定义。两个表示同一份配置、同一时间窗口或同一金额的值，通常可以互换使用。你可以随意复制、比较，也可以在线程之间传递，不用费心区分哪个才是”真正的”实例。</p>
 <p>实体（即携带身份的对象）则不同。一个活跃的客户端会话，不能和恰好在某一时刻字段相同的另一个会话互换。一个连接对象可能会重连、累积统计信息、持有同步状态，但在系统看来它始终是同一个连接。身份之所以存在，就是为了让程序能表达“跨越时间的连续性“。</p>
 <p>道理说出来都懂。但一旦团队没有明确决定某个类型属于哪一类，设计上的伤害就会悄然出现。</p>
 <p>假设一个 <code>Order</code> 类型既可变、又共享、还按全部字段做相等比较，同时又被用作缓存键——程序实际上就在同时讲几个互相矛盾的故事。又假设一个配置快照被塞进了引用计数的可变对象里，而调用方只需要一组不可变的值——代码平白为别名和生命周期的复杂度买了单，却没有换来任何语义上的好处。</p>
-<p>这里有一条默认原则，比很多代码库意识到的更有力：如果一个类型不需要跨越时间的连续性，就优先把它设计成值。</p>
+<p>这里有一条比很多代码库认识到的更有力的默认原则：如果一个类型不需要跨越时间的连续性，就优先把它设计成值。</p>
 <h2 id="值类型能减少意外耦合"><a class="header" href="#值类型能减少意外耦合">值类型能减少意外耦合</a></h2>
 <p>值语义的威力在于消除了隐式共享。调用方拿到的是自己的副本或 move 过来的实例，修改只影响自身，相等性通常可以按结构判定。写测试时可以直接构造小例子，而不必搭建对象图或 mock 基础设施。</p>
 <p>配置是个典型例子。很多系统因为产品中某处需要更新配置，就把配置建模成全局共享的可变对象。这个选择会殃及那些只需要稳定快照的代码。</p>
@@ -634,7 +552,7 @@ conn.set_timeout(config.timeout());
 // Entire request sees a single consistent configuration.
 }
 </code></pre>
-<p>不止于此——值天然易于组合：可以放进容器、跨线程传递、用于确定性测试，也能充当稳定的哈希或比较输入。携带身份的对象也能做到这些，但需要付出更多规则和更多谨慎。只在模型真正需要的时候，才值得去承担这份复杂性。</p>
+<p>更深层的意义在于，值天然易于组合：可以放进容器、跨线程传递、用于确定性测试，也能充当稳定的哈希或比较输入。携带身份的对象也能做到这些，但需要付出更多规则和更多谨慎。只在模型真正需要的时候，才值得去承担这份复杂性。</p>
 <h2 id="不变量是拥有类型的根本理由"><a class="header" href="#不变量是拥有类型的根本理由">不变量是拥有类型的根本理由</a></h2>
 <p>一个允许无效状态组合的类型，说到底不过是披着 struct 外衣的 bug 载体。</p>
 <p>所谓不变量，就是对象在任何可被外部观察到的时刻都应成立的条件。比如时间窗口要求 <code>start &lt;= end</code>；金额要求携带货币并使用有界整数表示；批处理策略要求 <code>max_items &gt; 0</code> 且 <code>flush_interval &gt; 0ms</code>；连接状态对象则禁止”已认证但未连接”。</p>
@@ -707,7 +625,7 @@ enqueue_after(delay); // never executes when max_attempts == 0
 </code></pre>
 <p>每条存储 <code>Task</code> 的路径都必须先经过 <code>validate()</code>，包括更新操作——仓库在突变后会重新验证。不变量由类型自己拥有，而不是由各个调用方分头负责。</p>
 <h2 id="反模式把实体语义偷偷塞进值类型"><a class="header" href="#反模式把实体语义偷偷塞进值类型">反模式：把实体语义偷偷塞进值类型</a></h2>
-<p>有个反复出现的问题：某个类型看上去像值——会被复制、会被比较——但实际上内部藏着带身份的可变状态。</p>
+<p>有一种反复出现的问题：某个类型看上去像值——会被复制、会被比较——但实际上内部藏着带身份的可变状态。</p>
 <pre><code class="language-cpp">// Anti-pattern: one type tries to be both a value and a live entity.
 struct Job {
 std::string id;
@@ -965,7 +883,7 @@ throw; // RISK: some failures logged here, some rethrown, signature hides both
 }
 </code></pre>
 <p>这个函数用起来代价很高：调用方既不知道 <code>false</code> 到底代表什么，也不知道哪些失败已经记过日志了，更不知道自己还需不需要补充上下文。如果好几层都是这个套路，事故排查时就会同时面对一片噪音和一堆信息空白。</p>
-<p>边界代码应当只选择一种传递方式、一种日志策略。要么函数返回结构化失败，把日志交给能附加请求上下文的上层来写；要么就在本层彻底处理失败，并在契约中写明白。两者一混用，重复日志和遗漏决策就会混入系统。</p>
+<p>边界代码应当只选择一种传递方式、一种日志策略。要么函数返回结构化失败，把日志交给能附加请求上下文的上层来写；要么就在本层彻底处理失败，并在契约中写明白。两者混用，正是重复日志和遗漏决策混入系统的根源。</p>
 <h2 id="反模式未检查返回值导致静默失败"><a class="header" href="#反模式未检查返回值导致静默失败">反模式：未检查返回值导致静默失败</a></h2>
 <p>副作用问题还有一种更隐蔽的变体：把失败悄悄转成默认值，不给调用方留下任何线索。</p>
 <pre><code class="language-cpp">// Anti-pattern: failure becomes a silent default.
@@ -1031,7 +949,7 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <p>错误策略应当因生命周期阶段而异。</p>
 <p>构造函数通常很适合用异常，因为”部分构造 + RAII”是 C++ 最强大的组合之一。一个持有资源却无法进入有效状态的对象，本就不该被创建出来。返回一个半初始化的对象再附带一个状态码，几乎不会更好。</p>
 <p>析构函数则恰好相反。在析构过程中抛异常通常要么是灾难性的，要么从设计上就被禁止。如果清理操作确实可能失败并且后果不可忽视，类型设计上就应该提供显式的 <code>close</code>、<code>flush</code> 或 <code>commit</code> 方法，趁对象还处于受控状态时报告错误。析构函数则退化为尽力清理的最后一道防线。</p>
-<p>启动又有所不同。进程启动期间的配置加载、依赖初始化和端口绑定，往往只有一种合理的失败策略：输出清晰的诊断信息，然后让进程退出。这并不是说每个启动辅助函数都该调 <code>std::exit</code>，而是说顶层启动边界应当掌握这个决策权，底层只需返回足够结构化的信息，让失败原因一目了然。</p>
+<p>启动又是另一种特殊场景。进程启动期间的配置加载、依赖初始化和端口绑定，往往只有一种合理的失败策略：输出清晰的诊断信息，然后让进程退出。这并不是说每个启动辅助函数都该调 <code>std::exit</code>，而是说顶层启动边界应当掌握这个决策权，底层只需返回足够结构化的信息，让失败原因一目了然。</p>
 <h2 id="诊断必须丰富但不能传染"><a class="header" href="#诊断必须丰富但不能传染">诊断必须丰富，但不能传染</a></h2>
 <p>好的错误处理保留上下文，差的错误处理则把拼装上下文的代码塞进每个分支，直到主逻辑被淹没。</p>
 <p>有用的失败信息通常包括：</p>
@@ -1050,7 +968,7 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <p>这条规则无论和 <code>expected</code> 风格的边界还是异常转换都能很好地配合。底层负责保留信息，边界层负责分类、附加上下文、决定恢复方式，并且只记录一次。</p>
 <h2 id="契约违反不只是另一条错误路径"><a class="header" href="#契约违反不只是另一条错误路径">契约违反不只是另一条错误路径</a></h2>
 <p>有些失败说明程序收到了坏输入，另一些则说明程序自身违背了自己的假设。</p>
-<p>如果某个不变量本应在更早阶段就已成立，此刻却不成立，或者代码走到了一个理论上不可达的状态，那么把它当成又一种可恢复的业务错误来处理，往往只会掩盖更深层的 bug。这不一定要求立刻终止进程，但确实需要用不同于普通验证失败的方式来对待。</p>
+<p>如果某个本应在更早阶段就被保证成立的不变量此刻不成立了，或者代码走到了一个理论上不可达的状态，那么把它当成又一种可恢复的业务错误来处理，往往只会掩盖更深层的 bug。这不一定要求立刻终止进程，但确实需要用不同于普通验证失败的方式来对待。</p>
 <p>好的代码库会把这些区分显式化：输入失败就建模为输入失败，后端不可用就建模为环境失败，内部不变量被破坏则作为 bug 暴露出来，而不是被塞进”操作失败”的通用代码路径里一笔带过。</p>
 <h2 id="验证与评审-2"><a class="header" href="#验证与评审-2">验证与评审</a></h2>
 <p>失败处理应当作为系统级属性来评审，而不是逐个函数孤立地看。</p>
@@ -1076,7 +994,7 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <h1 id="参数传递返回类型与-api-接口设计"><a class="header" href="#参数传递返回类型与-api-接口设计">参数传递、返回类型与 API 接口设计</a></h1>
 <p>在 C++ 中，函数签名承载的信息往往超出作者的本意。它不仅说明了被调用方是借用还是保留数据，通常还隐含着 null 是否有意义、能否修改、会不会发生拷贝、失败算不算正常控制流等语义。一旦签名传达了错误的语义，哪怕实现本身在局部是正确的，API 用起来仍然代价高昂、审查起来仍然困难重重。</p>
 <p>本章聚焦的正是这层语义接口。我们的目标不是死记”X 一律按 Y 传递”之类的教条，而是学会选择恰当的参数和返回形式，在调用方需要做决策的边界上，如实传达所有权、生命周期、可变性、可空性与开销。</p>
-<p>这一边界视角让本章有别于前后各章。第 1 章讨论了谁拥有资源，第 2 章讨论了模型中有哪些对象，第 3 章讨论了错误应当如何跨越边界。本章的问题更具体，也更实用：在这些设计决策已经确定的前提下，函数签名该怎么写，才能让调用契约一目了然？</p>
+<p>这一边界视角使本章区别于前后各章。第 1 章讨论了谁拥有资源，第 2 章讨论了模型中有哪些对象，第 3 章讨论了错误应当如何跨越边界。本章的问题更具体，也更实用：在这些设计决策已经确定的前提下，函数签名该怎么写，才能让调用契约一目了然？</p>
 <h2 id="签名是契约不是类型检查仪式"><a class="header" href="#签名是契约不是类型检查仪式">签名是契约，不是类型检查仪式</a></h2>
 <p>很多糟糕的 C++ API，根源在于把签名仅仅看作”能通过编译的最小类型集合”。这种做法忽略了一个事实：参数和返回值的选择本身就是带有约束力的文档。</p>
 <p>以一个解析器边界为例。</p>
@@ -1095,7 +1013,7 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <pre><code class="language-cpp">[[nodiscard]] inline std::optional&lt;Request&gt;
 parse_request(std::string_view raw);
 </code></pre>
-<p>函数接受一个指向栈 buffer 的 <code>string_view</code>，解析出 method、path、headers 和 body，返回一个成员全部为 <code>std::string</code> 的 <code>Request</code>——完全拥有自己的数据。调用方的 buffer 函数返回后即可复用或销毁。这种“借用输入、拥有输出“的契约，仅从签名就能看清。</p>
+<p>函数接受一个指向栈 buffer 的 <code>string_view</code>，解析出 method、path、headers 和 body，返回一个成员全部为 <code>std::string</code> 的 <code>Request</code>——完全拥有自己的数据。调用方的 buffer 在函数返回后即可立即复用或销毁。这种“借用输入、拥有输出“的契约，仅从签名就能看清。</p>
 <p>差别不在于风格是否讲究，而在于调用方能否不翻看实现就理解契约。</p>
 <h2 id="借用参数应当看起来就是借用"><a class="header" href="#借用参数应当看起来就是借用">借用参数应当看起来就是借用</a></h2>
 <p>如果函数在调用期间只读取调用方的数据、不做保留，签名就应该直接体现借用语义。</p>
@@ -1138,7 +1056,7 @@ private:
 std::string prefix_; // owning -- no lifetime dependency on caller
 };
 </code></pre>
-<p>由此得出一条简洁实用的审查准则：凡是参数类型标明了借用，实现中若要保留数据，就必须通过显式拷贝或转换为拥有类型来完成。</p>
+<p>由此可得一条简洁实用的代码审查准则：凡是参数类型标明了借用，实现中若要保留数据，就必须通过显式拷贝或转换为拥有类型来完成。</p>
 <h2 id="当被调用方反正需要自己的副本时就按值传递"><a class="header" href="#当被调用方反正需要自己的副本时就按值传递">当被调用方反正需要自己的副本时，就按值传递</a></h2>
 <p>现代 C++ 中最实用的模式之一，就是在被调用方需要存储或拥有参数时，直接按值传递。对于那些被灌输了”拷贝能省则省”观念的开发者来说，这往往令人意外。</p>
 <p>以一个需要存储租户名的请求对象为例：</p>
@@ -1222,7 +1140,7 @@ auto avg = average(readings);
 <h2 id="返回有意义的值而非存储的副产品"><a class="header" href="#返回有意义的值而非存储的副产品">返回有意义的值，而非存储的副产品</a></h2>
 <p>返回类型应当和参数一样严谨。核心问题是：调用方应该得到一个拥有所有权的值、一个借用访问，还是一个像 <code>expected</code> 或 <code>optional</code> 那样承载决策信息的包装类型？</p>
 <p>对于很多 API 来说，即使涉及一次 move，返回拥有所有权的值仍然是最干净的设计。它让生命周期保持局部化，让组合更容易，也避免了调用方对内部存储的依赖。C++23 的 move 语义已经让值返回在大多数场景下足够廉价，清晰性带来的收益完全值得。</p>
-<p>借用返回类型只在源对象的生命周期显而易见、足够稳定，而且确实属于契约一部分时才适合。返回指向内部存储的 <code>std::string_view</code>，前提是该存储的生存期明显长于 view，且调用方可以安全地依赖这一点。在较宽的接口边界上，这通常不是好的权衡——因为它把生命周期推理的负担推给了调用方，而这本是被调用方可以自行消化的。</p>
+<p>借用返回类型只在源对象的生命周期显而易见、足够稳定，而且确实属于契约一部分时才适合。返回指向内部存储的 <code>std::string_view</code>，前提是该存储的生存期明显长于 view，且调用方可以安全地依赖这一点。在较宽的接口边界上，这通常不是好的权衡——因为它把生命周期推理的负担导出了被调用方本可自行消化的范围。</p>
 <p>可选性和失败也应当在返回类型中显式表达，而不是靠哨兵值偷偷传递。搜索操作返回”也许找到了”，适合用 <code>std::optional&lt;T&gt;</code>，或者在生命周期语义需要时用观察者指针。解析或加载操作的失败如果关乎后续决策，适合用 <code>std::expected&lt;T, E&gt;</code>。失败时返回空字符串或 <code>-1</code> 的函数，通常是把 API 设计得比实际需要更弱了。</p>
 <h2 id="反模式一个签名背后藏着多个故事"><a class="header" href="#反模式一个签名背后藏着多个故事">反模式：一个签名背后藏着多个故事</a></h2>
 <p>这类 API 在很多代码库中依然大行其道，因为它看起来很灵活。</p>
@@ -1315,7 +1233,7 @@ auto widget = std::move(*result); // ownership transferred, no ambiguity
 <p>优秀的 C++ API 不只是能通过编译，而是足够早、足够清楚地表达意图，让调用方第一次阅读签名就能正确使用。签名值得投入这么多心思，原因正在于此。</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="改变设计的标准库类型"><a class="header" href="#改变设计的标准库类型">改变设计的标准库类型</a></h1>
-<p>标准库真正重要的时刻，不是充当工具层，而是它开始改变 API 所能表达的含义。在生产级 C++ 中，这种转变集中体现在一小组词汇类型上。它们让借用关系变得显式，把缺失和失败区分开来，表达封闭的备选集合，也避免了所有权信息散落在函数签名中。</p>
+<p>标准库真正重要的时刻，不是充当工具层，而是它开始改变 API 所能表达的含义。在生产级 C++ 中，这种转变集中体现在一小组词汇类型上。它们使借用关系显式化，将缺失与失败区分开来，表达封闭的备选集合，并避免所有权信息散落在每个函数签名中。</p>
 <p>本章不打算逐一浏览头文件。要讨论的问题更聚焦，也更实用：在 C++23 代码库中，哪些标准类型应该改变你编写日常代码的设计方式？这些类型又会在哪些场景下产生误导或带来额外开销？</p>
 <p>问题在边界处最为突出。一个典型服务的流程是：从网络解析字节，将借来的文本交给校验环节，构造领域值，记录局部失败，最后将结果写入存储或发往下游服务。如果这些步骤全靠裸指针、哨兵值和重容器的函数签名来表达，代码虽然能编译，但契约仍然是模糊的。读者不得不从实现细节中去猜测所有权、生命周期、可空性和错误含义——而这些信息恰恰最不应该被藏在实现里。</p>
 <h2 id="借用类型会改变-api-形状"><a class="header" href="#借用类型会改变-api-形状">借用类型会改变 API 形状</a></h2>
@@ -1368,7 +1286,7 @@ std::string_view tenant_;
 <p>示例项目清晰地演示了这种“借用到拥有“的转换。在 <code>examples/web-api/src/modules/task.cppm</code> 中，<code>Task::from_json</code> 接受一个 <code>string_view</code> 来借用原始 JSON body，但返回的 <code>optional&lt;Task&gt;</code> 的 <code>std::string</code> 成员独立拥有自己的数据：</p>
 <pre><code class="language-cpp">[[nodiscard]] static std::optional&lt;Task&gt; from_json(std::string_view sv);
 </code></pre>
-<p>函数从借来的输入中提取字段值，move 进拥有型字符串，返回一个自包含的 <code>Task</code>。调用方的 buffer 在函数返回后可以立即复用或销毁。这正是前文所述的模式：检查时借用，存储时拥有。</p>
+<p>函数从借来的输入中提取字段值，move 进拥有型字符串，返回一个完全自给自足的 <code>Task</code>。调用方的 buffer 在函数返回后可以立即复用或销毁。这正是前文所述的模式：检查时借用，存储时拥有。</p>
 <p>实践中有一个简单好用的评审准则：这个对象只是看一下调用方的数据，还是需要留下来长期持有？如果是后者，用借用类型做成员变量就已经值得警惕了。</p>
 <h2 id="optionalexpected-和-variant-解决的是不同问题"><a class="header" href="#optionalexpected-和-variant-解决的是不同问题"><code>optional</code>、<code>expected</code> 和 <code>variant</code> 解决的是不同问题</a></h2>
 <p>把某一种词汇类型当作万能方案，生产代码的维护成本就会迅速攀升。<code>std::optional</code>、<code>std::expected</code> 和 <code>std::variant</code> 各自建模的语义截然不同。在它们之间做选择是设计决策，不是风格偏好。</p>
@@ -1420,9 +1338,9 @@ void process(const Value&amp; v) {
 }
 </code></pre>
 <p><code>union</code> 虽然能存放数据，但语言本身并不保证 <code>kind</code> 与当前激活成员保持同步。每新增一个备选项，就得手动更新所有 <code>switch</code> 分支，而编译器也未必会对遗漏发出警告。<code>std::variant</code> 将当前激活的备选项纳入类型的运行时状态，重新赋值时自动正确析构旧值；配合 <code>std::visit</code>，编译器还能在分支遗漏时给出警告。</p>
-<p>假设一个配置加载器有三种可能的结果：没找到覆盖项、解析出了有效覆盖项、或者拒绝了格式错误的输入。三者在语义上截然不同。把它们硬塞进 <code>optional&lt;Config&gt;</code> 就丢掉了”格式错误为何被拒绝”的信息。返回 <code>expected&lt;optional&lt;Config&gt;, ConfigError&gt;</code> 看起来有点重，但它精确表述了契约：缺失是正常的，格式错误才是失败。</p>
-<p>在服务边界上，同样的精确性也至关重要。如果内部客户端库返回 <code>variant&lt;Response, RetryAfter, Redirect&gt;</code>，调用方就可以对合法的协议结果做模式匹配。而如果返回的是 <code>expected&lt;Response, Error&gt;</code>，那么重试和重定向就算属于正常控制流，也会被错误地归入异常路径。</p>
-<p>示例项目在领域边界上采用了这一方式。在 <code>examples/web-api/src/modules/error.cppm</code> 中，一个项目级的类型别名让这一模式在整个代码库中保持一致：</p>
+<p>假设一个配置加载器有三种可能的结果：没找到覆盖项、解析出了有效覆盖项、或者拒绝了格式错误的输入。三者在语义上截然不同。把它们硬塞进 <code>optional&lt;Config&gt;</code> 就丢掉了”格式错误为何被拒绝”的信息。返回 <code>expected&lt;optional&lt;Config&gt;, ConfigError&gt;</code> 看起来稍显沉重，但它精确表述了契约：缺失是正常的，格式错误才是失败。</p>
+<p>在服务边界上，同样的精确性也至关重要。如果内部客户端库返回 <code>variant&lt;Response, RetryAfter, Redirect&gt;</code>，调用方就可以对合法的协议结果进行模式匹配。而如果返回的是 <code>expected&lt;Response, Error&gt;</code>，那么重试和重定向就算属于正常控制流，也会被错误地归入异常路径。</p>
+<p>示例项目在领域边界上采用了这一方式。在 <code>examples/web-api/src/modules/error.cppm</code> 中，一个项目级别名让这一模式在整个代码库中保持一致：</p>
 <pre><code class="language-cpp">template &lt;typename T&gt;
 using Result = std::expected&lt;T, Error&gt;;
 </code></pre>
@@ -1477,7 +1395,7 @@ return result_to_response(result, 201);
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="使用概念与约束编写泛型代码"><a class="header" href="#使用概念与约束编写泛型代码">使用概念与约束编写泛型代码</a></h1>
 <p>当问题中确实存在”家族相似性”时，泛型代码才有价值；用模板来推迟接口决策，只会带来破坏。生产中真正要回答的问题不是”怎么让它可复用”，而是”怎样消除重复的同时，不让调用契约、诊断信息和失败行为变得不透明”。</p>
-<p>概念（concepts）是 C++ 很长时间以来第一个能在边界处——也就是读者最需要帮助的地方——直接改善局面的特性。它不会让泛型代码自动变简单，但你可以用更贴近实际设计的方式，说明模板对使用者的期望。与”先实例化、再祈祷编译器报错能指到正确的行”的旧时代相比，这是一次重大转变。</p>
+<p>概念（concepts）是 C++ 很长时间以来第一个能在边界处——也就是读者最需要帮助的地方——直接改善局面的特性。它不会让泛型代码自动变简单，但让你能够用贴近实际设计的方式，说明模板对使用者的期望。与”先实例化、再祈祷编译器报错能指到正确的行”的旧时代相比，这是一次重大转变。</p>
 <p>本章关注的是普通产品团队也能维护的受约束泛型代码：可复用的变换、窄小的扩展点、策略对象，以及假设条件必须随时可供评审的算法族。</p>
 <h2 id="从变化开始而不是从模板开始"><a class="header" href="#从变化开始而不是从模板开始">从变化开始，而不是从模板开始</a></h2>
 <p>大多数糟糕的泛型代码都始于一个错误前提：”这些函数看起来很像，应该模板化。”光是表面语法相似远远不够。真正要问的是：设计中哪些部分允许变化，哪些不变量必须保持固定。</p>
@@ -1566,7 +1484,7 @@ auto flush_batch(Sink&amp; sink, std::span&lt;const EncodedRecord&gt; batch)
     -&gt; std::expected&lt;void, WriteError&gt;;
 </code></pre>
 <p>同样的约束，换成了没人想读的写法。<code>std::enable_if_t</code> 搭配 <code>decltype</code> 和 <code>std::declval</code>，表达的不是设计意图，而是在利用编译器机制。当 SFINAE 拒绝某个重载时，典型的错误信息往往只有一句”没有匹配 <code>flush_batch</code> 的函数调用”，不会告诉你到底哪条要求没满足。如果存在多个受 SFINAE 保护的重载，编译器甚至会把所有被拒绝的候选逐一列出，却依然不解释各自失败的原因。概念版本在可读性、错误质量和可维护性上全面胜出。</p>
-<p>主动约束公共接口，让实现保持朴素。这才是正确的取舍。</p>
+<p>积极约束公共接口面，让实现保持朴素。这才是正确的取舍。</p>
 <h2 id="概念应该描述语义而不只是语法"><a class="header" href="#概念应该描述语义而不只是语法">概念应该描述语义，而不只是语法</a></h2>
 <p>只检查成员名是否存在的概念，比没有强，但仍然算不上好设计。生产中的泛型代码要想可维护，概念就必须对应系统中的某个语义角色。</p>
 <p><code>SortableRange</code> 比 <code>HasBeginEndAndLessThan</code> 好，<code>ByteSink</code> 比 <code>HasWriteAndFlush</code> 好，<code>RetryPolicy</code> 比 <code>CallableWithErrorAndAttemptCount</code> 好。概念的名字越像团队日常使用的设计术语，它在代码评审和诊断中就越有用。</p>
@@ -1576,7 +1494,7 @@ auto flush_batch(Sink&amp; sink, std::span&lt;const EncodedRecord&gt; batch)
 <li>人类用它们来理解算法期待的是哪一类东西。</li>
 </ol>
 <p>如果名字和结构只满足了编译器，价值就丢掉了一半。</p>
-<p>但这也不意味着概念要试图证明所有语义规则。大多数有用的不变量更适合用测试来验证，而不是靠编译期静态强制。<code>RetryPolicy</code> 概念可以要求调用签名和结果类型，却无法证明该策略对某个具体操作是幂等安全的。接受这个局限就好：能在接口里检查的就在接口里说清楚，其余的交给测试和评审。</p>
+<p>但这也不意味着概念要试图证明所有语义规则。大多数有用的不变量更适合通过测试来验证，而不是靠编译期静态强制。<code>RetryPolicy</code> 概念可以要求调用签名和结果类型，却无法证明该策略对某个具体操作是幂等安全的。接受这个局限就好：能在接口里检查的就在接口里说清楚，其余的交给测试和评审。</p>
 <h2 id="窄定制点优于模板蔓延"><a class="header" href="#窄定制点优于模板蔓延">窄定制点优于模板蔓延</a></h2>
 <p>很多可复用组件根本不需要庞大的概念层级体系，一两个精心选定的扩展点就够了。</p>
 <p>假设一个存储子系统要支持多种记录类型，它们都可以序列化到 wire buffer。常见的坏做法是：定义一个主模板，让特化散布在整个代码库，再靠 ADL 或隐式转换决定实际行为。这样做会让行为难以发现，也很容易被无意破坏。</p>
@@ -1656,7 +1574,7 @@ static_assert(json::JsonDeserializable&lt;Task&gt;,
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="范围视图与生成器"><a class="header" href="#范围视图与生成器">范围、视图与生成器</a></h1>
 <p>Range 和 generator 之所以吸引人，是因为它们能把迭代压缩成类似数据流的写法。这种写法有时确实是生产代码所需要的；但有时，它也会把生命周期 bug、隐性开销和难以调试的惰性行为悄悄引入原本简单直白的代码。</p>
-<p>真正要问的不是 range pipeline 是否优雅，而是：惰性组合在什么场景下比普通循环更能揭示工作的结构？又在什么场景下反而会掩盖所有权、错误处理和性能开销？C++23 提供了强大的 range 机制和用于拉取式序列的 <code>std::generator</code>，但它们都不应成为一切迭代的默认写法。</p>
+<p>值得思考的问题不是 range pipeline 是否优雅，而是：惰性组合在什么场景下比普通循环更能揭示工作的结构？又在什么场景下反而会掩盖所有权、错误处理和性能开销？C++23 提供了强大的 range 机制和用于拉取式序列的 <code>std::generator</code>，但它们都不应成为一切迭代的默认写法。</p>
 <p>本章的示例都取自真实场景：导出前过滤日志、在批处理作业中转换数据行、将分页数据源或协程驱动的数据源包装为拉取式序列。这些场景面临的设计压力是相同的——工作随时间陆续到达，代码需要表达一连串转换，而风险在于延迟执行、借用状态，以及”数据究竟存放在哪里”变得模糊不清。</p>
 <h2 id="只有当数据流是主线时pipeline-才值得使用"><a class="header" href="#只有当数据流是主线时pipeline-才值得使用">只有当数据流是主线时，pipeline 才值得使用</a></h2>
 <p>很多任务用普通循环就够了。循环的执行顺序一目了然，副作用一清二楚，单步调试也很方便。Range pipeline 真正有价值的场景，是工作的本质结构可以概括为”取一个序列，筛掉部分元素，对留下的做转换，最后物化或消费结果”。</p>
@@ -1688,8 +1606,8 @@ for (auto it = records.begin(); it != records.end(); ++it) {
   })
 | std::ranges::to&lt;std::vector&gt;();
 </code></pre>
-<p>这就是好的 range 代码——pipeline 本身就是业务逻辑。没有棘手的就地修改，源对象的生命周期不存在歧义，末尾有一个清晰的物化点。概念上根本不需要中间存储，省掉它既提升了清晰度，也降低了开销。</p>
-<p>再拿它和另一类循环比较：那种循环要更新共享计数器、发送 metric、原地修改记录，还要有条件地重试下游写入。在那种场景下，pipeline 反而会把最关键的部分——执行顺序和副作用——藏起来。一旦计算本身有状态、副作用又多，range 语法并不能提升可读性。</p>
+<p>这就是好的 range 代码——pipeline 本身就是业务逻辑。没有棘手的就地修改，源对象的生命周期不存在歧义，末尾有一个清晰的物化点。中间存储在概念上就不需要存在，省掉它既提升了清晰度，也降低了开销。</p>
+<p>再拿它和另一类循环比较：那种循环要更新共享计数器、发送 metric、原地修改记录，还要有条件地重试下游写入。在那种场景下，pipeline 反而会把最关键的部分——执行顺序和副作用——藏起来。一旦计算本身是有状态且副作用密集的，range 语法并不能提升可读性。</p>
 <p>C++20 之前还有一个常见模式值得一看，就是用于原地过滤的 “erase-remove” 惯用法：</p>
 <pre><code class="language-cpp">// Pre-C++20 erase-remove idiom
 records.erase(
@@ -1775,7 +1693,7 @@ chain(R&amp;&amp; middlewares, http::Handler base) {
     return current;
 }
 </code></pre>
-<p>这是在局部算法内善用 range 工具的好例子：用 <code>rbegin</code>/<code>rend</code> 清晰表达了反向迭代意图，而非依赖索引运算，函数产出的也是拥有型结果。</p>
+<p>这是在局部算法内善用 range 工具的好例子：反向迭代的意图通过 <code>rbegin</code>/<code>rend</code> 清晰表达，而非依赖索引运算，函数产出的也是拥有型结果。</p>
 <p>同样的谨慎也适用于 pipeline 中的 <code>string_view</code> 和 <code>span</code>。转换步骤产生的借用切片，只要源对象的生命周期是局部且显而易见的，就没有问题。但如果这些切片被跨线程传递、排入队列留待后续处理，或者被缓存起来，就很危险了。</p>
 <h2 id="stdgenerator-适用于拉取式数据源不是用来替代每一个循环的"><a class="header" href="#stdgenerator-适用于拉取式数据源不是用来替代每一个循环的"><code>std::generator</code> 适用于拉取式数据源，不是用来替代每一个循环的</a></h2>
 <p>C++23 的 <code>std::generator</code> 之所以有用，是因为有些序列天生不适合”先全部存下来再遍历”。它们是增量产生的：分页数据库扫描、目录遍历、分块文件读取、带重试的轮询，以及随着字节到达而逐条产出完整消息的协议解码器。</p>
@@ -1937,7 +1855,7 @@ constexpr auto crc_table = build_crc_table();
 </code></pre>
 <p>这两个函数都是用普通控制流表达的编译期查找表，不需要任何模板机制，误用时的诊断信息清晰，运行时也可以正常调试。这正是 <code>constexpr</code> 的甜蜜点：输入来自一个小的静态集合，映射关系足够稳定，编译期求值增加了安全性而没有带来复杂性。</p>
 <h2 id="只有当延迟失败本身就是设计-bug-时才使用-consteval"><a class="header" href="#只有当延迟失败本身就是设计-bug-时才使用-consteval">只有当延迟失败本身就是设计 bug 时，才使用 <code>consteval</code></a></h2>
-<p><code>consteval</code> 比 <code>constexpr</code> 更严格：它强制要求在编译期求值。如果允许运行时回退，某些绝不该混进生产环境的配置错误就可能被掩盖，那就应该用 <code>consteval</code>。</p>
+<p><code>consteval</code> 比 <code>constexpr</code> 更严格：它强制要求在编译期求值。如果放任运行时回退，会把某种你绝不想让它混进生产环境的配置错误掩盖掉，那就应该用 <code>consteval</code>。</p>
 <p>举个例子：某个线路协议子系统有一组固定的消息描述符，每个描述符必须有唯一的 opcode 和受限的 payload 大小。这些约束不是动态业务逻辑，而是程序静态结构的一部分。在编译期就发现重复 opcode，显然好过启动时才暴露问题——更别说等到集成测试中因为路由 bug 才发现了。</p>
 <pre><code class="language-cpp">struct MessageDescriptor {
 std::uint16_t opcode;
@@ -2211,7 +2129,7 @@ virtual ~OrderRepository() = default;
 <p>把命令和查询分开，往往就能恢复清晰度。查询路径想要的是值类型的请求和结果、可预测的开销、没有隐藏的副作用。命令路径想要的是显式的所有权转移、明确的副作用和严格的失败语义。硬塞成一个接口，就是在纵容偶然耦合——调用方迟早会依赖上个季度顺手塞进去的某个方法。</p>
 <p>接口越小，评审也越容易。评审者可以直接问：这里的每个函数到底属不属于同一个边界？而一旦接口沦为”附近操作的大杂烩”，这个问题就很难回答了。</p>
 <p><code>examples/web-api/src/modules/repository.cppm</code> 中的 <code>TaskRepository</code> 就是一个保持聚焦的窄接口。它的公共面只有 CRUD 操作：<code>create</code>、<code>find_by_id</code>、<code>find_all</code>、<code>find_completed</code>、<code>update</code>、<code>remove</code> 和 <code>size</code>。没有日志方法，没有配置开关，没有 metric 快照，没有缓存刷新。锁策略（<code>std::shared_mutex</code>）、存储表示（<code>std::vector&lt;Task&gt;</code>）、ID 生成（<code>std::atomic&lt;TaskId&gt;</code>）全部是 private 的。调用方依赖的是领域操作，而不是 repository 碰巧如何实现它们。</p>
-<h2 id="数据形状接受稳定视图返回拥有型领域值"><a class="header" href="#数据形状接受稳定视图返回拥有型领域值">数据形状：接受稳定视图，返回拥有型领域值</a></h2>
+<h2 id="数据形状接受稳定视图返回拥有型含义"><a class="header" href="#数据形状接受稳定视图返回拥有型含义">数据形状：接受稳定视图，返回拥有型含义</a></h2>
 <p>第 4 章讨论的是局部的签名选择。到了接口边界，同样的规则就升格为架构规则。</p>
 <p>如果被调用方不需要保留数据，输入通常应接受非拥有视图：<code>std::string_view</code>、<code>std::span&lt;const std::byte&gt;</code>、领域对象的 span，或者引用调用方所持数据的轻量请求结构体。这样调用点既便宜又坦诚。</p>
 <p>输出通常应返回拥有型值或生命周期明确的领域对象。如果返回的是指向 adapter 内部存储的视图、指向 cache line 的借用指针、指向内部状态的迭代器，那就把边界变成了生命周期谜题，很少值得这么做。</p>
@@ -2276,7 +2194,7 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <p>验证不只靠代码评审。集成测试应当覆盖真正发生转换的 adapter 边界。构建性能分析同样有价值：如果一个看似干净的接口仍然把大量传递性依赖拖得到处都是，那这个设计很可能只是给源码级耦合披了层伪装。</p>
 <h2 id="要点-8"><a class="header" href="#要点-8">要点</a></h2>
 <p>接口设计说到底，就是决定什么东西绝不能泄漏出去。</p>
-<p>依赖方向要对齐稳定策略，而非一时方便的实现。无需留存数据时，接受廉价的借用输入；跨边界返回时，交出拥有型领域值。按职责拆分接口，而非堆砌一堆操作。在易变依赖进入系统的位置完成失败转换。只在真实的设计接缝处做抽象。</p>
+<p>依赖方向要对齐稳定策略，而非一时方便的实现。无需留存数据时，接受廉价的借用输入；跨边界返回时，交出拥有型的领域含义。按职责拆分接口，而非堆砌一堆操作。在易变依赖进入系统的位置完成失败转换。只在真实的设计接缝处做抽象。</p>
 <p>如果调用方想正确使用你的 API，却不得不了解你的数据库 schema、传输包装类型、框架句柄或内部存储的生命周期，那这个边界承载的东西就已经太多了。趁耦合还没变成常态，赶紧重新设计。</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="运行时多态类型擦除与回调"><a class="header" href="#运行时多态类型擦除与回调">运行时多态、类型擦除与回调</a></h1>
@@ -2461,7 +2379,7 @@ void wire(EventSource&amp; source, Session&amp; session) {
 </code></pre>
 <p>问题不仅是引用捕获本身，而在于 API 根本没交代 handler 的去向：是只在一次操作中借用，还是存到注销为止？会不会被并发调用，或者在析构期间调用？抽象追求了泛化，却没给出可用的契约。</p>
 <p>更好的设计会把所有权和生命周期模型写在明面上。如果回调会被保留，注册就应返回一个 handle 或注册对象，用它的生命周期来管控订阅关系。如果回调是同步的，API 就不该为了显得通用而接收拥有型的擦除 callable。</p>
-<p><code>examples/web-api/</code> 的 <code>main.cpp</code> 展示了对引用捕获的作用域生命周期纪律。<code>TaskRepository</code> 在 router 和 handler 之前声明，server 最后声明。因为 C++ 按构造的逆序销毁局部变量，所以 repository 一定比所有捕获了其引用的 handler 和中间件活得更久。这个顺序不是偶然的——它是确保擦除 callable 中捕获的 <code>repo</code> 引用永远不会悬垂的结构性保证。当回调以引用方式捕获外部对象时，包围作用域必须保证被引用对象比 callable 活得更久。<code>main()</code> 中的声明顺序，正是这一保证的落脚点。</p>
+<p><code>examples/web-api/</code> 的 <code>main.cpp</code> 展示了对引用捕获的作用域生命周期纪律。<code>TaskRepository</code> 在 router 和 handler 之前声明，server 最后声明。因为 C++ 按构造的逆序销毁局部变量，所以 repository 一定比所有捕获了其引用的 handler 和中间件活得更久。这个顺序不是偶然的——它是确保擦除 callable 中捕获的 <code>repo</code> 引用永远不会悬垂的结构性保证。当回调以引用方式捕获外部对象时，包围作用域必须保证被引用对象比 callable 活得更久。<code>main()</code> 中的声明顺序，就是这个保证所在的位置。</p>
 <h2 id="虚协议还是擦除-callable"><a class="header" href="#虚协议还是擦除-callable">虚协议还是擦除 callable？</a></h2>
 <p>这里有一条实用的判断原则。</p>
 <p>如果行为天然可以描述为一组具名操作或有意义的状态转换，就选虚接口。带有 <code>record_counter</code>、<code>record_histogram</code> 和 <code>flush</code> 的 metrics sink 是对象协议；带有 <code>get</code>、<code>put</code> 和 <code>remove</code> 的存储后端也是对象协议。</p>
@@ -2583,7 +2501,7 @@ import webapi.task;
 </code></pre>
 <p>不需要 include guard，没有宏冲突，不受包含顺序影响。构建系统可以直接看到模块依赖图，并按正确的顺序编译各模块。这就是模块在源码层面带来的改善。</p>
 <p>因此，首要问题不是”我们要不要用模块？”，而是”我们对使用者做出了什么承诺？”</p>
-<p>如果答案是在同一个仓库内、基于同一套工具链做内部源码复用，模块可能是绝佳选择。如果答案是”我们要发布一个公共 SDK，供未知的构建系统和编译器版本使用”，模块仍然有助于改善你自己的构建流程，但它无法免除你在二进制边界上严格自律的责任。</p>
+<p>如果答案是在同一个仓库内、基于同一套工具链进行内部源码复用，模块可能是绝佳选择。如果答案是”我们要发布一个公共 SDK，供未知的构建系统和编译器版本使用”，模块仍然有助于改善你自己的构建流程，但它无法免除你在二进制边界上严格自律的责任。</p>
 <h2 id="打包选择表达运维意图"><a class="header" href="#打包选择表达运维意图">打包选择表达运维意图</a></h2>
 <p>打包是架构决策落地为部署方案的环节。</p>
 <h3 id="header-only-或源码分发库"><a class="header" href="#header-only-或源码分发库">Header-only 或源码分发库</a></h3>
@@ -2737,7 +2655,7 @@ EXPORT status_code get_name(char* buffer, std::size_t buffer_size);
 </code></pre>
 <p>正是这些细节，决定了一个在本地写得干净利落的接口，能否真正成为可靠运行的库。</p>
 <h2 id="验证与评审问题-2"><a class="header" href="#验证与评审问题-2">验证与评审问题</a></h2>
-<p>打包和 ABI 问题应当与源码级 API 质量分开评审。</p>
+<p>打包和 ABI 问题应当独立于源码级 API 质量进行评审。</p>
 <ol>
 <li>这个库的使用场景是什么——与生产方一同构建、源码级引用，还是作为可独立升级的二进制发布？</li>
 <li>我们是否在用模块改善源码整洁性的同时，错误地以为它们也解决了 ABI 问题？</li>
@@ -2897,7 +2815,7 @@ public:
 <p>锁保护的不是变量，而是不变量。</p>
 <p>这一区分至关重要，因为生产环境中的对象很少在单个字段层面出错。真正出问题的场景是：多个字段必须一起修改，而某个线程恰好在修改之间观察到了中间状态。</p>
 <p>连接池的正确性不在于 <code>available_count</code> 是不是原子的，而在于并发访问下以下关系始终成立：已借出的连接不会同时出现在空闲列表中；已关闭的连接不会被重新分发；当有可用资源时，等待者能被唤醒。这些才是不变量。如果设计没有明确列出这些不变量，同步边界就已经定义不清了。</p>
-<p>正因如此，粗粒度加锁有时反而更优。如果一把 mutex 能干净地覆盖一个完整的不变量域，它可能比几把细粒度锁更好——后者容易导致不可能的中间状态，或者要求脆弱的锁顺序。细粒度加锁不见得更优，往往只是更难审查。</p>
+<p>正因如此，粗粒度加锁有时反而更优。如果一把 mutex 能干净地覆盖一个完整的不变量域，它可能比几把细粒度锁更好——后者容易导致不可能的中间状态，或者要求脆弱的锁顺序。细粒度加锁并不天然高级，它往往只是更难审查。</p>
 <h2 id="反模式不断膨胀的服务对象外面包一把锁"><a class="header" href="#反模式不断膨胀的服务对象外面包一把锁">反模式：不断膨胀的服务对象外面包一把锁</a></h2>
 <p>最常见的失败模式不是”没有同步”，而是”一把起初看着合理的锁，随着功能迭代逐渐变成了整个服务的瓶颈”。</p>
 <pre><code class="language-cpp">// Anti-pattern: one mutex protects unrelated invariants and long operations.
@@ -3054,7 +2972,7 @@ public:
 <p>当共享不可避免时，先定义不变量，再选原语。优先考虑线程私有化、分片和快照，而非堆砌越来越巧妙的锁。用 mutex 保护不变量域，用 atomics 表达简单事实，condition variable 只在谓词清晰定义后才使用。最后，在真实负载下测量结果——因为即便同步本身是正确的，如果争用主导了系统行为，这个设计仍然是失败的。</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="协程任务与挂起边界"><a class="header" href="#协程任务与挂起边界">协程、任务与挂起边界</a></h1>
-<p>本章假定你已经理解错误传递和并发共享状态设计。这里的关注点更集中：协程拥有什么、什么能在挂起后继续存活，以及异步控制流掩盖生命周期时会引发什么问题。</p>
+<p>本章假定你已经理解错误传递和并发共享状态设计。本章关注点更集中：协程拥有什么、什么能在挂起后继续存活，以及异步控制流掩盖生命周期时会引发什么问题。</p>
 <h2 id="生产中的问题"><a class="header" href="#生产中的问题">生产中的问题</a></h2>
 <p>协程让异步代码更好读，也更容易产生误导。</p>
 <p>原本层层嵌套回调的请求处理器，可以写成顺序执行的直线代码。流式解析器可以自然地逐个产出值。后台刷新任务可以用 <code>co_await</code> 等待定时器和 I/O，不必再手写状态机。这些都是实实在在的收益。但底层机制并没有消失——状态机依然存在，只是搬进了协程帧，而协程帧的生命周期、所有权和恢复上下文都需要刻意设计。</p>
@@ -3100,7 +3018,7 @@ void handle_request(request req, std::function&lt;void(response)&gt; done) {
 }
 </code></pre>
 <p>代码可以顺序阅读，每一步只有一条错误路径，也没有嵌套。改进是实实在在的。但状态机并没有消失——它搬进了协程帧。本章剩余部分讨论的，就是这对所有权和生命周期意味着什么。</p>
-<p>示例项目的 handler 层（<code>examples/web-api/src/modules/handlers.cppm</code>）用同步代码展示了同样的结构优势。每个 handler 是一个接收 <code>const http::Request&amp;</code>（借用）并返回 <code>http::Response</code>（拥有）的函数，控制流是直线式的：解析路径参数、校验输入、调用 repository、把结果转换为 HTTP 响应。错误处理就在每一步的本地完成，无需嵌套回调。虽然这些 handler 不是协程，但它们体现了同一条原则——当每一步都是顺序的、错误路径是扁平的，业务逻辑就更具可读性和可审查性。</p>
+<p>示例项目的 handler 层（<code>examples/web-api/src/modules/handlers.cppm</code>）展示了同一种结构优势的同步版本。每个 handler 是一个接收 <code>const http::Request&amp;</code>（借用）并返回 <code>http::Response</code>（拥有）的函数，控制流是直线式的：解析路径参数、校验输入、调用 repository、把结果转换为 HTTP 响应。错误处理就在每一步的本地完成，无需嵌套回调。虽然这些 handler 不是协程，但它们体现了同一条原则——当每一步都是顺序的、错误路径是扁平的，业务逻辑就更具可读性和可审查性。</p>
 <h2 id="协程是带存储的状态机"><a class="header" href="#协程是带存储的状态机">协程是带存储的状态机</a></h2>
 <p>把协程当语法糖来用，是最快制造生命周期 bug 的捷径。</p>
 <p>函数变成协程后，部分状态会搬进协程帧。参数可能被拷贝或移动到帧中。跨越挂起点存活的局部变量会驻留在帧中。awaiter 的状态则可能决定执行何时恢复、在哪里恢复。析构可能发生在成功、失败、取消，或者持有该任务对象的外部对象被销毁时。这些都不是无关紧要的细节。</p>
@@ -3116,8 +3034,8 @@ void handle_request(request req, std::function&lt;void(response)&gt; done) {
 <li>恢复会发生在哪个 executor 或线程上？</li>
 </ol>
 <p>这相当于把 API 生命周期评审搬到了局部层面。如果协程在挂起期间保留了借用数据，你就必须证明数据的所有者比协程活得更久，否则就应该让协程接管所有权。</p>
-<p>这也解释了为什么协程 API 在参数选择上往往比同步 API 更严格。同步的辅助函数可以放心地接收 <code>std::string_view</code>，因为它会立即返回。而会挂起的异步任务通常不应保留这个 view，除非所有权契约极其严格并且有明确文档。</p>
-<p>示例项目的 <code>Request::path_param_after()</code>（<code>examples/web-api/src/modules/http.cppm</code>）展示了满足这条边界约束时的安全做法。它返回 <code>std::optional&lt;std::string_view&gt;</code>，指向请求对象的 <code>path</code> 成员。在当前设计中这是安全的，因为 handler 同步执行——<code>Request</code> 对象在整个 handler 调用期间都存活。但如果这些 handler 变成了会在执行中途挂起的协程，同一个 <code>string_view</code> 就会在请求缓冲区被回收的瞬间变为悬空引用。这个设计之所以成立，恰恰是因为生命周期契约足够简单：请求在 handler 执行期间存活，而 handler 不会挂起。</p>
+<p>这也解释了为什么协程 API 对参数的选择往往比同步 API 更严格。同步的辅助函数可以放心地接收 <code>std::string_view</code>，因为它会立即返回。而会挂起的异步任务通常不应保留这个 view，除非所有权契约极其严格并且有明确文档。</p>
+<p>示例项目的 <code>Request::path_param_after()</code>（<code>examples/web-api/src/modules/http.cppm</code>）展示了这条边界安全的一面。它返回 <code>std::optional&lt;std::string_view&gt;</code>，指向请求对象的 <code>path</code> 成员。在当前设计中这是安全的，因为 handler 同步执行——<code>Request</code> 对象在整个 handler 调用期间都存活。但如果这些 handler 变成了会在执行中途挂起的协程，同一个 <code>string_view</code> 就会在请求缓冲区被回收的瞬间变为悬空引用。这个设计之所以成立，恰恰是因为生命周期契约足够简单：请求在 handler 执行期间存活，而 handler 不会挂起。</p>
 <h2 id="反模式借用的请求状态跨越挂起存活"><a class="header" href="#反模式借用的请求状态跨越挂起存活">反模式：借用的请求状态跨越挂起存活</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: borrowed data may dangle after suspension.
 task&lt;parsed_request&gt; parse_and_authorize(
@@ -3172,7 +3090,7 @@ public:
 	}
 };
 </code></pre>
-<p>如果 <code>connection</code> 对象在 <code>run()</code> 挂起期间被移动到另一个容器或被销毁，恢复时 <code>this</code> 就失效了。成员协程只有在对象生命周期保证长于协程时才安全。实践中，这通常意味着协程应持有 <code>shared_ptr&lt;connection&gt;</code>，或者所有者作用域必须做结构化设计，防止对象在挂起期间被销毁。</p>
+<p>如果 <code>connection</code> 对象在 <code>run()</code> 挂起期间被移动到另一个容器或被销毁，恢复时 <code>this</code> 就失效了。成员协程只在对象的生命周期确保长于协程时才安全。实践中，这通常意味着协程应持有 <code>shared_ptr&lt;connection&gt;</code>，或者所有者作用域必须做结构化设计，防止对象在挂起期间被销毁。</p>
 <p>这些都不是奇特的边角案例，而是生产环境中协程生命周期最常见的失败模式。每个挂起点，都是调用方的世界可能已经变了样的时刻。</p>
 <h2 id="任务类型就是所有权契约"><a class="header" href="#任务类型就是所有权契约">任务类型就是所有权契约</a></h2>
 <p>协程的返回类型不是装饰品，它定义了所有权、结果传递和析构语义。</p>
@@ -3469,7 +3387,7 @@ extern "C" void signal_handler(int /*sig*/) {
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="数据布局容器与内存行为"><a class="header" href="#数据布局容器与内存行为">数据布局、容器与内存行为</a></h1>
 <h2 id="生产问题-5"><a class="header" href="#生产问题-5">生产问题</a></h2>
-<p>C++ 中的许多性能问题，表面上看是算法选择之争，实则是数据表示的失败。团队还在讨论某次查找该是 $O(1)$ 还是 $O(\log n)$，真正的问题早已暴露在别处——热路径上堆节点的逐一遍历、过多缓存行的触碰、每次迭代中冷字段的无谓搬运。编译器无法弥补糟糕的数据形状，它只能在既有的形状上做有限的优化。</p>
+<p>C++ 中的许多性能问题，表面上看是算法选择之争，实则是数据表示的失败。团队还在讨论某次查找该是 $O(1)$ 还是 $O(\log n)$，真正的问题早已暴露在别处——热路径上堆节点的逐一遍历、过多缓存行的触碰、每次迭代中冷字段的无谓搬运。编译器无法弥补糟糕的数据形状，它只能在既定形状上做些微不足道的优化。</p>
 <p>本章关注的正是决定数据如何驻留在内存中的一系列决策：容器选择、元素布局、迭代顺序、失效行为，以及视图如何在不掩盖生命周期的前提下暴露存储数据。重点不在于抽象地讨论”哪个容器最快”，而是一个更具体、也更有价值的问题：在你实际构建的系统中，什么样的数据表示能让核心操作足够高效？</p>
 <p>回答这个问题时，要以真实的负载压力为参照。想象一下：一个管理着数百万路由条目的请求路由器、一条持续摄取高密度时序样本的遥测 pipeline、一个每帧都要扫描组件状态的游戏或模拟更新循环，或者一个逐批遍历事件的分析作业。在这些系统中，容器选择绝不只是实现细节，而是性能契约的一部分。</p>
 <h2 id="当-big-o-不再解释运行时间"><a class="header" href="#当-big-o-不再解释运行时间">当 Big-O 不再解释运行时间</a></h2>
@@ -3484,7 +3402,7 @@ extern "C" void signal_handler(int /*sig*/) {
 <p>如果这些问题没有答案，容器选择就只能靠经验传闻。</p>
 <h2 id="默认优先连续存储"><a class="header" href="#默认优先连续存储">默认优先连续存储</a></h2>
 <p>对于频繁遍历的数据，连续存储应当是默认起点。<code>std::vector</code>、<code>std::array</code>、<code>std::span</code>、<code>std::mdspan</code>、flat buffer 和列式数组屡屡胜出，因为硬件天然偏爱可预测的访问模式。顺序扫描使处理器能够高效 prefetch、摊薄 TLB 开销，并保持简单的分支行为。这种硬件层面的优势，往往比理论上”更高级”的数据结构所带来的算法优势更大。</p>
-<p>差距十分明显。以一个简单的例子来说明：对元素数量相同的 <code>std::vector&lt;int&gt;</code> 和 <code>std::list&lt;int&gt;</code> 分别求和：</p>
+<p>这种差异并不微妙。以一个简单的例子来说明：对元素数量相同的 <code>std::vector&lt;int&gt;</code> 和 <code>std::list&lt;int&gt;</code> 分别求和：</p>
 <pre><code class="language-cpp">#include &lt;list&gt;
 #include &lt;vector&gt;
 #include &lt;numeric&gt;
@@ -3503,7 +3421,7 @@ std::int64_t sum_list(const std::list&lt;int&gt;&amp; l) {
 }
 </code></pre>
 <p>在典型硬件上处理一百万个元素时，纯遍历场景下 vector 版本通常比 list 版本快 10-50 倍。list 固然有每节点开销（大多数实现中每个元素附带两个指针，外加 allocator 元数据），但主导成本不在空间上——真正的瓶颈在于：推进到下一个节点时需要加载一个指针，而该指针指向的地址对 prefetcher 来说完全不可预测。每一步都可能触发一次 last-level cache miss，代价 50-100 ns；反观 vector 扫描，由于硬件 prefetcher 能识别顺序访问模式，几乎每次都能命中 L1 或 L2 缓存。</p>
-<p>这并不是刻意构造的最坏场景，而是 <code>std::list</code> 在通用 allocator 下随时间分配节点的常态。即便换用 pool allocator 使节点在内存中更加连续，效果也有限——next-pointer 的间接跳转和每节点的额外开销依然无法消除。</p>
+<p>这并不是刻意构造的最坏场景，而是 <code>std::list</code> 在通用 allocator 下随时间分配节点的常态。即便换用 pool allocator 使节点在内存中更加连续，改善也只是部分的——next-pointer 的间接跳转和每节点的额外开销依然无法消除。</p>
 <p>正因如此，许多高性能设计初看起来都很“朴素“：把记录存进 <code>std::vector</code>，排序一次，之后通过二分查找或批量扫描来响应查询；热数据保持紧凑；用粗粒度批处理重建索引，而不是增量维护 pointer-rich 结构；尽可能将随机访问转化为规则性的顺序访问。</p>
 <p>这并不是说 <code>std::vector</code> 放之四海而皆准，而是说举证责任通常在非连续方案一侧。如果确实需要 node-based 或 hash-based 结构，理由应当具体明确：变更过程中需要迭代器稳定、确实存在大量中间位置的插入、需要并发所有权模式、外部 handle 必须在容器变更后仍然有效，或者查找模式的规模和稀疏度确实大到让 hashing 物有所值。</p>
 <h2 id="容器编码的是权衡不只是操作"><a class="header" href="#容器编码的是权衡不只是操作">容器编码的是权衡，不只是操作</a></h2>
@@ -3580,13 +3498,13 @@ double mid_price_sum_soa(const TickColumns&amp; ticks) {
 <p>一个实用的折中方案是 hot/cold splitting，而非完全转向 SoA：保留一个只包含热路径所需字段的紧凑”热” struct，冷字段则放进一个按相同下标索引的并行 side table。</p>
 <p>这种表示并不因为”看起来更现代”就天然更好。它的优势只在特定条件下成立：负载确实会反复独立处理各列，或者紧凑的数值列能显著改善内存行为。如果下游逻辑频繁需要包含多个相关字段的完整 tick 对象，那么数据拼装的成本或代码清晰度的损失，完全可能抵消布局上的收益。</p>
 <h2 id="稳定-handle-很昂贵先问你是否真的需要它们"><a class="header" href="#稳定-handle-很昂贵先问你是否真的需要它们">稳定 handle 很昂贵；先问你是否真的需要它们</a></h2>
-<p>许多糟糕的数据表示，根源在于一个未被明言的隐含需求：地址稳定性。代码把裸指针或引用存入容器元素，于是容器的选择不再由访问成本驱动，而被生命周期和失效问题所绑架。这往往把设计推向 node-based 结构——地址是稳定了，其他所有路径上的局部性却全面恶化。</p>
+<p>许多糟糕的数据表示，根源在于一个没有被明确提出的隐含需求：地址稳定性。代码把裸指针或引用存入容器元素，于是容器的选择不再由访问成本驱动，而被生命周期和失效问题所绑架。这往往把设计推向 node-based 结构——地址是稳定了，其他所有路径上的局部性却全面恶化。</p>
 <p>有时这种权衡确实合理。但更多时候，深层问题在于系统把对象身份与物理地址耦合在了一起。如果组件需要持久的外部引用，应当使用显式 handle、带 generation counter 的索引，或指向稳定间接层的 key。这样既能让底层存储保持紧凑和可移动，又能保证外部引用的安全性。</p>
 <p>这当然不是零成本的——handle 会引入额外的查找步骤、校验逻辑，以及围绕过期引用的错误处理。但这些成本是显式且局部化的，通常好过为了满足少数长生命周期的 alias，就让整个数据层都被迫使用 pointer-stable 容器。</p>
 <h2 id="失效规则是-api-设计的一部分"><a class="header" href="#失效规则是-api-设计的一部分">失效规则是 API 设计的一部分</a></h2>
 <p>容器不仅是存储机制，它还隐含地创造或破坏 API 保证。返回一个指向 <code>std::vector&lt;T&gt;</code> 内部的 <code>std::span&lt;T&gt;</code>，等于告诉调用方：只有在底层存储仍然存活、且未发生导致失效的变更时，这个视图才有效。返回哈希表中的迭代器，则把 rehash 敏感性暴露给了调用方。返回 node 容器中的引用，则暴露了关于对象生命周期和同步的隐含假设。</p>
 <p>这就是为什么数据表示与接口设计无法彻底分开。如果一个模块希望保留在内部进行压缩、排序、重建或重新分配的自由，就不该轻易向外暴露原始迭代器或长生命周期引用。当实现需要移动数据的自由时，应优先采用返回值、短生命周期的回调式访问、拷贝出的摘要，或 opaque handle。</p>
-<p>ranges 让非拥有访问的表达更整洁，但也更容易被误用。一条 view pipeline 表面上看起来是纯函数式的，背后却可能引用着生命周期比 pipeline 更短的存储。如果底层数据位于临时 buffer、query object 或请求级 arena 中，那么一个写得再漂亮的 range 表达式，本质上仍然是生命周期 bug。归根结底，存储模型才是第一位的。</p>
+<p>ranges 让非拥有访问的表达更整洁，但也更容易被误用。一条 view pipeline 表面上看起来是纯函数式的，背后却可能借用了某段生命周期比 pipeline 本身更短的存储。如果底层数据位于临时 buffer、query object 或请求级 arena 中，那么一个写得再漂亮的 range 表达式，本质上仍然是生命周期 bug。归根结底，存储模型才是第一位的。</p>
 <h2 id="在热路径上稠密数据胜过聪明的对象模型"><a class="header" href="#在热路径上稠密数据胜过聪明的对象模型">在热路径上，稠密数据胜过聪明的对象模型</a></h2>
 <p>当团队过于字面地对问题领域建模时，数据密集型系统的性能往往会急剧退化。比如一个日志处理阶段，因为领域“听起来很面向对象“，就被建成了由对象图、virtual method 和分散所有权构成的体系。结果在高负载下，profiler 暴露出的瓶颈不是昂贵的算术运算，而是大量的缓存未命中和 allocator 抖动。</p>
 <p>在热路径上，应优先选择能让主要遍历操作既简单又稠密的数据表示。举几个例子：数据包分类器可以把解析后的头字段存入紧凑数组，罕见的扩展数据另行存放；推荐引擎可以把不可变的 item 特征与请求级的评分 buffer 分离；订单簿在价格区间有界的情况下，可以把价格档位放入按归一化 tick 偏移量索引的连续数组，而非使用堆节点构成的树。</p>
@@ -3847,7 +3765,7 @@ void submit_work_fixed(const Config&amp; cfg,
 </code></pre>
 <p>规则不是”永远别用 <code>std::shared_ptr</code>”，而是：不要用共享所有权来逃避生命周期思考。对象有明确的所有者和借用者时，就用唯一所有者加引用或视图来表达。<code>std::shared_ptr</code> 应该留给那些确实需要共享、且生命周期无法静态确定的场景。另外，当 <code>const&amp;</code> 或裸引用就够用时，千万别按值传 <code>std::shared_ptr</code>——每次拷贝都是一次毫无收益的原子往返。</p>
 <p>示例项目对这一原则的实践值得参考。在 <code>examples/web-api/src/modules/handlers.cppm</code> 中，每个 handler 工厂（如 <code>list_tasks()</code>、<code>get_task()</code>、<code>create_task()</code>）都通过引用接收 <code>TaskRepository&amp;</code>，并在返回的 lambda 中以引用方式捕获。repository 由 <code>main()</code> 持有，生命周期覆盖所有 handler，因此完全不需要 <code>std::shared_ptr&lt;TaskRepository&gt;</code>。这样每次请求都避免了原子引用计数的开销，handler 的捕获也更紧凑——只是一个普通指针，而不是两指针宽的 <code>shared_ptr</code> 外加控制块。</p>
-<p>还有一些零碎但容易忽视的开销：<code>std::shared_ptr</code> 自身就有两个指针宽（对象指针 + 控制块指针），是裸指针的两倍大。容器里装 <code>std::shared_ptr</code> 时缓存密度自然更差。弱引用计数又多出一个原子变量。控制块里存放的自定义 deleter 还会在析构时引入一层类型擦除间接调用。</p>
+<p>还有一些逐步累积的成本：<code>std::shared_ptr</code> 自身就有两个指针宽（对象指针 + 控制块指针），是裸指针的两倍大。容器里装 <code>std::shared_ptr</code> 时缓存密度自然更差。弱引用计数又多出一个原子变量。控制块里存放的自定义 deleter 还会在析构时引入一层类型擦除间接调用。</p>
 <h2 id="隐式分配是设计异味"><a class="header" href="#隐式分配是设计异味">隐式分配是设计异味</a></h2>
 <p>现代 C++ 提供了大量抽象，但只有当成本模型在代码评审中仍然可见时，这些抽象才用得安心。问题不在于抽象本身，而在于：有些抽象的分配行为是隐式的、随负载变化的，或者以团队从未关注过的实现定义方式发生。</p>
 <p><code>std::string</code> 可能分配堆内存，也可能靠 small-string 优化放在栈上。<code>std::function</code> 对大 callable 可能分配，对小的则未必。类型擦除 wrapper、协程帧、regex 引擎、locale 相关的格式化，以及基于 stream 的组合，都可能在调用点完全看不出来的情况下触发分配。</p>
@@ -3899,7 +3817,7 @@ void submit_work_fixed(const Config&amp; cfg,
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="不自欺的基准测试与性能剖析"><a class="header" href="#不自欺的基准测试与性能剖析">不自欺的基准测试与性能剖析</a></h1>
-<h2 id="生产问题-7"><a class="header" href="#生产问题-7">生产问题</a></h2>
+<h2 id="生产中的问题-1"><a class="header" href="#生产中的问题-1">生产中的问题</a></h2>
 <p>团队一旦把数字误当成证据，性能讨论的代价就会急剧上升。基准测试号称有 20% 的收益，生产服务却纹丝未动。Profiler 指向某个热点函数，真正的瓶颈却是锁争用或 off-CPU 等待。回归悄悄混进主干——要么因为基准测试选错了输入形状，要么因为有人”优化”了编译器早已删掉的无用计算。</p>
 <p>本章的主题是测量纪律。前几章谈的是数据表示与成本建模，而这里要回答的问题不一样：怎样才能拿到足够有力的证据，来决定是否改代码、是否值得引入复杂度、或是否该否决一个看似有效的优化？这需要严谨的基准测试设计、对 profiler 的基本功，以及不被漂亮图表蒙蔽因果判断的定力。</p>
 <p>现代 C++ 的性能工作尤其容易自欺欺人，因为语言本身提供了大量强力的局部优化手段：容器类型、所有权模型、内联边界、allocator 策略、range pipeline、协程结构、类型擦除方案，都可以随手调整。其中有些改动确实有效，但很多根本不起作用。测量，就是用来区分两者的。</p>
@@ -4316,7 +4234,7 @@ TEST(config_survives_input_destruction)
 <li>在某个 schema 版本里合法、在另一个版本里非法的输入，尤其是涉及版本协商的场景。</li>
 </ul>
 <p>示例项目中有这几种模式的具体实践。在 <code>examples/web-api/tests/test_http.cpp</code> 中，<code>test_parse_request_malformed()</code> 向解析器喂入字符串 <code>"not a valid request"</code>，断言 <code>parse_request()</code> 返回 <code>std::nullopt</code> 而非崩溃或产出半初始化的 <code>Request</code>。这正是那种能抓住“默认假设输入格式正确“的解析器 bug 的畸形输入边界测试。同一文件还测试了 header 缺失的情况（<code>test_header_missing()</code>），确认返回 <code>std::optional</code> 的 <code>header()</code> 方法在 header 不存在时能正确处理缺失，而非返回悬空 view 或默认构造的字符串。</p>
-<p>在 <code>examples/web-api/tests/test_task.cpp</code> 中，边界验证测试同样值得关注。<code>test_task_validation_rejects_empty_title()</code> 和 <code>test_task_validation_rejects_long_title()</code>（后者构造了一个 257 字符的字符串）验证了领域不变量在极端值处依然成立。这些不是验证调用顺序的测试——它们断言的是业务规则：task 标题必须非空且在长度上限内，并且错误通过 <code>std::expected</code> 以正确的 <code>ErrorCode::bad_request</code> 报告，而非被吞掉或转化为异常。</p>
+<p>在 <code>examples/web-api/tests/test_task.cpp</code> 中，边界验证测试同样值得关注。<code>test_task_validation_rejects_empty_title()</code> 和 <code>test_task_validation_rejects_long_title()</code>（后者构造了一个 257 字符的字符串）验证了领域不变量在极端值处依然成立。这些不是实现顺序测试——它们断言的是业务规则：task 标题必须非空且在长度上限内，并且错误通过 <code>std::expected</code> 以正确的 <code>ErrorCode::bad_request</code> 报告，而非被吞掉或转化为异常。</p>
 <h2 id="失败注入比更多-mock-更有价值"><a class="header" href="#失败注入比更多-mock-更有价值">失败注入比更多 mock 更有价值</a></h2>
 <p>C++ 的错误路径，恰恰是所有权错误演变为生产事故的温床。只测成功路径，就等于默认错误处理代码无需审查。</p>
 <p>务实的做法是确定性故障注入。在组件跨越资源边界或调度边界的地方引入故障：文件打开、rename、有界组件内部的内存分配、任务提交、定时器到期、下游 RPC 调用、持久化提交。然后验证操作结束后系统仍处于有效状态。</p>
@@ -4459,7 +4377,7 @@ void log_and_remove_session(session_registry&amp; registry, session_id id)
 }
 </code></pre>
 <p>没有 ASan 时，这段代码通常能通过测试，甚至在生产环境里正确运行好几个月。被释放的内存仍然保留着旧的字符串数据，直到被其他内容覆盖。测试通过了，代码评审也未必能发现问题——函数看起来很简单。等到真正出问题时，症状却是乱码日志或某个毫不相干的分配处崩溃，离实际 bug 的位置很远。</p>
-<p>在 ASan 下，它会立刻报出精确的错误：</p>
+<p>在 ASan 下，它会立刻产生精确失败：</p>
 <pre><code>==41032==ERROR: AddressSanitizer: heap-use-after-free on address 0x6020000000d0
 READ of size 12 at 0x6020000000d0 thread T0
     #0 0x55a3c1 in log_and_remove_session(session_registry&amp;, session_id)
@@ -4716,7 +4634,7 @@ void report_stats(service_stats const&amp; stats) {
 <li>在发布状态可能相关时，还应包含版本或构建元数据。</li>
 </ul>
 <p>避免两个常见错误。</p>
-<p>第一，不要把日志当成指标类问题的唯一信息来源。如果需要了解重试率或队列深度，应该直接发指标，而不是逼运维人员从文本里重新拼凑。第二，不要仅仅因为某次事故需要就把高基数数据或敏感内容全部记下来，应该放在专门的采样或调试路径中按需开启。</p>
+<p>第一，不要把日志当成指标类问题的唯一信息来源。如果需要了解重试率或队列深度，应该直接发指标，而不是逼运维人员从文本里重新拼凑。第二，不要仅仅因为某次事故需要就把高基数负载或敏感数据全部记下来，应该放在专门的采样或调试路径中按需开启。</p>
 <p><code>std::source_location</code> 在低频的内部诊断或基础设施代码中很实用，特别是需要一个稳定的调用点标签又不想手工维护字符串的时候。但它不能替代有意义的操作名称——一条 <code>source=foo.cpp:412</code> 的日志，远不如 <code>operation=manifest_reload phase=commit</code> 有用。</p>
 <p>示例项目中的 <code>request_logger()</code> 中间件（见 <code>examples/web-api/src/modules/middleware.cppm</code>）展示了一个最小但结构化的逐请求日志起点：</p>
 <pre><code class="language-cpp">// examples/web-api/src/modules/middleware.cppm — request_logger()
@@ -4736,7 +4654,7 @@ return [](const http::Request&amp; req, const http::Handler&amp; next) -&gt; htt
     return resp;
 };
 </code></pre>
-<p>每条响应都携带了 method、path、状态码和延迟。这还不是生产级的结构化日志——字段嵌在格式化文本里，而非以机器可查询的键值对输出——但它体现了正确的直觉：在一个横切点上捕获身份标识（路由）、结果（状态码）和时序（延迟）。将其演化为结构化 JSON 或键值格式输出是顺理成章的下一步。</p>
+<p>每条响应都携带了 method、path、状态码和延迟。这还不是生产级的结构化日志——字段嵌在格式化文本里，而非以机器可查询的键值对输出——但它体现了正确的直觉：在一个横切点上捕获身份标识（路由）、结果（状态码）和时序（延迟）。将其演化为结构化 JSON 或键值发射器是顺理成章的下一步。</p>
 <h3 id="非结构化日志与结构化日志的实际差异"><a class="header" href="#非结构化日志与结构化日志的实际差异">非结构化日志与结构化日志的实际差异</a></h3>
 <p>非结构化日志与结构化日志的差异在事故中体现得最为明显——此时读日志的人时间紧迫，而且往往不是写这段代码的人。</p>
 <pre><code class="language-cpp">// 非结构化：人类可读，但对机器不友好。
@@ -4867,10 +4785,10 @@ struct diagnostics_sink {
 <li>让库的遥测绑死在特定的服务日志栈上。</li>
 </ul>
 <p>以上做法都会增加成本，却带不来相应的诊断价值。</p>
-<h2 id="要点总结-5"><a class="header" href="#要点总结-5">要点总结</a></h2>
+<h2 id="要点-14"><a class="header" href="#要点-14">要点</a></h2>
 <p>原生系统的可观测性本质上是运行时证据的设计工作。从具体的运维问题出发，用日志记录决策和状态转换，用指标追踪速率和饱和度，用追踪揭示端到端延迟结构，用崩溃制品支撑事后调试。保持异步和所有权边界的完整性，这些信号才有意义。暴露足够的资源信号，让运维人员能分清泄漏、积压、碎片化和依赖停滞。</p>
 <p>核心权衡在于开销与解释质量。丰富的遥测会增加 CPU、内存、存储和设计复杂度；稀疏的遥测则拉长事故处理时间，让原生故障变得模棱两可。选择能回答真实运维问题的最小信号集，然后保持它的稳定性。</p>
-<p>评审问题：</p>
+<p>复习问题：</p>
 <ul>
 <li>这个服务或库今天不靠猜测能回答哪些运维问题？</li>
 <li>哪些日志字段足够稳定、足够结构化，能支撑自动化处理，而不只是给人看的文本？</li>
@@ -4881,10 +4799,10 @@ struct diagnostics_sink {
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="在现代-c-中构建一个小型服务"><a class="header" href="#在现代-c-中构建一个小型服务">在现代 C++ 中构建一个小型服务</a></h1>
 <p>小型服务往往是 C++ 团队养成良好工程纪律或栽跟头的分水岭。代码库尚小，人们很容易即兴行事；然而流程中已经埋着不少真实的失败模式：过载、启动时配置加载不全、部分写入、依赖超时、队列无限增长、关闭时的竞态条件，以及证据不足时的生产环境排障。语言本身帮不了你。</p>
-<p>本章不是框架教程。要回答的生产问题更为具体：如果你希望六个月后回头看，所有权、失败处理、并发和运维依然清晰可审，那么一个小型 C++23 服务该是什么样子？答案不是”把最新特性全用上”，而是选择一种服务形态，让生命周期一目了然、异步工作归属明确、资源限制显式可控，并且在高压下仍能快速定位问题。</p>
+<p>本章不是框架教程。要回答的生产问题更为具体：如果你希望六个月后回头看，所有权、失败处理、并发和运维依然清晰可审，那么一个小型 C++23 服务该是什么样子？答案不是”把最新特性全用上”，而是选择一种服务形态，使生命周期一目了然、异步工作归属明确、资源限制显式可控，并且在高压下仍能快速定位问题。</p>
 <p>本章的示例是一个配置驱动的小型服务：接收请求、校验请求、执行有界的后台工作、持久化状态，并对外暴露指标和健康信息。细节刻意选得很普通——大多数生产服务在概念上并无新意，之所以出问题，是因为基本的工程边界没有划清。</p>
 <h2 id="先定义所有权单元再定义部署单元"><a class="header" href="#先定义所有权单元再定义部署单元">先定义所有权单元，再定义部署单元</a></h2>
-<p>小型服务最常见的第一个架构错误，是按端点、处理器或框架回调来组织代码，而非按它拥有的资源来组织。一个可部署的服务拥有一组固定的长生命周期对象：配置、监听器、执行器、连接池、存储适配器、遥测汇聚点，以及关闭协调机制。如果不把这些对象显式建模出来，代码就会慢慢滑向全局变量、共享单例、脱管的后台工作，以及”听天由命”的关闭流程。</p>
+<p>小型服务最常见的第一个架构错误，是按端点、处理器或框架回调来组织代码，而非按照它所拥有的资源来组织。一个可部署的服务拥有一组固定的长生命周期对象：配置、监听器、执行器、连接池、存储适配器、遥测汇聚点，以及关闭协调机制。如果不把这些对象显式建模出来，代码就会慢慢滑向全局变量、共享单例、脱管的后台工作，以及”听天由命”的关闭流程。</p>
 <p>因此，服务对象应当直接体现所有权关系——由它来构造、启动和停止所有长生命周期的依赖。这并不是要造一个无所不包的上帝对象，而是要有一个清晰的根，负责管辖那些生命周期必须一同结束的组件。</p>
 <h3 id="刻意只展示片段掌控时序与关闭流程的服务根"><a class="header" href="#刻意只展示片段掌控时序与关闭流程的服务根">刻意只展示片段：掌控时序与关闭流程的服务根</a></h3>
 <pre><code class="language-cpp">struct service_components {
@@ -5161,7 +5079,7 @@ auto handler = webapi::middleware::chain(pipeline, router.to_handler());
 <h2 id="这种形态在什么地方开始不够用"><a class="header" href="#这种形态在什么地方开始不够用">这种形态在什么地方开始不够用</a></h2>
 <p>本章的建议适用于真正意义上的小型服务：单进程、少量长生命周期依赖、有界的后台工作，以及一个团队仍然能把完整运行时模型装在脑子里的代码规模。再往上走一步，你可能就需要更显式的子系统所有权划分、更强的组件隔离、服务级准入控制，或者一个对生命周期管理已有成熟方案的专用异步框架。</p>
 <p>当领域主要受限于本章只略微提及的某个约束时，你也应选择不同的架构形态：超低延迟交易、硬实时系统、需要防范恶意扩展的插件宿主，或者拥有专用协议栈的公网服务器。同样的原则依然适用，但工程的重心会有所偏移。</p>
-<h2 id="要点总结-6"><a class="header" href="#要点总结-6">要点总结</a></h2>
+<h2 id="要点总结-5"><a class="header" href="#要点总结-5">要点总结</a></h2>
 <p>一个好的小型 C++23 服务，应当围绕有明确归属的资源、显式的启动与关闭、有界的并发、短命的借用、窄边界的依赖适配器，以及与真实生命周期边界对齐的可观测性来构建。代码应当让人一眼看出进程拥有什么、工作如何被准入、取消如何传播，以及故障期间哪些状态仍然有效。</p>
 <p>这些取舍都是刻意为之的。显式边界会带来更多样板代码；有界队列会更早拒绝请求；值类型工作项可能比满是视图的设计多一些复制开销；窄适配器会增加边界转换代码。但和调试一个生命周期与过载行为全藏在实现细节里的服务相比，这些成本通常微不足道。</p>
 <p>复习问题：</p>
@@ -5390,7 +5308,7 @@ namespace v1 {
 <li>有没有线程安全保证，如果有，保证到什么程度。</li>
 <li>版本和兼容性方面，哪些承诺是真的。</li>
 </ul>
-<p>简短、看起来像生产代码的示例在这里最有用，尤其是那些同时展示了错误处理路径和配置边界的示例。大而全的教程式演练通常帮助不大。文档的目的，是让另一个团队不用打听内部”口耳相传”的知识，也能顺利集成。</p>
+<p>简短的、看起来像生产代码的示例在这里最有用，尤其是那些同时展示了错误处理路径和配置边界的示例。大而全的教程式演练通常帮助不大。文档的目的，是让另一个团队不用打听内部”口耳相传”的知识，也能顺利集成。</p>
 <p>性能方面的说法同样需要克制。不要笼统地说库”很快”，而要讲清楚：测了什么场景、在什么负载下、跟什么基线对比、成本模型对哪些因素敏感。解析库的性能往往与分配策略、输入大小分布和失败率密切相关，这些都应当直说。</p>
 <h2 id="验证应当匹配库的公开承诺"><a class="header" href="#验证应当匹配库的公开承诺">验证应当匹配库的公开承诺</a></h2>
 <p>可复用库需要比末端应用组件更严格的验证纪律，因为调用者没办法审查你的全部假设。测试应当直接对应公开承诺。</p>
@@ -5399,7 +5317,7 @@ namespace v1 {
 <h2 id="知道什么时候还不该做成库"><a class="header" href="#知道什么时候还不该做成库">知道什么时候还不该做成库</a></h2>
 <p>团队经常过早地把代码做成共享库。如果只有一个应用在用，领域词汇每周都在变，或者所谓的”复用”更多只是组织层面的美好愿望，那么强行冻结出一个稳定的公开接口，往往只会把错误的假设固化下来。有时正确的做法是：在契约真正稳定之前，先把组件留在内部。</p>
 <p>这并不是反对复用，而是要求认真计算公开 API 的真实成本。其他团队一旦依赖上这个库，修改语义、所有权或错误策略的代价就会远高于改内部代码。只有当问题本身和契约都已成熟到值得承担这笔代价时，复用才真正有意义。</p>
-<h2 id="要点总结-7"><a class="header" href="#要点总结-7">要点总结</a></h2>
+<h2 id="要点总结-6"><a class="header" href="#要点总结-6">要点总结</a></h2>
 <p>好的可复用 C++23 库只做一个精确的承诺，在公开类型中直接编码所有权与不变量，保持失败形态的稳定，只开放少量经过深思熟虑的定制接缝，并如实陈述版本与性能方面的承诺。它应尽量减少依赖拖拽，让有经验的调用者能轻松做出是否采用的判断。</p>
 <p>这些权衡并不陌生，只是在库的语境下要付得更明确。更丰富的签名可能不够优雅；稳定的错误类别需要在边界做转换；面向 ABI 稳定的设计会限制公开模板的自由度；窄接缝要求你有纪律地决定哪些东西不开放定制。之所以这些成本可以接受，是因为库是一份长期契约，而不仅仅是一堆可复用的代码。</p>
 <p>复习问题：</p>
@@ -5581,10 +5499,10 @@ set_buffer_size(user_input);  // silent narrowing: -1 becomes SIZE_MAX
 <p>不是每个未解决的问题都值得强行拦下，但有些必须拦。</p>
 <p>以下情况应该阻止变更：所有权不清楚，借用的状态可能比来源活得更久，失败契约前后不一致，并发无界或关闭语义未定义，公开接口变更缺少兼容性论证，性能声明缺乏必要证据，或者验证体系已经覆盖不到风险路径。</p>
 <p>不要仅仅因为”换作是我会写成另一个样子”就拦住改动。现代 C++ 本身的偶然复杂度已经够高了，评审不应再叠加一层口味驱动的阻力。</p>
-<h2 id="要点总结-8"><a class="header" href="#要点总结-8">要点总结</a></h2>
+<h2 id="要点总结-7"><a class="header" href="#要点总结-7">要点总结</a></h2>
 <p>最高效的 C++ 评审者，会先审查所有权、失败形态、接口诚实性、并发生命周期、成本流向和验证证据，然后才去看局部优雅。他们先给改动分类，再围绕生产风险提问，并在仅靠代码本身撑不起结论的地方，坚持索要证据。</p>
 <p>正是这种审查态度，才能把本书的内容转化为日常工程实践。精确的所有权模型、显式的失败边界、有界并发、诚实的 API 和严格的诊断纪律，之所以重要，不是因为它们”看起来现代”，而是因为它们让评审者能够用具体的语言说清楚：这次改动为什么安全、为什么有风险、或者为什么还不完整。</p>
-<p>复习问题：</p>
+<p>Review questions:</p>
 <ul>
 <li>这次改动引入的主导性生产风险是什么，评审是否先聚焦在那里？</li>
 <li>哪些所有权、生命周期或借用假设现在跨越了时间、线程或 API 边界？</li>

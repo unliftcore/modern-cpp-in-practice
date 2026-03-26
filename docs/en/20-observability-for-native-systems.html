@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-a846e9dc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -204,26 +204,26 @@
 <h3 id="what-debugging-looks-like-without-observability"><a class="header" href="#what-debugging-looks-like-without-observability">What debugging looks like without observability</a></h3>
 <p>To make the value concrete, consider a service that processes file uploads. A user reports that uploads are timing out. Here is the handler with no structured observability:</p>
 <pre><code class="language-cpp">void handle_upload(const http_request&amp; req) {
-	std::println("INFO: Processing upload");
+	std::cout &lt;&lt; "INFO: Processing upload" &lt;&lt; std::endl;
 
-	std::println("INFO: Starting validation");
+	std::cout &lt;&lt; "INFO: Starting validation" &lt;&lt; std::endl;
 	auto validation = validate(req);
 	if (!validation) {
-		std::println(stderr, "ERROR: Validation failed: {}",
-		             validation.error().message());
+		std::cerr &lt;&lt; "ERROR: Validation failed: "
+		          &lt;&lt; validation.error().message() &lt;&lt; std::endl;
 		return;
 	}
 
-	std::println("INFO: Storing file");
+	std::cout &lt;&lt; "INFO: Storing file" &lt;&lt; std::endl;
 	auto store_result = store(req);
 	if (!store_result) {
-		std::println(stderr, "ERROR: Store failed: {}",
-		             store_result.error().message());
+		std::cerr &lt;&lt; "ERROR: Store failed: "
+		          &lt;&lt; store_result.error().message() &lt;&lt; std::endl;
 		return;
 	}
 
 	notify(req);
-	std::println("INFO: Upload complete");
+	std::cout &lt;&lt; "INFO: Upload complete" &lt;&lt; std::endl;
 }
 </code></pre>
 <p>Which upload failed? Was it the same user or a different one? What was it waiting on – disk I/O, a downstream service, a lock? How long did the store call take? Was the failure retried? None of these questions are answerable from the logs this function produces. The on-call engineer resorts to grepping logs by timestamp ranges, guessing at correlation, and asking the user to reproduce.</p>
@@ -304,7 +304,7 @@ return [](const http::Request&amp; req, const http::Handler&amp; next) -&gt; htt
     auto elapsed = std::chrono::steady_clock::now() - start;
     auto ms = std::chrono::duration_cast&lt;std::chrono::microseconds&gt;(elapsed).count();
 
-    std::println("[{}] {} {} → {} ({} μs)",
+    std::cout &lt;&lt; std::format("[{}] {} {} → {} ({} μs)\n",
         "LOG",
         http::method_to_string(req.method),
         req.path,

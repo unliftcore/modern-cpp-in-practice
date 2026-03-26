@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+        <link rel="stylesheet" href="theme/custom-da23fd28.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-780adacc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -262,7 +262,7 @@ import webapi.task;
 </code></pre>
 <p>不需要 include guard，没有宏冲突，不受包含顺序影响。构建系统可以直接看到模块依赖图，并按正确的顺序编译各模块。这就是模块在源码层面带来的改善。</p>
 <p>因此，首要问题不是”我们要不要用模块？”，而是”我们对使用者做出了什么承诺？”</p>
-<p>如果答案是在同一个仓库内、基于同一套工具链做内部源码复用，模块可能是绝佳选择。如果答案是”我们要发布一个公共 SDK，供未知的构建系统和编译器版本使用”，模块仍然有助于改善你自己的构建流程，但它无法免除你在二进制边界上严格自律的责任。</p>
+<p>如果答案是在同一个仓库内、基于同一套工具链进行内部源码复用，模块可能是绝佳选择。如果答案是”我们要发布一个公共 SDK，供未知的构建系统和编译器版本使用”，模块仍然有助于改善你自己的构建流程，但它无法免除你在二进制边界上严格自律的责任。</p>
 <h2 id="打包选择表达运维意图"><a class="header" href="#打包选择表达运维意图">打包选择表达运维意图</a></h2>
 <p>打包是架构决策落地为部署方案的环节。</p>
 <h3 id="header-only-或源码分发库"><a class="header" href="#header-only-或源码分发库">Header-only 或源码分发库</a></h3>
@@ -416,7 +416,7 @@ EXPORT status_code get_name(char* buffer, std::size_t buffer_size);
 </code></pre>
 <p>正是这些细节，决定了一个在本地写得干净利落的接口，能否真正成为可靠运行的库。</p>
 <h2 id="验证与评审问题"><a class="header" href="#验证与评审问题">验证与评审问题</a></h2>
-<p>打包和 ABI 问题应当与源码级 API 质量分开评审。</p>
+<p>打包和 ABI 问题应当独立于源码级 API 质量进行评审。</p>
 <ol>
 <li>这个库的使用场景是什么——与生产方一同构建、源码级引用，还是作为可独立升级的二进制发布？</li>
 <li>我们是否在用模块改善源码整洁性的同时，错误地以为它们也解决了 ABI 问题？</li>
