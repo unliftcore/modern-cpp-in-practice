@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -185,7 +185,7 @@
 <p>写现代 C++ 时，首先要面对的生产问题不是”这该不该做成一个类”，也不是”这里能不能零拷贝”。问题更简单，也更危险：谁拥有这个资源？它能保持有效多久？当正常流程走不通了，谁来保证清理？</p>
 <p>这个问题首先针对内存，但内存只是冰山一角。真实系统需要管理的资源远不止于此：socket、文件描述符、互斥量、线程 join、临时目录、遥测注册、进程句柄、映射文件、事务作用域、关闭钩子……C++ 给了你充分的自由，也给了你充分的机会把这些全都搞砸。之所以把所有权放在第一章，不是因为它在学术上很基础，而是因为所有权一旦不清晰，后面的设计就根本无法放心地做评审。</p>
 <p>在生产环境中，代价高昂的故障往往不会在调用点上表现得很显眼。一个服务启动了后台 flush，捕获了指向请求状态的裸指针，部署时偶尔崩一下。连接池在错误的线程上被关闭，因为最后一个 <code>shared_ptr</code> 恰好在一个没人当成关闭流程的回调里被释放。初始化路径构建了三个资源才建了一半，第四个抛异常时第二个就泄漏了。这些都不是语法问题——它们是所有权问题，最终演变成了运维事故。</p>
-<p>RAII 至今仍是现代 C++ 能把这些情况处理干净的核心原因。它不是靠惯性留下来的老古董，而是一种让资源生命周期能与作用域、异常、提前返回和部分构造自然组合的机制。用好了，RAII 会让清理变得毫无存在感——这恰恰就是你想要的效果。</p>
+<p>RAII 至今仍是现代 C++ 能把这些情况处理干净的核心原因。它不是靠惯性留下来的老古董，而是一种让资源生命周期能与作用域、异常、提前返回和部分构造自然组合的机制。用好了，RAII 会让清理变得毫无存在感——这正是你想要的效果。</p>
 <h2 id="所有权必须一目了然"><a class="header" href="#所有权必须一目了然">所有权必须一目了然</a></h2>
 <p>所有权是一种契约，不是实现细节。评审者应该能指着任意一个类型或成员，迅速回答三个问题：</p>
 <ol>
@@ -200,96 +200,178 @@
 <p>很多程序员第一次接触 RAII，是通过”用智能指针代替手写 <code>delete</code>”这句话。方向大致没错，但格局太小了。</p>
 <p>RAII 的本质是：把资源绑定到一个对象的生命周期上，由该对象的析构函数负责释放。资源可以是内存，但也完全可以是文件描述符、内核事件、事务锁，或者必须在关闭完成前注销的指标注册。</p>
 <h3 id="没有-raii-会发生什么"><a class="header" href="#没有-raii-会发生什么">没有 RAII 会发生什么</a></h3>
-<p>在展示 RAII 模式之前，有必要先完整看一遍手工方式——因为生产代码库里至今仍有长得一模一样的代码。</p>
-<pre><code class="language-cpp">// Manual resource management: C-style socket handling.
-void serve_request(const Config&amp; config) {
-socket_t sock = ::open_socket(config.port());
-if (sock == invalid_socket) {
-throw NetworkError{"bind failed"};
+<p>在展示 RAII 模式之前，有必要先完整看一遍更接近真实情况的手工方式。下面这个反面示例是故意写得有缺陷的，因为生产代码库里至今仍有长得一模一样的代码。</p>
+<pre><code class="language-cpp">socket_t create_server_socket(std::uint16_t port) {
+	socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
+	if (server == invalid_socket) {
+		throw NetworkError{"socket failed"};
+	}
+
+	int opt = 1;
+	if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
+		::close_socket(server);
+		throw NetworkError{"setsockopt failed"};
+	}
+
+	sockaddr_in addr{};
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = INADDR_ANY;
+	addr.sin_port = htons(port);
+
+	if (::bind(server, reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
+		::close_socket(server);
+		throw NetworkError{"bind failed"};
+	}
+
+	if (::listen(server, 16) &lt; 0) {
+		::close_socket(server);
+		throw NetworkError{"listen failed"};
+	}
+
+	return server; // RISK: caller now owns the raw descriptor by convention
 }
 
-char* buffer = new char[config.buffer_size()]; // second resource
+void serve_once(std::uint16_t port) {
+	socket_t server = create_server_socket(port);
+	socket_t client = invalid_socket;
 
-auto* sub = event_bus::subscribe("health_check"); // third resource
+	try {
+		sockaddr_in client_addr{};
+		socket_length addr_len = sizeof(client_addr);
+		client = ::accept(server,
+		                  reinterpret_cast&lt;sockaddr*&gt;(&amp;client_addr),
+		                  &amp;addr_len);
+		if (client == invalid_socket) {
+			::close_socket(server); // BUG: server will be closed twice (here + in catch)
+			throw NetworkError{"accept failed"};
+		}
 
-// -- any throw between here and the cleanup block leaks all three --
+		std::array&lt;char, 8192&gt; buffer{};
+		auto n = read_from_socket(client, buffer.data(), buffer.size());
+		if (n &lt;= 0) {
+			::close_socket(client);
+			::close_socket(server);
+			return;
+		}
 
-process(sock, buffer, sub); // may throw
+		process_request(client, std::string_view{buffer.data(), static_cast&lt;std::size_t&gt;(n)}); // RISK: any throw must preserve cleanup correctness
 
-event_bus::unsubscribe(sub);
-delete[] buffer;
-::close_socket(sock);
+		::close_socket(client);
+		::close_socket(server);
+	} catch (...) {
+		if (client != invalid_socket) {
+			::close_socket(client);
+		}
+		::close_socket(server);
+		throw;
+	}
 }
 </code></pre>
 <p>问题会迅速叠加起来：</p>
 <ol>
 <li>
-<p><strong>异常不安全。</strong> 如果 <code>process</code> 抛异常，或者 <code>event_bus::subscribe</code> 在 buffer 分配之后抛异常，先前获取的资源就会悄悄泄漏。为每次获取都套上 <code>try</code>/<code>catch</code> 会形成层层嵌套的清理阶梯，既痛苦又容易出错。</p>
+<p><strong>清理逻辑会重复。</strong> <code>::close_socket(server)</code> 同时出现在设置 helper、正常路径、提前返回路径和异常路径里。退出点越多，重复就越多。</p>
 </li>
 <li>
-<p><strong>重复释放风险。</strong> 如果后续的维护改动加了一个提前返回或第二条调用路径，开发者可能对 <code>buffer</code> 多调一次 <code>delete[]</code>，或对已关闭的句柄再调一次 <code>::close_socket</code>。这两类错误在编译期都发现不了。</p>
+<p><strong>重复最终会变成 bug。</strong> <code>accept</code> 失败路径在抛异常前已经关闭了 <code>server</code>，而 <code>catch</code> 块又会再关一次。手工所有权逻辑在维护过程中很容易就会漂移成这样。</p>
 </li>
 <li>
-<p><strong>拆除顺序敏感。</strong> 每往函数里多加一个资源，就必须更新所有退出路径。三个资源时，部分获取状态的组合就已经不少了；到五六个的时候，清理逻辑的存在感会超过函数本身的业务逻辑。</p>
+<p><strong>异常安全依赖纪律。</strong> <code>process_request</code> 可能抛异常。以后只要有人在“获取资源”和“手工清理”之间多插一段代码，就必须重新想一遍当时哪些描述符还活着。</p>
 </li>
 <li>
-<p><strong>难以承受维护压力。</strong> 代码评审无法局部验证清理的正确性——评审者必须追踪函数中的每一条路径，确认每个资源都恰好被释放一次。这不可持续。</p>
+<p><strong>转移是隐式的。</strong> <code>create_server_socket()</code> 返回的是裸 <code>socket_t</code>，所以所有权只能靠调用方和被调方之间的约定维持，而不是由类型系统表达。</p>
+</li>
+<li>
+<p><strong>评审变成全局推理。</strong> 想确认代码正确，评审者就得检查整段函数，确认每一条退出路径都把每个描述符恰好关闭一次。</p>
 </li>
 </ol>
 <p>RAII 方案从结构上消除了这些问题：每个资源都由一个拥有它的对象持有，析构函数负责释放，剩下的交给栈展开。</p>
-<p>来看一个服务组件的例子，它需要一个 socket 和一个对内部事件流的临时订阅。</p>
-<pre><code class="language-cpp">class SocketHandle {
-public:
-SocketHandle() = default;
-explicit SocketHandle(socket_t fd) noexcept : fd_(fd) {}
-
-SocketHandle(const SocketHandle&amp;) = delete;
-auto operator=(const SocketHandle&amp;) -&gt; SocketHandle&amp; = delete;
-
-SocketHandle(SocketHandle&amp;&amp; other) noexcept
-: fd_(std::exchange(other.fd_, invalid_socket)) {}
-
-auto operator=(SocketHandle&amp;&amp; other) noexcept -&gt; SocketHandle&amp; {
-if (this != &amp;other) {
-reset();
-fd_ = std::exchange(other.fd_, invalid_socket);
-}
-return *this;
-}
-
-~SocketHandle() { reset(); }
-
-auto get() const noexcept -&gt; socket_t { return fd_; }
-
-void reset() noexcept {
-if (fd_ != invalid_socket) {
-::close_socket(fd_);
-fd_ = invalid_socket;
-}
-}
-
-private:
-socket_t fd_ = invalid_socket;
-};
-</code></pre>
-<p>写这个类型不是为了展示移动语义，而是为了让 socket 的所有权变得单一、显式、异常安全。析构函数即清理策略；移动操作定义了转移方式；禁止复制，因为复制所有权本身就是错的。</p>
-<p>本书配套的 web-api 示例项目中，<code>http.cppm</code> 里的 <code>Socket</code> 类就是这一模式的真实实现——禁止复制、通过 <code>std::exchange</code> 实现移动、析构函数调用 <code>::close</code>：</p>
-<pre><code class="language-cpp">// 摘自 examples/web-api/src/modules/http.cppm
+<p>本书配套的 web-api 示例项目里已经有我们真正想讲的例子。<code>examples/web-api/src/modules/http.cppm</code> 中的 <code>Socket</code> 类包装了一个文件描述符，并把所有权规则直接写进了类型里：</p>
+<pre><code class="language-cpp">// From examples/web-api/src/modules/http.cppm
 class Socket {
-    explicit Socket(int fd) noexcept : fd_{fd} {}
+public:
+    Socket() = default;
+    explicit Socket(socket_handle fd) noexcept : fd_{fd} {}
+
     Socket(const Socket&amp;) = delete;
-    Socket(Socket&amp;&amp; other) noexcept : fd_{std::exchange(other.fd_, -1)} {}
-    ~Socket() { close(); }
+    Socket&amp; operator=(const Socket&amp;) = delete;
+
+    Socket(Socket&amp;&amp; other) noexcept
+        : fd_{std::exchange(other.fd_, invalid_socket_handle)} {}
+
+    Socket&amp; operator=(Socket&amp;&amp; other) noexcept {
+        if (this != &amp;other) {
+            close(); // release what this object currently owns
+            fd_ = std::exchange(other.fd_, invalid_socket_handle);
+        }
+        return *this;
+    }
+
+    ~Socket() { close(); } // automatic release on every exit path
+
+    [[nodiscard]] socket_handle fd() const noexcept { return fd_; }
+    [[nodiscard]] bool valid() const noexcept { return fd_ != invalid_socket_handle; }
+    explicit operator bool() const noexcept { return valid(); }
 
     void close() noexcept {
-        if (fd_ &gt;= 0) { ::close(fd_); fd_ = -1; }
+        if (fd_ != invalid_socket_handle) {
+            close_socket(fd_);
+            fd_ = invalid_socket_handle;
+        }
     }
+
 private:
-    int fd_{-1};
+    socket_handle fd_{invalid_socket_handle};
 };
 </code></pre>
-<p>这个 <code>Socket</code> 贯穿于整个服务器实现中。例如 <code>create_server_socket()</code> 执行多步骤的 socket 设置（创建、<code>setsockopt</code>、<code>bind</code>、<code>listen</code>），并按值返回一个 <code>Socket</code>。如果任何一步失败，已获取的文件描述符会在局部 <code>Socket</code> 析构时被自动清理。</p>
-<p>同样的模式适用于各种非内存资源。作用域注册令牌在析构时注销；事务对象不显式提交就回滚；joined-thread 包装器在析构时 join，或者拒绝在仍可 join 的状态下被销毁。一旦代码库建立起这种思维方式，清理路径就重新回归局部，不再散落于各处错误处理之中。</p>
+<p>光这个类就足够把 RAII 的核心讲清楚：</p>
+<ul>
+<li><strong>获取</strong> 发生在构造时：<code>Socket sock{::socket(...)};</code></li>
+<li><strong>所有权是独占的</strong>，因为复制被禁用了。</li>
+<li><strong>转移是显式的</strong>，因为移动通过 <code>std::exchange</code> 把源对象清空。</li>
+<li><strong>释放是自动的</strong>，因为析构函数总会调用 <code>close()</code>。</li>
+</ul>
+<p>同一个模块中的周边代码还展示了它在真实使用中是如何工作的。下面是一段局部摘录：只保留了与所有权相关的代码，辅助声明和无关的错误处理细节为了便于阅读被省略了。</p>
+<pre><code class="language-cpp">[[nodiscard]] Socket create_server_socket() const {
+    Socket sock{::socket(AF_INET, SOCK_STREAM, 0)}; // ownership starts here
+    if (!sock) return {};
+
+    int opt = 1;
+    if (::setsockopt(sock.fd(), SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
+        return {}; // sock is destroyed here, so the descriptor closes automatically
+    }
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port_);
+    if (::bind(sock.fd(), reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
+        return {}; // same: failure path still releases the descriptor
+    }
+
+    if (::listen(sock.fd(), 16) &lt; 0) {
+        return {};
+    }
+
+    return sock; // move or copy elision transfers ownership to the caller
+}
+
+Socket client{::accept(server_sock.fd(), ...)}; // 为简洁起见，省略了客户端地址相关参数
+handle_connection(std::move(client));           // explicit ownership transfer
+
+void handle_connection(Socket client) const {
+    std::array&lt;char, 8192&gt; buf{};
+    auto n = read_from_socket(client.fd(), buf.data(), buf.size());
+    if (n &lt;= 0) return;
+
+    Response resp = handler_(req); // request parsing omitted here
+    auto data = resp.serialize();
+    (void)write_to_socket(client.fd(), data.data(), static_cast&lt;int&gt;(data.size()));
+} // client goes out of scope here and closes automatically
+</code></pre>
+<p>在 <code>handle_connection(std::move(client))</code> 之后，调用方那边的 <code>client</code> 就不再拥有这个描述符了。移动构造函数已经把它的文件描述符交换成 <code>invalid_socket_handle</code>，所以之后这个被移动过的对象析构时也不会出事。任意时刻，所有权都只存在于一个对象里。</p>
+<p>注意那些消失掉的东西：没有清理阶梯，没有主要职责是收尾的 <code>try</code>/<code>catch</code>，也没有“这个描述符现在到底归谁管”的口头约定。类型本身就携带了策略。这才是 RAII 的现实价值。</p>
+<p>同样的模式适用于各种非内存资源。作用域注册令牌在析构时注销；事务对象不显式提交就回滚；joined-thread 包装器在析构时 join，或者拒绝在仍可 join 的状态下被销毁。一旦代码库建立起这种思维方式，清理路径就重新回归局部，不再散落于各处错误处理中。</p>
 <h2 id="反模式靠约定清理"><a class="header" href="#反模式靠约定清理">反模式：靠约定清理</a></h2>
 <p>RAII 的替代方案通常不是”手工清理但做到完美无缺”，而是靠约定来清理——这就意味着一有压力，清理就会被跳过。</p>
 <pre><code class="language-cpp">// Anti-pattern: ownership and cleanup are split across control flow.
@@ -332,7 +414,7 @@ publisher.send(*payload);
 <h2 id="独占所有权应当是默认选择"><a class="header" href="#独占所有权应当是默认选择">独占所有权应当是默认选择</a></h2>
 <p>在设计良好的系统中，大多数资源在任意时刻都只有一个显而易见的所有者。请求对象拥有解析后的载荷，连接对象拥有它的 socket，批处理拥有它的 buffer。独占所有权理应成为默认的思维方式。</p>
 <p>落实到代码中，就是优先使用普通对象成员，无法直接内嵌时再用 <code>std::unique_ptr</code>。<code>unique_ptr</code> 并不意味着设计有多复杂，它只是说明所有权的转移和销毁都是显式的。它与容器、工厂和错误路径的组合也很自然，因为 moved-from 状态是良定义的，单一所有权自始至终保持单一。</p>
-<p>共享所有权应被视为有意为之的例外。确实有合理的场景：异步扇出中多个组件需要让同一份不可变状态保持存活；图状结构中确实存在共享生命周期；缓存条目在多个使用者持有期间必须有效。但 <code>shared_ptr</code> 不是万能的安全毯。它会改变销毁时机，在许多实现中带来原子引用计数的开销，还经常掩盖真正的问题：为什么没有任何一个组件能明确充当所有者？</p>
+<p>共享所有权应该是有意为之的例外。确实有合理的场景：异步扇出中多个组件需要让同一份不可变状态保持存活；图状结构中确实存在共享生命周期；缓存条目在多个使用者持有期间必须有效。但 <code>shared_ptr</code> 不是万能的安全毯。它会改变销毁时机，在许多实现中带来原子引用计数的开销，还经常掩盖真正的问题：为什么没有任何一个组件能明确充当所有者？</p>
 <p>评审中如果在边界处发现了 <code>shared_ptr</code>，应该追问一个具体的问题：究竟是什么样的生命周期关系，让独占所有权行不通？如果答案含糊不清，那这个共享所有权多半只是在给一个从未想清楚资源归属的设计打补丁。</p>
 <p>一个常见的症状是关闭时机的不确定性。当最后一个持有资源的 <code>shared_ptr</code> 从某个不可预期的回调或线程中被释放，析构函数就会在不可预期的时间和位置执行：</p>
 <pre><code class="language-cpp">// Risky: destruction timing depends on which callback finishes last.
@@ -352,7 +434,7 @@ conn-&gt;send(shard_ping()); // last lambda to finish destroys conn
 <p>所有权关系再清晰的系统，也少不了非拥有式的访问。算法需要检查调用方拥有的 buffer，验证逻辑需要读取请求元数据，迭代器和视图需要在不拷贝的前提下遍历存储。借用是正常的，错误在于让借用的状态活过了所有者，或者让借用关系变得不可见。</p>
 <p>现代 C++ 提供了表达借用的类型工具：引用、明确用作观察者的指针、<code>std::span</code> 和 <code>std::string_view</code>。它们很有帮助，但光靠类型本身不能保证设计正确。一个长生命周期对象里的 view 成员，如果真正的所有者在别处，仍然是生命周期隐患。回调捕获了栈上状态的引用，延后执行时照样出问题。</p>
 <p>并发场景下风险更大。被捕获进后台工作的裸指针或 <code>string_view</code> 绝非无害的小优化——它是跨越时间的借用，有效性取决于调度时序和关闭顺序。</p>
-<p>由此可以总结出一条简明的所有权准则：拥有类型可以自由跨越时间边界；借用类型只有在所有者明显比使用方更强壮、更长命时，才可以跨越时间边界。如果你无法迅速证明这一点，就应该选择拷贝或转移所有权。</p>
+<p>由此得出一条简明的所有权准则：拥有类型可以自由跨越时间边界；借用类型只有在所有者明显比使用方更强壮、更长命时，才可以跨越时间边界。如果你无法迅速证明这一点，就应该选择拷贝或转移所有权。</p>
 <h2 id="移动语义定义的是转移而非单纯的优化"><a class="header" href="#移动语义定义的是转移而非单纯的优化">移动语义定义的是转移，而非单纯的优化</a></h2>
 <p>移动语义通常被当作性能话题来讲，但在实践中，它首先是一个所有权话题。</p>
 <p>对一个对象执行移动，就是宣告资源换了主人：源对象依然有效，但不再对原来的资源负责。正因如此，工厂、容器和流水线各阶段才能在不为每个类型另造一套转移 API 的前提下组合起来。</p>
@@ -445,7 +527,7 @@ int main() {
 <li>移动操作是否保持了单一所有权和安全销毁？</li>
 <li>关闭流程是否依赖了超出资源释放范围的析构副作用？</li>
 </ol>
-<p>动态工具仍然不可或缺。AddressSanitizer 能捕获大量 use-after-free 问题；Leak Sanitizer 和平台诊断工具能发现遗漏的释放路径；ThreadSanitizer 在生命周期错误因关闭期间的竞态条件而暴露时尤其有用。不过，只有当类型系统本身已经把所有权表达清楚时，这些工具才能发挥最大的威力。</p>
+<p>动态工具仍然不可或缺。AddressSanitizer 能捕获大量 use-after-free 问题；Leak Sanitizer 和平台诊断工具能发现遗漏的释放路径；ThreadSanitizer 在生命周期错误因关闭期间的竞态条件而暴露时尤其有用。不过，只有当类型系统本身已经把所有权表达清楚时，这些工具才最有效。</p>
 <h2 id="要点"><a class="header" href="#要点">要点</a></h2>
 <ul>
 <li>把所有权当作契约来对待——它必须在类型和对象结构中清晰可见。</li>
@@ -454,7 +536,7 @@ int main() {
 <li>先把移动语义理解为所有权转移规则，再把它当作性能优化手段。</li>
 <li>对关闭路径和部分构造路径的审查力度，应该和对稳态运行路径一样。</li>
 </ul>
-<p>如果一个资源可能被泄漏、被重复释放、在销毁后被访问、或者在错误的线程上被销毁，那问题往往早在崩溃发生之前就埋下了——埋在所有权被留为隐式的那一刻。</p>
+<p>如果一个资源可能泄漏、重复释放、销毁后仍被访问，或在错误的线程上销毁，那问题往往早在崩溃发生之前就埋下了——埋在所有权被留为隐式的那一刻。</p>
 
                     </main>
 

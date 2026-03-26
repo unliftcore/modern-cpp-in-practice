@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -294,7 +294,7 @@
 <li>在发布状态可能相关时，还应包含版本或构建元数据。</li>
 </ul>
 <p>避免两个常见错误。</p>
-<p>第一，不要把日志当成指标类问题的唯一信息来源。如果需要了解重试率或队列深度，应该直接发指标，而不是逼运维人员从文本里重新拼凑。第二，不要仅仅因为某次事故需要就把高基数负载或敏感数据全部记下来，应该放在专门的采样或调试路径中按需开启。</p>
+<p>第一，不要把日志当成指标类问题的唯一信息来源。如果需要了解重试率或队列深度，应该直接发指标，而不是逼运维人员从文本里重新拼凑。第二，不要仅仅因为某次事故需要就把高基数数据或敏感内容全部记下来，应该放在专门的采样或调试路径中按需开启。</p>
 <p><code>std::source_location</code> 在低频的内部诊断或基础设施代码中很实用，特别是需要一个稳定的调用点标签又不想手工维护字符串的时候。但它不能替代有意义的操作名称——一条 <code>source=foo.cpp:412</code> 的日志，远不如 <code>operation=manifest_reload phase=commit</code> 有用。</p>
 <p>示例项目中的 <code>request_logger()</code> 中间件（见 <code>examples/web-api/src/modules/middleware.cppm</code>）展示了一个最小但结构化的逐请求日志起点：</p>
 <pre><code class="language-cpp">// examples/web-api/src/modules/middleware.cppm — request_logger()
@@ -314,7 +314,7 @@ return [](const http::Request&amp; req, const http::Handler&amp; next) -&gt; htt
     return resp;
 };
 </code></pre>
-<p>每条响应都携带了 method、path、状态码和延迟。这还不是生产级的结构化日志——字段嵌在格式化文本里，而非以机器可查询的键值对输出——但它体现了正确的直觉：在一个横切点上捕获身份标识（路由）、结果（状态码）和时序（延迟）。将其演化为结构化 JSON 或键值发射器是顺理成章的下一步。</p>
+<p>每条响应都携带了 method、path、状态码和延迟。这还不是生产级的结构化日志——字段嵌在格式化文本里，而非以机器可查询的键值对输出——但它体现了正确的直觉：在一个横切点上捕获身份标识（路由）、结果（状态码）和时序（延迟）。将其演化为结构化 JSON 或键值格式输出是顺理成章的下一步。</p>
 <h3 id="非结构化日志与结构化日志的实际差异"><a class="header" href="#非结构化日志与结构化日志的实际差异">非结构化日志与结构化日志的实际差异</a></h3>
 <p>非结构化日志与结构化日志的差异在事故中体现得最为明显——此时读日志的人时间紧迫，而且往往不是写这段代码的人。</p>
 <pre><code class="language-cpp">// 非结构化：人类可读，但对机器不友好。
@@ -445,10 +445,10 @@ struct diagnostics_sink {
 <li>让库的遥测绑死在特定的服务日志栈上。</li>
 </ul>
 <p>以上做法都会增加成本，却带不来相应的诊断价值。</p>
-<h2 id="要点"><a class="header" href="#要点">要点</a></h2>
+<h2 id="要点总结"><a class="header" href="#要点总结">要点总结</a></h2>
 <p>原生系统的可观测性本质上是运行时证据的设计工作。从具体的运维问题出发，用日志记录决策和状态转换，用指标追踪速率和饱和度，用追踪揭示端到端延迟结构，用崩溃制品支撑事后调试。保持异步和所有权边界的完整性，这些信号才有意义。暴露足够的资源信号，让运维人员能分清泄漏、积压、碎片化和依赖停滞。</p>
 <p>核心权衡在于开销与解释质量。丰富的遥测会增加 CPU、内存、存储和设计复杂度；稀疏的遥测则拉长事故处理时间，让原生故障变得模棱两可。选择能回答真实运维问题的最小信号集，然后保持它的稳定性。</p>
-<p>复习问题：</p>
+<p>评审问题：</p>
 <ul>
 <li>这个服务或库今天不靠猜测能回答哪些运维问题？</li>
 <li>哪些日志字段足够稳定、足够结构化，能支撑自动化处理，而不只是给人看的文本？</li>

@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -182,7 +182,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="协程任务与挂起边界"><a class="header" href="#协程任务与挂起边界">协程、任务与挂起边界</a></h1>
-<p>本章假定你已经理解错误传递和并发共享状态设计。本章关注点更集中：协程拥有什么、什么能在挂起后继续存活，以及异步控制流掩盖生命周期时会引发什么问题。</p>
+<p>本章假定你已经理解错误传递和并发共享状态设计。这里的关注点更集中：协程拥有什么、什么能在挂起后继续存活，以及异步控制流掩盖生命周期时会引发什么问题。</p>
 <h2 id="生产中的问题"><a class="header" href="#生产中的问题">生产中的问题</a></h2>
 <p>协程让异步代码更好读，也更容易产生误导。</p>
 <p>原本层层嵌套回调的请求处理器，可以写成顺序执行的直线代码。流式解析器可以自然地逐个产出值。后台刷新任务可以用 <code>co_await</code> 等待定时器和 I/O，不必再手写状态机。这些都是实实在在的收益。但底层机制并没有消失——状态机依然存在，只是搬进了协程帧，而协程帧的生命周期、所有权和恢复上下文都需要刻意设计。</p>
@@ -228,7 +228,7 @@ void handle_request(request req, std::function&lt;void(response)&gt; done) {
 }
 </code></pre>
 <p>代码可以顺序阅读，每一步只有一条错误路径，也没有嵌套。改进是实实在在的。但状态机并没有消失——它搬进了协程帧。本章剩余部分讨论的，就是这对所有权和生命周期意味着什么。</p>
-<p>示例项目的 handler 层（<code>examples/web-api/src/modules/handlers.cppm</code>）展示了同一种结构优势的同步版本。每个 handler 是一个接收 <code>const http::Request&amp;</code>（借用）并返回 <code>http::Response</code>（拥有）的函数，控制流是直线式的：解析路径参数、校验输入、调用 repository、把结果转换为 HTTP 响应。错误处理就在每一步的本地完成，无需嵌套回调。虽然这些 handler 不是协程，但它们体现了同一条原则——当每一步都是顺序的、错误路径是扁平的，业务逻辑就更具可读性和可审查性。</p>
+<p>示例项目的 handler 层（<code>examples/web-api/src/modules/handlers.cppm</code>）用同步代码展示了同样的结构优势。每个 handler 是一个接收 <code>const http::Request&amp;</code>（借用）并返回 <code>http::Response</code>（拥有）的函数，控制流是直线式的：解析路径参数、校验输入、调用 repository、把结果转换为 HTTP 响应。错误处理就在每一步的本地完成，无需嵌套回调。虽然这些 handler 不是协程，但它们体现了同一条原则——当每一步都是顺序的、错误路径是扁平的，业务逻辑就更具可读性和可审查性。</p>
 <h2 id="协程是带存储的状态机"><a class="header" href="#协程是带存储的状态机">协程是带存储的状态机</a></h2>
 <p>把协程当语法糖来用，是最快制造生命周期 bug 的捷径。</p>
 <p>函数变成协程后，部分状态会搬进协程帧。参数可能被拷贝或移动到帧中。跨越挂起点存活的局部变量会驻留在帧中。awaiter 的状态则可能决定执行何时恢复、在哪里恢复。析构可能发生在成功、失败、取消，或者持有该任务对象的外部对象被销毁时。这些都不是无关紧要的细节。</p>
@@ -244,8 +244,8 @@ void handle_request(request req, std::function&lt;void(response)&gt; done) {
 <li>恢复会发生在哪个 executor 或线程上？</li>
 </ol>
 <p>这相当于把 API 生命周期评审搬到了局部层面。如果协程在挂起期间保留了借用数据，你就必须证明数据的所有者比协程活得更久，否则就应该让协程接管所有权。</p>
-<p>这也解释了为什么协程 API 对参数的选择往往比同步 API 更严格。同步的辅助函数可以放心地接收 <code>std::string_view</code>，因为它会立即返回。而会挂起的异步任务通常不应保留这个 view，除非所有权契约极其严格并且有明确文档。</p>
-<p>示例项目的 <code>Request::path_param_after()</code>（<code>examples/web-api/src/modules/http.cppm</code>）展示了这条边界安全的一面。它返回 <code>std::optional&lt;std::string_view&gt;</code>，指向请求对象的 <code>path</code> 成员。在当前设计中这是安全的，因为 handler 同步执行——<code>Request</code> 对象在整个 handler 调用期间都存活。但如果这些 handler 变成了会在执行中途挂起的协程，同一个 <code>string_view</code> 就会在请求缓冲区被回收的瞬间变为悬空引用。这个设计之所以成立，恰恰是因为生命周期契约足够简单：请求在 handler 执行期间存活，而 handler 不会挂起。</p>
+<p>这也解释了为什么协程 API 在参数选择上往往比同步 API 更严格。同步的辅助函数可以放心地接收 <code>std::string_view</code>，因为它会立即返回。而会挂起的异步任务通常不应保留这个 view，除非所有权契约极其严格并且有明确文档。</p>
+<p>示例项目的 <code>Request::path_param_after()</code>（<code>examples/web-api/src/modules/http.cppm</code>）展示了满足这条边界约束时的安全做法。它返回 <code>std::optional&lt;std::string_view&gt;</code>，指向请求对象的 <code>path</code> 成员。在当前设计中这是安全的，因为 handler 同步执行——<code>Request</code> 对象在整个 handler 调用期间都存活。但如果这些 handler 变成了会在执行中途挂起的协程，同一个 <code>string_view</code> 就会在请求缓冲区被回收的瞬间变为悬空引用。这个设计之所以成立，恰恰是因为生命周期契约足够简单：请求在 handler 执行期间存活，而 handler 不会挂起。</p>
 <h2 id="反模式借用的请求状态跨越挂起存活"><a class="header" href="#反模式借用的请求状态跨越挂起存活">反模式：借用的请求状态跨越挂起存活</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: borrowed data may dangle after suspension.
 task&lt;parsed_request&gt; parse_and_authorize(
@@ -300,7 +300,7 @@ public:
 	}
 };
 </code></pre>
-<p>如果 <code>connection</code> 对象在 <code>run()</code> 挂起期间被移动到另一个容器或被销毁，恢复时 <code>this</code> 就失效了。成员协程只在对象的生命周期确保长于协程时才安全。实践中，这通常意味着协程应持有 <code>shared_ptr&lt;connection&gt;</code>，或者所有者作用域必须做结构化设计，防止对象在挂起期间被销毁。</p>
+<p>如果 <code>connection</code> 对象在 <code>run()</code> 挂起期间被移动到另一个容器或被销毁，恢复时 <code>this</code> 就失效了。成员协程只有在对象生命周期保证长于协程时才安全。实践中，这通常意味着协程应持有 <code>shared_ptr&lt;connection&gt;</code>，或者所有者作用域必须做结构化设计，防止对象在挂起期间被销毁。</p>
 <p>这些都不是奇特的边角案例，而是生产环境中协程生命周期最常见的失败模式。每个挂起点，都是调用方的世界可能已经变了样的时刻。</p>
 <h2 id="任务类型就是所有权契约"><a class="header" href="#任务类型就是所有权契约">任务类型就是所有权契约</a></h2>
 <p>协程的返回类型不是装饰品，它定义了所有权、结果传递和析构语义。</p>

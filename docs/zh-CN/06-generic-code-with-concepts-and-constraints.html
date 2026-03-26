@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="theme/custom-da23fd28.css">
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
 
 
         <!-- Provide site root and default themes to javascript -->
@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-780adacc.js";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -183,7 +183,7 @@
                     <main>
                         <h1 id="使用概念与约束编写泛型代码"><a class="header" href="#使用概念与约束编写泛型代码">使用概念与约束编写泛型代码</a></h1>
 <p>当问题中确实存在”家族相似性”时，泛型代码才有价值；用模板来推迟接口决策，只会带来破坏。生产中真正要回答的问题不是”怎么让它可复用”，而是”怎样消除重复的同时，不让调用契约、诊断信息和失败行为变得不透明”。</p>
-<p>概念（concepts）是 C++ 很长时间以来第一个能在边界处——也就是读者最需要帮助的地方——直接改善局面的特性。它不会让泛型代码自动变简单，但让你能够用贴近实际设计的方式，说明模板对使用者的期望。与”先实例化、再祈祷编译器报错能指到正确的行”的旧时代相比，这是一次重大转变。</p>
+<p>概念（concepts）是 C++ 很长时间以来第一个能在边界处——也就是读者最需要帮助的地方——直接改善局面的特性。它不会让泛型代码自动变简单，但你可以用更贴近实际设计的方式，说明模板对使用者的期望。与”先实例化、再祈祷编译器报错能指到正确的行”的旧时代相比，这是一次重大转变。</p>
 <p>本章关注的是普通产品团队也能维护的受约束泛型代码：可复用的变换、窄小的扩展点、策略对象，以及假设条件必须随时可供评审的算法族。</p>
 <h2 id="从变化开始而不是从模板开始"><a class="header" href="#从变化开始而不是从模板开始">从变化开始，而不是从模板开始</a></h2>
 <p>大多数糟糕的泛型代码都始于一个错误前提：”这些函数看起来很像，应该模板化。”光是表面语法相似远远不够。真正要问的是：设计中哪些部分允许变化，哪些不变量必须保持固定。</p>
@@ -272,7 +272,7 @@ auto flush_batch(Sink&amp; sink, std::span&lt;const EncodedRecord&gt; batch)
     -&gt; std::expected&lt;void, WriteError&gt;;
 </code></pre>
 <p>同样的约束，换成了没人想读的写法。<code>std::enable_if_t</code> 搭配 <code>decltype</code> 和 <code>std::declval</code>，表达的不是设计意图，而是在利用编译器机制。当 SFINAE 拒绝某个重载时，典型的错误信息往往只有一句”没有匹配 <code>flush_batch</code> 的函数调用”，不会告诉你到底哪条要求没满足。如果存在多个受 SFINAE 保护的重载，编译器甚至会把所有被拒绝的候选逐一列出，却依然不解释各自失败的原因。概念版本在可读性、错误质量和可维护性上全面胜出。</p>
-<p>积极约束公共接口面，让实现保持朴素。这才是正确的取舍。</p>
+<p>主动约束公共接口，让实现保持朴素。这才是正确的取舍。</p>
 <h2 id="概念应该描述语义而不只是语法"><a class="header" href="#概念应该描述语义而不只是语法">概念应该描述语义，而不只是语法</a></h2>
 <p>只检查成员名是否存在的概念，比没有强，但仍然算不上好设计。生产中的泛型代码要想可维护，概念就必须对应系统中的某个语义角色。</p>
 <p><code>SortableRange</code> 比 <code>HasBeginEndAndLessThan</code> 好，<code>ByteSink</code> 比 <code>HasWriteAndFlush</code> 好，<code>RetryPolicy</code> 比 <code>CallableWithErrorAndAttemptCount</code> 好。概念的名字越像团队日常使用的设计术语，它在代码评审和诊断中就越有用。</p>
@@ -282,7 +282,7 @@ auto flush_batch(Sink&amp; sink, std::span&lt;const EncodedRecord&gt; batch)
 <li>人类用它们来理解算法期待的是哪一类东西。</li>
 </ol>
 <p>如果名字和结构只满足了编译器，价值就丢掉了一半。</p>
-<p>但这也不意味着概念要试图证明所有语义规则。大多数有用的不变量更适合通过测试来验证，而不是靠编译期静态强制。<code>RetryPolicy</code> 概念可以要求调用签名和结果类型，却无法证明该策略对某个具体操作是幂等安全的。接受这个局限就好：能在接口里检查的就在接口里说清楚，其余的交给测试和评审。</p>
+<p>但这也不意味着概念要试图证明所有语义规则。大多数有用的不变量更适合用测试来验证，而不是靠编译期静态强制。<code>RetryPolicy</code> 概念可以要求调用签名和结果类型，却无法证明该策略对某个具体操作是幂等安全的。接受这个局限就好：能在接口里检查的就在接口里说清楚，其余的交给测试和评审。</p>
 <h2 id="窄定制点优于模板蔓延"><a class="header" href="#窄定制点优于模板蔓延">窄定制点优于模板蔓延</a></h2>
 <p>很多可复用组件根本不需要庞大的概念层级体系，一两个精心选定的扩展点就够了。</p>
 <p>假设一个存储子系统要支持多种记录类型，它们都可以序列化到 wire buffer。常见的坏做法是：定义一个主模板，让特化散布在整个代码库，再靠 ADL 或隐式转换决定实际行为。这样做会让行为难以发现，也很容易被无意破坏。</p>
