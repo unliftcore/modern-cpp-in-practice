@@ -89,7 +89,7 @@ int main() {
 
     std::println("Task API server starting on port {}", port);
     std::println("Press Ctrl+C to stop");
-    std::print("\n");
+    std::println("");
     std::println("Available endpoints:");
     std::println("  GET    /health        — health check");
     std::println("  GET    /tasks         — list all tasks");
@@ -98,7 +98,7 @@ int main() {
     std::println("  PUT    /tasks/:id     — replace a task");
     std::println("  PATCH  /tasks/:id     — partial update");
     std::println("  DELETE /tasks/:id     — delete a task");
-    std::print("\n");
+    std::println("");
 
     // Run server with cooperative cancellation (Ch 14: jthread + stop_token).
     // The jthread and stop_token mechanism lives inside Server::run_until(),
