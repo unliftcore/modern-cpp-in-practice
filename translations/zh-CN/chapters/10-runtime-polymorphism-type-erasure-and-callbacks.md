@@ -246,7 +246,7 @@ void wire(EventSource& source, Session& session) {
 
 更好的设计会把所有权和生命周期模型写在明面上。如果回调会被保留，注册就应返回一个 handle 或注册对象，用它的生命周期来管控订阅关系。如果回调是同步的，API 就不该为了显得通用而接收拥有型的擦除 callable。
 
-`examples/web-api/` 的 `main.cpp` 展示了对引用捕获的作用域生命周期纪律。`TaskRepository` 在 router 和 handler 之前声明，server 最后声明。因为 C++ 按构造的逆序销毁局部变量，所以 repository 一定比所有捕获了其引用的 handler 和中间件活得更久。这个顺序不是偶然的——它是确保擦除 callable 中捕获的 `repo` 引用永远不会悬垂的结构性保证。当回调以引用方式捕获外部对象时，包围作用域必须保证被引用对象比 callable 活得更久。`main()` 中的声明顺序，就是这个保证所在的位置。
+`examples/web-api/` 的 `main.cpp` 展示了对引用捕获的作用域生命周期纪律。`TaskRepository` 在 router 和 handler 之前声明，server 最后声明。因为 C++ 按构造的逆序销毁局部变量，所以 repository 一定比所有捕获了其引用的 handler 和中间件活得更久。这个顺序不是偶然的——它是确保擦除 callable 中捕获的 `repo` 引用永远不会悬垂的结构性保证。当回调以引用方式捕获外部对象时，包围作用域必须保证被引用对象比 callable 活得更久。`main()` 中的声明顺序，正是这一保证的落脚点。
 
 ## 虚协议还是擦除 callable？
 

@@ -226,7 +226,7 @@ virtual ~OrderRepository() = default;
 
 `examples/web-api/src/modules/repository.cppm` 中的 `TaskRepository` 就是一个保持聚焦的窄接口。它的公共面只有 CRUD 操作：`create`、`find_by_id`、`find_all`、`find_completed`、`update`、`remove` 和 `size`。没有日志方法，没有配置开关，没有 metric 快照，没有缓存刷新。锁策略（`std::shared_mutex`）、存储表示（`std::vector<Task>`）、ID 生成（`std::atomic<TaskId>`）全部是 private 的。调用方依赖的是领域操作，而不是 repository 碰巧如何实现它们。
 
-## 数据形状：接受稳定视图，返回拥有型含义
+## 数据形状：接受稳定视图，返回拥有型领域值
 
 第 4 章讨论的是局部的签名选择。到了接口边界，同样的规则就升格为架构规则。
 
@@ -326,6 +326,6 @@ result_to_response(const Result<T>& result, int success_status = 200) {
 
 接口设计说到底，就是决定什么东西绝不能泄漏出去。
 
-依赖方向要对齐稳定策略，而非一时方便的实现。无需留存数据时，接受廉价的借用输入；跨边界返回时，交出拥有型的领域含义。按职责拆分接口，而非堆砌一堆操作。在易变依赖进入系统的位置完成失败转换。只在真实的设计接缝处做抽象。
+依赖方向要对齐稳定策略，而非一时方便的实现。无需留存数据时，接受廉价的借用输入；跨边界返回时，交出拥有型领域值。按职责拆分接口，而非堆砌一堆操作。在易变依赖进入系统的位置完成失败转换。只在真实的设计接缝处做抽象。
 
 如果调用方想正确使用你的 API，却不得不了解你的数据库 schema、传输包装类型、框架句柄或内部存储的生命周期，那这个边界承载的东西就已经太多了。趁耦合还没变成常态，赶紧重新设计。
