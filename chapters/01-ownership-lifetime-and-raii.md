@@ -30,102 +30,182 @@ RAII means tying a resource to the lifetime of an object whose destructor releas
 
 ### What Happens Without RAII
 
-Before illustrating the RAII pattern, it is worth seeing the manual approach in full, because production codebases still contain code that looks exactly like this.
+Before illustrating the RAII pattern, it is worth seeing the manual approach in a fuller form. The following anti-pattern is intentionally buggy, because production codebases still contain code that looks exactly like this.
 
 ```cpp
-// Manual resource management: C-style socket handling.
-void serve_request(const Config& config) {
-	socket_t sock = ::open_socket(config.port());
-	if (sock == invalid_socket) {
+socket_t create_server_socket(std::uint16_t port) {
+	socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
+	if (server == invalid_socket) {
+		throw NetworkError{"socket failed"};
+	}
+
+	int opt = 1;
+	if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+		::close_socket(server);
+		throw NetworkError{"setsockopt failed"};
+	}
+
+	sockaddr_in addr{};
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = INADDR_ANY;
+	addr.sin_port = htons(port);
+
+	if (::bind(server, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+		::close_socket(server);
 		throw NetworkError{"bind failed"};
 	}
 
-	char* buffer = new char[config.buffer_size()]; // second resource
+	if (::listen(server, 16) < 0) {
+		::close_socket(server);
+		throw NetworkError{"listen failed"};
+	}
 
-	auto* sub = event_bus::subscribe("health_check"); // third resource
+	return server; // RISK: caller now owns the raw descriptor by convention
+}
 
-	// -- any throw between here and the cleanup block leaks all three --
+void serve_once(std::uint16_t port) {
+	socket_t server = create_server_socket(port);
+	socket_t client = invalid_socket;
 
-	process(sock, buffer, sub); // may throw
+	try {
+		sockaddr_in client_addr{};
+		socket_length addr_len = sizeof(client_addr);
+		client = ::accept(server,
+		                  reinterpret_cast<sockaddr*>(&client_addr),
+		                  &addr_len);
+		if (client == invalid_socket) {
+			::close_socket(server); // BUG: server will be closed twice (here + in catch)
+			throw NetworkError{"accept failed"};
+		}
 
-	event_bus::unsubscribe(sub);
-	delete[] buffer;
-	::close_socket(sock);
+		std::array<char, 8192> buffer{};
+		auto n = read_from_socket(client, buffer.data(), buffer.size());
+		if (n <= 0) {
+			::close_socket(client);
+			::close_socket(server);
+			return;
+		}
+
+		process_request(client, std::string_view{buffer.data(), static_cast<std::size_t>(n)}); // RISK: any throw must preserve cleanup correctness
+
+		::close_socket(client);
+		::close_socket(server);
+	} catch (...) {
+		if (client != invalid_socket) {
+			::close_socket(client);
+		}
+		::close_socket(server);
+		throw;
+	}
 }
 ```
 
 The problems compound quickly:
 
-1. **Exception unsafety.** If `process` throws, or if `event_bus::subscribe` throws after the buffer is allocated, the preceding resources leak silently. Adding `try`/`catch` blocks for each acquisition creates deeply nested cleanup ladders that are painful to write and easy to get wrong.
+1. **Cleanup is duplicated.** `::close_socket(server)` appears in the setup helper, the normal path, the early-return path, and the exception path. The more exits you add, the more duplication you carry.
 
-2. **Double-free risk.** If a maintenance change adds an early return or a second call path, a developer may call `delete[] buffer` twice or call `::close_socket` on an already-closed handle. Neither failure is caught at compile time.
+2. **Duplication turns into bugs.** The `accept` failure path already closes `server` before throwing, so the `catch` block closes it a second time. Manual ownership logic tends to drift this way under maintenance.
 
-3. **Order-dependent teardown.** Every new resource added to the function forces the developer to update every exit path. With three resources there are already multiple combinations of partially-acquired state. With five or six, the cleanup logic dominates the function.
+3. **Exception safety depends on discipline.** `process_request` may throw. Any maintenance change between acquisition and cleanup has to remember which descriptors are live at that point.
 
-4. **Fragility under maintenance.** Code review cannot verify cleanup correctness locally. The reviewer must trace every path through the function to confirm that every resource is released exactly once. This does not scale.
+4. **Transfer is implicit.** `create_server_socket()` returns a raw `socket_t`, so ownership is now a convention between caller and callee rather than part of the type system.
+
+5. **Reviews become global.** To verify correctness, a reviewer has to inspect the whole function and confirm that every exit path closes every descriptor exactly once.
 
 The RAII alternative eliminates these problems by construction. Each resource is held by an owning object whose destructor performs the release. Stack unwinding does the rest.
 
-Consider a service component that needs a socket and a temporary subscription to an internal event stream.
-
-```cpp
-class SocketHandle {
-public:
-	SocketHandle() = default;
-	explicit SocketHandle(socket_t fd) noexcept : fd_(fd) {}
-
-	SocketHandle(const SocketHandle&) = delete;
-	auto operator=(const SocketHandle&) -> SocketHandle& = delete;
-
-	SocketHandle(SocketHandle&& other) noexcept
-		: fd_(std::exchange(other.fd_, invalid_socket)) {}
-
-	auto operator=(SocketHandle&& other) noexcept -> SocketHandle& {
-		if (this != &other) {
-			reset();
-			fd_ = std::exchange(other.fd_, invalid_socket);
-		}
-		return *this;
-	}
-
-	~SocketHandle() { reset(); }
-
-	auto get() const noexcept -> socket_t { return fd_; }
-
-	void reset() noexcept {
-		if (fd_ != invalid_socket) {
-			::close_socket(fd_);
-			fd_ = invalid_socket;
-		}
-	}
-
-private:
-	socket_t fd_ = invalid_socket;
-};
-```
-
-This type does not exist to show move semantics. It exists so ownership of the socket becomes single, explicit, and exception-safe. The destructor is the cleanup policy. Move operations define transfer. Copy is forbidden because duplicating ownership would be wrong.
-
-The companion web-api project demonstrates this exact pattern in production form. Its `Socket` class in `http.cppm` wraps a POSIX file descriptor with the same structure -- deleted copy, move via `std::exchange`, and a destructor that calls `::close`:
+The companion web-api project already contains the example we want. Its `Socket` class in `examples/web-api/src/modules/http.cppm` wraps a file descriptor and makes the ownership rules explicit:
 
 ```cpp
 // From examples/web-api/src/modules/http.cppm
 class Socket {
 public:
-    explicit Socket(int fd) noexcept : fd_{fd} {}
+    Socket() = default;
+    explicit Socket(socket_handle fd) noexcept : fd_{fd} {}
+
     Socket(const Socket&) = delete;
-    Socket(Socket&& other) noexcept : fd_{std::exchange(other.fd_, -1)} {}
-    ~Socket() { close(); }
+    Socket& operator=(const Socket&) = delete;
+
+    Socket(Socket&& other) noexcept
+        : fd_{std::exchange(other.fd_, invalid_socket_handle)} {}
+
+    Socket& operator=(Socket&& other) noexcept {
+        if (this != &other) {
+            close(); // release what this object currently owns
+            fd_ = std::exchange(other.fd_, invalid_socket_handle);
+        }
+        return *this;
+    }
+
+    ~Socket() { close(); } // automatic release on every exit path
+
+    [[nodiscard]] socket_handle fd() const noexcept { return fd_; }
+    [[nodiscard]] bool valid() const noexcept { return fd_ != invalid_socket_handle; }
+    explicit operator bool() const noexcept { return valid(); }
 
     void close() noexcept {
-        if (fd_ >= 0) { ::close(fd_); fd_ = -1; }
+        if (fd_ != invalid_socket_handle) {
+            close_socket(fd_);
+            fd_ = invalid_socket_handle;
+        }
     }
+
 private:
-    int fd_{-1};
+    socket_handle fd_{invalid_socket_handle};
 };
 ```
 
-This `Socket` is then used throughout the server -- for instance, `create_server_socket()` performs a multi-step setup (create, `setsockopt`, `bind`, `listen`) and returns a `Socket` by value. If any step fails, the already-acquired file descriptor is cleaned up automatically when the local `Socket` is destroyed.
+That class is enough to explain the whole RAII story:
+
+- **Acquisition** happens in the constructor: `Socket sock{::socket(...)};`
+- **Ownership is unique** because copy is deleted.
+- **Transfer is explicit** because moves use `std::exchange` to leave the source empty.
+- **Release is automatic** because the destructor always calls `close()`.
+
+The surrounding code in the same module shows how this behaves in real use. The following is a partial excerpt: only the ownership-relevant lines are shown, so supporting declarations and unrelated error-handling details are omitted for clarity.
+
+```cpp
+[[nodiscard]] Socket create_server_socket() const {
+    Socket sock{::socket(AF_INET, SOCK_STREAM, 0)}; // ownership starts here
+    if (!sock) return {};
+
+    int opt = 1;
+    if (::setsockopt(sock.fd(), SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        return {}; // sock is destroyed here, so the descriptor closes automatically
+    }
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port_);
+    if (::bind(sock.fd(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+        return {}; // same: failure path still releases the descriptor
+    }
+
+    if (::listen(sock.fd(), 16) < 0) {
+        return {};
+    }
+
+    return sock; // move or copy elision transfers ownership to the caller
+}
+
+Socket client{::accept(server_sock.fd(), ...)}; // client address parameters omitted for brevity
+handle_connection(std::move(client));           // explicit ownership transfer
+
+void handle_connection(Socket client) const {
+    std::array<char, 8192> buf{};
+    auto n = read_from_socket(client.fd(), buf.data(), buf.size());
+    if (n <= 0) return;
+
+    Response resp = handler_(req); // request parsing omitted here
+    auto data = resp.serialize();
+    (void)write_to_socket(client.fd(), data.data(), static_cast<int>(data.size()));
+} // client goes out of scope here and closes automatically
+```
+
+After `handle_connection(std::move(client))`, the caller-side `client` no longer owns the descriptor. The move constructor exchanged its file descriptor for `invalid_socket_handle`, so the moved-from object is harmless when its destructor later runs. Ownership exists in exactly one object at a time.
+
+Notice what disappeared: there is no cleanup ladder, no `try`/`catch` whose main job is teardown, and no convention about who owns which descriptor. The type carries the policy. That is the practical value of RAII.
 
 The same pattern applies to many non-memory resources. A scoped registration token unregisters in its destructor. A transaction object rolls back unless explicitly committed. A joined-thread wrapper joins during destruction or refuses to be destroyed while still joinable. Once a codebase thinks this way, cleanup paths become local again instead of scattered through error handling.
 
