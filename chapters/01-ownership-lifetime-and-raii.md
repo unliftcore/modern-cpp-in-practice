@@ -189,7 +189,7 @@ The surrounding code in the same module shows how this behaves in real use. The 
     return sock; // move or copy elision transfers ownership to the caller
 }
 
-Socket client{::accept(server_sock.fd(), ...)}; // accepted socket now has an owner
+Socket client{::accept(server_sock.fd(), ...)}; // client address parameters omitted for brevity
 handle_connection(std::move(client));           // explicit ownership transfer
 
 void handle_connection(Socket client) const {
