@@ -74,7 +74,7 @@ void serve_once(std::uint16_t port) {
 		                  reinterpret_cast<sockaddr*>(&client_addr),
 		                  &addr_len);
 		if (client == invalid_socket) {
-			::close_socket(server); // BUG: duplicated cleanup; catch will also close server
+			::close_socket(server); // BUG: server will be closed twice (here + in catch)
 			throw NetworkError{"accept failed"};
 		}
 
@@ -162,7 +162,7 @@ That class is enough to explain the whole RAII story:
 - **Transfer is explicit** because moves use `std::exchange` to leave the source empty.
 - **Release is automatic** because the destructor always calls `close()`.
 
-The surrounding code in the same module shows how this behaves in real use. The following is an intentional partial excerpt: only the ownership-relevant lines are shown.
+The surrounding code in the same module shows how this behaves in real use. The following is an intentional partial excerpt: only the ownership-relevant lines are shown, so supporting declarations and unrelated error-handling details are omitted for clarity.
 
 ```cpp
 [[nodiscard]] Socket create_server_socket() const {
