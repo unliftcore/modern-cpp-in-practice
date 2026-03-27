@@ -22,24 +22,8 @@ module;
 
 // Global module fragment: standard + POSIX headers
 // (POSIX headers must appear here, not in the module purview)
-#include <algorithm>
-#include <array>
-#include <atomic>
 #include <cerrno>
-#include <chrono>
-#include <cstdint>
 #include <cstdio>
-#include <format>
-#include <functional>
-#include <optional>
-#include <print>
-#include <sstream>
-#include <string>
-#include <string_view>
-#include <system_error>
-#include <thread>
-#include <utility>
-#include <vector>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -52,6 +36,8 @@ module;
 #endif
 
 export module webapi.http;
+
+import std;
 
 export namespace webapi::http {
 

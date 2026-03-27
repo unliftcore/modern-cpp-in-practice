@@ -17,13 +17,9 @@
 // ============================================================================
 module;
 
-#include <charconv>
-#include <cstdint>
-#include <format>
-#include <string>
-#include <string_view>
-
 export module webapi.handlers;
+
+import std;
 
 import webapi.error;
 import webapi.http;

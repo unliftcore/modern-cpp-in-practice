@@ -15,13 +15,9 @@
 // ============================================================================
 module;
 
-#include <format>
-#include <functional>
-#include <string>
-#include <string_view>
-#include <vector>
-
 export module webapi.router;
+
+import std;
 
 import webapi.http;
 

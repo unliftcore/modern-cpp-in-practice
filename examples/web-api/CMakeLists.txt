@@ -1,4 +1,9 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.30)
+
+# `import std;` must be enabled before CMake detects the C++ toolchain.
+set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "451f2fe2-a8a2-47c3-bc32-94786d8fc91b")
+set(CMAKE_CXX_MODULE_STD ON)
+
 project(web-api-example
     VERSION   0.1.0
     LANGUAGES CXX
@@ -11,13 +16,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS        OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# ── Require Ninja generator for C++20 module support ────────────────────────
-# CMake's module dependency scanning for the Clang lane requires Ninja or
-# Ninja Multi-Config. MSVC can configure with Visual Studio generators.
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_GENERATOR MATCHES "Ninja")
+# ── Require Ninja generator for `import std;` support ───────────────────────
+# CMake currently supports `import std;` only with Ninja-based generators.
+if(NOT CMAKE_GENERATOR MATCHES "Ninja")
     message(FATAL_ERROR
-    "The Clang module lane requires the Ninja generator. "
+        "The web-api import std example requires a Ninja generator. "
         "Please configure with: cmake -G Ninja -B build ...")
+endif()
+
+if(NOT 23 IN_LIST CMAKE_CXX_COMPILER_IMPORT_STD)
+    message(FATAL_ERROR
+        "The active C++ toolchain does not provide import std support for C++23. "
+        "CMake reported: ${CMAKE_CXX_COMPILER_IMPORT_STD_ERROR_MESSAGE}")
 endif()
 
 # ── Warning policy (Ch 20 & Appendix B) ─────────────────────────────────────

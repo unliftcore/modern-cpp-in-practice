@@ -15,22 +15,9 @@
 //   • [[nodiscard]]                       — prevent silent drops
 //   • Concepts (requires)                 — constrain update callable
 // ============================================================================
-module;
-
-#include <algorithm>
-#include <atomic>
-#include <concepts>
-#include <cstdint>
-#include <format>
-#include <functional>
-#include <mutex>
-#include <optional>
-#include <ranges>
-#include <shared_mutex>
-#include <string_view>
-#include <vector>
-
 export module webapi.repository;
+
+import std;
 
 import webapi.error;
 import webapi.task;

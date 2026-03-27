@@ -16,16 +16,9 @@
 // ============================================================================
 module;
 
-#include <concepts>
-#include <cstddef>
-#include <format>
-#include <optional>
-#include <ranges>
-#include <string>
-#include <string_view>
-#include <vector>
-
 export module webapi.json;
+
+import std;
 
 export namespace webapi::json {
 

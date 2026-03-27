@@ -15,14 +15,9 @@
 // ============================================================================
 module;
 
-// Global module fragment: standard headers used by the exported interface
-#include <cstdint>
-#include <expected>
-#include <format>
-#include <string>
-#include <string_view>
-
 export module webapi.error;
+
+import std;
 
 export namespace webapi {
 

@@ -3,9 +3,8 @@
 // ============================================================================
 
 #include <cassert>
-#include <print>
-#include <string>
-#include <vector>
+
+import std;
 
 import webapi.json;
 import webapi.task;
