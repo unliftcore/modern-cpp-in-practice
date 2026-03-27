@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -181,14 +181,14 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="structured-concurrency-cancellation-and-backpressure"><a class="header" href="#structured-concurrency-cancellation-and-backpressure">Structured Concurrency, Cancellation, and Backpressure</a></h1>
+                        <h1 id="structured-concurrency-cancellation-and-backpressure"><a class="header" href="#structured-concurrency-cancellation-and-backpressure">Structured concurrency, cancellation, and backpressure</a></h1>
 <p>This chapter assumes you already understand local coroutine lifetime and suspension hazards. The focus now is system shape: how groups of tasks begin, end, fail, and apply pressure to each other under real load.</p>
-<h2 id="the-production-problem"><a class="header" href="#the-production-problem">The Production Problem</a></h2>
+<h2 id="the-production-problem"><a class="header" href="#the-production-problem">The production problem</a></h2>
 <p>Many asynchronous systems fail even when each individual task looks reasonable.</p>
 <p>A request fans out to four backends and returns once three respond, but the fourth keeps running after the client disconnects. A worker pipeline accepts input faster than downstream storage can commit it, so memory usage climbs until the process is killed. A shutdown path waits forever because background tasks were detached instead of being part of a supervised tree. A retry storm consumes the very capacity needed for recovery. None of these is primarily a local coroutine bug. They are orchestration bugs.</p>
-<p>Structured concurrency is the discipline of making concurrent work follow lexical and ownership structure. Tasks belong to parents. Lifetimes are bounded. Failure propagates somewhere definite. Cancellation is not advisory folklore. Backpressure is part of admission policy, not a dashboard surprise after rollout.</p>
+<p>Structured concurrency is the discipline of making concurrent work follow lexical and ownership structure. Tasks belong to parents. Lifetimes are bounded. Failure propagates somewhere definite. Cancellation is not advisory folklore. Backpressure is part of admission policy, not a dashboard surprise.</p>
 <p>This chapter is about those system-level rules. Chapter 12 dealt with shared mutable state. Chapter 13 dealt with what one coroutine owns across suspension. Here the unit of reasoning is a set of tasks that together implement a request path, stream processor, or bounded service stage.</p>
-<h2 id="unstructured-work-scales-failure-not-just-throughput"><a class="header" href="#unstructured-work-scales-failure-not-just-throughput">Unstructured Work Scales Failure, Not Just Throughput</a></h2>
+<h2 id="unstructured-work-scales-failure-not-just-throughput"><a class="header" href="#unstructured-work-scales-failure-not-just-throughput">Unstructured work scales failure, not just throughput</a></h2>
 <p>The simplest way to start concurrent work is to launch tasks wherever needed and hope completion sorts itself out. That style is attractive because it minimizes immediate coordination. It is also how systems accumulate invisible work.</p>
 <p>Detached tasks, ad hoc thread pools, and fire-and-forget retries have three predictable consequences:</p>
 <ol>
@@ -197,7 +197,7 @@
 <li>Capacity becomes fictional. The system keeps accepting work because no parent scope owns admission pressure.</li>
 </ol>
 <p>A service can survive this for months if traffic is light and shutdown is rare. Under burst load, deployment churn, or slow downstream dependencies, the hidden work becomes the system.</p>
-<h2 id="fire-and-forget-a-catalog-of-failures"><a class="header" href="#fire-and-forget-a-catalog-of-failures">Fire-and-Forget: A Catalog of Failures</a></h2>
+<h2 id="fire-and-forget-a-catalog-of-failures"><a class="header" href="#fire-and-forget-a-catalog-of-failures">Fire-and-forget: a catalog of failures</a></h2>
 <p>Before contrasting with structured concurrency, it is worth seeing exactly how unstructured work fails. “Fire-and-forget” is not one anti-pattern; it is several, each with a distinct failure mode.</p>
 <h3 id="resource-leaks-from-ownerless-work"><a class="header" href="#resource-leaks-from-ownerless-work">Resource leaks from ownerless work</a></h3>
 <pre><code class="language-cpp">// Anti-pattern: detached task leaks a database connection on cancellation.
@@ -254,8 +254,8 @@ task&lt;void&gt; on_request(request req, std::stop_token stop) {
     // if stop is triggered, co_await points observe it and unwind cleanly
 }
 </code></pre>
-<p>The parent request scope can cancel the token on client disconnect or deadline. The coroutine’s awaitables check the token at each suspension point. Resources are released through normal RAII. No work outlives its owner. The contrast with fire-and-forget is not style; it is the difference between a system that can shut down and one that cannot.</p>
-<h2 id="structured-concurrency-means-parent-scopes-own-child-work"><a class="header" href="#structured-concurrency-means-parent-scopes-own-child-work">Structured Concurrency Means Parent Scopes Own Child Work</a></h2>
+<p>The parent request scope can cancel the token on client disconnect or deadline. The coroutine’s awaitables check the token at each suspension point. Resources are released through normal RAII. No work outlives its owner. The contrast with fire-and-forget is not style preference; it is the difference between a system that can shut down cleanly and one that cannot.</p>
+<h2 id="structured-concurrency-means-parent-scopes-own-child-work"><a class="header" href="#structured-concurrency-means-parent-scopes-own-child-work">Structured concurrency means parent scopes own child work</a></h2>
 <p>The central idea is simple: if a scope starts child tasks to complete its job, those children should finish, fail, or be canceled before the scope is considered done.</p>
 <p>That gives you three properties that ad hoc async code rarely has by default:</p>
 <ol>
@@ -264,11 +264,11 @@ task&lt;void&gt; on_request(request req, std::stop_token stop) {
 <li>Cancellation and shutdown can follow a tree instead of searching the process for loose ends.</li>
 </ol>
 <p>This does not require one specific library. It requires design discipline. A request handler that fans out to multiple backends should not return while those backend calls continue running unless the business contract explicitly permits detached follow-up work and names its owner. A batch consumer should not enqueue downstream tasks without also deciding who drains them on shutdown and who absorbs overload.</p>
-<p>Structured concurrency is therefore an ownership rule for time. If Chapter 1 taught that every resource needs an owner, this chapter applies the same principle to concurrent work.</p>
-<h2 id="cancellation-must-be-a-first-class-contract"><a class="header" href="#cancellation-must-be-a-first-class-contract">Cancellation Must Be a First-Class Contract</a></h2>
+<p>Structured concurrency is an ownership rule for time. If Chapter 1 taught that every resource needs an owner, this chapter applies the same principle to concurrent work.</p>
+<h2 id="cancellation-must-be-a-first-class-contract"><a class="header" href="#cancellation-must-be-a-first-class-contract">Cancellation must be a first-class contract</a></h2>
 <p>Cancellation is often described as a courtesy. In production it is load control.</p>
 <p>Once a client disconnects, a deadline expires, or a parent task fails, continuing child work may waste CPU, memory, database capacity, and retry budget. Worse, uncanceled work competes with useful work. Systems under pressure often fail because they keep doing tasks that no longer matter.</p>
-<p>Modern C++ gives useful building blocks such as <code>std::stop_source</code>, <code>std::stop_token</code>, and <code>std::jthread</code>. The example project’s <code>Server::run(std::stop_token)</code> (<code>examples/web-api/src/modules/http.cppm</code>) uses exactly these building blocks: the accept loop checks <code>stop_token.stop_requested()</code> on every iteration, and <code>select()</code> with a one-second timeout ensures the check happens promptly even when no clients are connecting. This is cooperative cancellation in a real server — the token is the contract, and the timeout-based polling is the mechanism.</p>
+<p>Modern C++ gives useful building blocks: <code>std::stop_source</code>, <code>std::stop_token</code>, and <code>std::jthread</code>. The example project’s <code>Server::run(std::stop_token)</code> (<code>examples/web-api/src/modules/http.cppm</code>) uses them directly: the accept loop checks <code>stop_token.stop_requested()</code> on every iteration, and <code>select()</code> with a one-second timeout ensures the check happens promptly even when no clients are connecting. The token is the contract; the timeout-based polling is the mechanism.</p>
 <p>But the primitives alone are not enough. The harder question is semantic:</p>
 <ol>
 <li>Which operations are cancelable?</li>
@@ -278,7 +278,7 @@ task&lt;void&gt; on_request(request req, std::stop_token stop) {
 </ol>
 <p>If those questions are unanswered, wiring a stop token through a few functions is theater.</p>
 <p>Cancellation also needs direction. Parent-to-child propagation should be the default. Child-to-parent escalation depends on policy: one child failure may cancel siblings, may degrade the result, or may be recorded while work continues. The point is that the rule must be explicit at the scope that owns the group.</p>
-<h2 id="anti-pattern-fan-out-without-bounded-ownership"><a class="header" href="#anti-pattern-fan-out-without-bounded-ownership">Anti-pattern: Fan-Out Without Bounded Ownership</a></h2>
+<h2 id="anti-pattern-fan-out-without-bounded-ownership"><a class="header" href="#anti-pattern-fan-out-without-bounded-ownership">Anti-pattern: fan-out without bounded ownership</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: child work outlives the request and overload has no admission limit.
 task&lt;aggregate_reply&gt; handle_request(request req) {
     auto a = fetch_profile(req.user_id);
@@ -296,11 +296,11 @@ task&lt;aggregate_reply&gt; handle_request(request req) {
 <p>What cancels the three child operations if the client times out after the first await? What prevents ten thousand concurrent requests from starting thirty thousand backend calls immediately? If <code>fetch_inventory</code> hangs, do the others keep running? If one call fails fast, should the rest be canceled or allowed to complete because partial results are useful?</p>
 <p>The problem is not that fan-out is bad. It is that the code does not show a supervision policy.</p>
 <p>In a structured design, the request scope owns a cancellation source or token, child tasks are started within that scope, deadlines are attached, and concurrency against downstream dependencies is bounded by permits or semaphores. The exact abstraction varies by codebase. The essential property is that the request does not create anonymous work.</p>
-<h2 id="deadlines-and-budgets-beat-best-effort-timeouts"><a class="header" href="#deadlines-and-budgets-beat-best-effort-timeouts">Deadlines and Budgets Beat Best-Effort Timeouts</a></h2>
+<h2 id="deadlines-and-budgets-beat-best-effort-timeouts"><a class="header" href="#deadlines-and-budgets-beat-best-effort-timeouts">Deadlines and budgets beat best-effort timeouts</a></h2>
 <p>Timeouts are often implemented locally and inconsistently. One dependency has a 200 ms timeout, another has 500 ms, and the caller has a 300 ms deadline that nobody propagates. The result is wasted work and confusing telemetry.</p>
 <p>A better model is budget propagation. A parent operation carries a deadline or remaining budget. Child operations derive their own limits from that budget instead of inventing unrelated ones. This keeps cancellation and latency intent aligned.</p>
 <p>The tradeoff is that downstream APIs must accept deadline or cancellation context explicitly, and timeout behavior becomes visible in signatures or task builders. That is a good cost. Hidden timeout policy is usually worse than noisy timeout policy.</p>
-<h2 id="backpressure-is-admission-control-not-complaint-logging"><a class="header" href="#backpressure-is-admission-control-not-complaint-logging">Backpressure Is Admission Control, Not Complaint Logging</a></h2>
+<h2 id="backpressure-is-admission-control-not-complaint-logging"><a class="header" href="#backpressure-is-admission-control-not-complaint-logging">Backpressure is admission control, not complaint logging</a></h2>
 <p>Backpressure means the system has a deliberate answer to “what happens when work arrives faster than we can finish it?”</p>
 <p>Without that answer, work piles up in queues, buffers, retry loops, and coroutine frames. Memory climbs first, latency second, and only then does the outage become obvious. An unbounded queue is not elasticity. It is a promise to convert overload into delayed failure.</p>
 <p>Real backpressure mechanisms are concrete:</p>
@@ -312,11 +312,11 @@ task&lt;aggregate_reply&gt; handle_request(request req) {
 <li>Batch sizing and flush policy that match downstream commit cost.</li>
 </ol>
 <p>Each mechanism encodes business policy. Which work can be dropped? Which must wait? Which clients receive an explicit overload signal? Those are product decisions expressed as concurrency control.</p>
-<h2 id="bounded-concurrency-is-usually-better-than-bigger-pools"><a class="header" href="#bounded-concurrency-is-usually-better-than-bigger-pools">Bounded Concurrency Is Usually Better Than Bigger Pools</a></h2>
+<h2 id="bounded-concurrency-is-usually-better-than-bigger-pools"><a class="header" href="#bounded-concurrency-is-usually-better-than-bigger-pools">Bounded concurrency is usually better than bigger pools</a></h2>
 <p>When a dependency slows down, many teams first increase pool sizes or queue depths. That often amplifies the problem.</p>
 <p>If a database can sustain fifty useful concurrent requests, allowing two hundred in-flight operations mostly increases contention and timeout overlap. The same applies to CPU-heavy parsing stages, compression work, and remote service calls with their own internal bottlenecks.</p>
 <p>Bound concurrency where the scarce resource actually is. Make that bound visible in code and telemetry. Then decide what should happen when the bound is reached: wait, fail fast, degrade, or redirect. Bigger pools without policy only hide overload until the whole system is saturated.</p>
-<h2 id="pipelines-need-pressure-to-travel-upstream"><a class="header" href="#pipelines-need-pressure-to-travel-upstream">Pipelines Need Pressure to Travel Upstream</a></h2>
+<h2 id="pipelines-need-pressure-to-travel-upstream"><a class="header" href="#pipelines-need-pressure-to-travel-upstream">Pipelines need pressure to travel upstream</a></h2>
 <p>Pipelines are where backpressure discipline becomes unavoidable.</p>
 <p>Consider a message consumer that parses records, enriches them with remote lookups, and writes batches to storage. If parsing outruns storage, some stage must slow down. If enrichment outruns parsing, the enrichment stage should not keep creating more in-flight requests just because it can. If shutdown begins, all stages need a coordinated drain or cancel policy.</p>
 <p>Good pipeline design therefore names:</p>
@@ -327,8 +327,8 @@ task&lt;aggregate_reply&gt; handle_request(request req) {
 <li>Whether cancellation drains partially completed batches or discards them.</li>
 <li>Which metrics reveal saturation before memory pressure becomes critical.</li>
 </ol>
-<p>This is not optional infrastructure polish. It is the difference between a system that degrades and one that accumulates work until it dies.</p>
-<h2 id="failure-propagation-needs-policy-not-hope"><a class="header" href="#failure-propagation-needs-policy-not-hope">Failure Propagation Needs Policy, Not Hope</a></h2>
+<p>This is not optional infrastructure polish. It is the difference between a system that degrades gracefully and one that accumulates work until it dies.</p>
+<h2 id="failure-propagation-needs-policy-not-hope"><a class="header" href="#failure-propagation-needs-policy-not-hope">Failure propagation needs policy, not hope</a></h2>
 <p>Once work is structured into groups, failure handling becomes a design choice instead of an accident.</p>
 <p>Common policies include:</p>
 <ol>
@@ -337,8 +337,8 @@ task&lt;aggregate_reply&gt; handle_request(request req) {
 <li>Quorum groups, where enough successful children satisfy the operation and the rest are canceled.</li>
 <li>Supervisory loops, where failures restart isolated child work under rate limits and budgets.</li>
 </ol>
-<p>All four are valid in the right domain. What matters is that the code and abstraction make the policy apparent. Silent continuation after child failure is not resilience. It is ambiguity.</p>
-<h2 id="shutdown-is-the-truth-serum"><a class="header" href="#shutdown-is-the-truth-serum">Shutdown Is the Truth Serum</a></h2>
+<p>All four are valid in the right domain. What matters is that the code and abstraction make the policy apparent. Silent continuation after child failure is not resilience; it is ambiguity.</p>
+<h2 id="shutdown-is-the-truth-serum"><a class="header" href="#shutdown-is-the-truth-serum">Shutdown is the truth serum</a></h2>
 <p>Systems with weak concurrency structure often look fine until shutdown.</p>
 <p>A clean shutdown path forces all the hidden questions into the open. Which tasks are still running? Which can be interrupted safely? Which queues must drain? Which side effects may be committed after shutdown begins? Which background loops own the stop source, and who awaits their completion?</p>
 <p>This is why shutdown tests are disproportionately valuable. They expose detached work, missing cancellation points, unbounded queues, and tasks with no owner. If a subsystem cannot describe how it stops under load, it does not fully own its concurrency model.</p>
@@ -373,7 +373,7 @@ extern "C" void signal_handler(int /*sig*/) {
 }
 </code></pre>
 <p>The ownership chain is clear: <code>main</code> owns the <code>Server</code>, the <code>Server</code> owns the <code>jthread</code>, and the <code>jthread</code> owns the <code>stop_source</code>. When Ctrl+C arrives, the signal handler sets the atomic flag, <code>run_until</code> observes it and calls <code>request_stop()</code>, the accept loop exits on the next iteration, and the <code>jthread</code> destructor joins the thread. No detached work, no orphaned connections, no race between shutdown and in-flight requests. This is structured concurrency applied to a real service lifecycle.</p>
-<h2 id="verification-and-telemetry-for-structured-async-systems"><a class="header" href="#verification-and-telemetry-for-structured-async-systems">Verification and Telemetry for Structured Async Systems</a></h2>
+<h2 id="verification-and-telemetry-for-structured-async-systems"><a class="header" href="#verification-and-telemetry-for-structured-async-systems">Verification and telemetry for structured async systems</a></h2>
 <p>Unit tests alone do not validate structured concurrency or backpressure. You need evidence that the system behaves sanely under stress.</p>
 <p>Useful verification includes:</p>
 <ol>
@@ -384,7 +384,7 @@ extern "C" void signal_handler(int /*sig*/) {
 <li>Traces or logs that show parent-child linkage so orphaned work is visible.</li>
 </ol>
 <p>If observability cannot reveal where work is accumulating or which parent owns it, the structure exists only in the author’s head.</p>
-<h2 id="review-questions-for-structured-concurrency"><a class="header" href="#review-questions-for-structured-concurrency">Review Questions for Structured Concurrency</a></h2>
+<h2 id="review-questions-for-structured-concurrency"><a class="header" href="#review-questions-for-structured-concurrency">Review questions for structured concurrency</a></h2>
 <p>Before approving an asynchronous orchestration design, ask:</p>
 <ol>
 <li>Who owns each group of child tasks?</li>

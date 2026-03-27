@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -181,23 +181,17 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="parameter-passing-return-types-and-api-surface"><a class="header" href="#parameter-passing-return-types-and-api-surface">Parameter Passing, Return Types, and API Surface</a></h1>
+                        <h1 id="parameter-passing-return-types-and-api-surface"><a class="header" href="#parameter-passing-return-types-and-api-surface">Parameter passing, return types, and API surface</a></h1>
 <p>In C++, a function signature says more than many authors intend. It says whether the callee borrows or retains data. It often implies whether null is meaningful, whether mutation is allowed, whether a copy may happen, and whether failure is ordinary control flow. If the signature gets these semantics wrong, the implementation can still be locally correct while the API remains expensive to use and hard to review.</p>
 <p>This chapter is about that semantic surface area. The goal is not to memorize “always pass X by Y.” The goal is to choose parameter and return forms that tell the truth about ownership, lifetime, mutation, nullability, and cost at the boundary where a caller must make decisions.</p>
 <p>That boundary focus keeps this chapter distinct from the ones before and after it. Chapter 1 dealt with who owns resources. Chapter 2 dealt with what kinds of objects exist in the model. Chapter 3 dealt with how failure should cross boundaries. Here the question is narrower and more practical: given those design choices, what should a function signature look like so the call contract is obvious?</p>
-<h2 id="signatures-are-contracts-not-type-checking-rituals"><a class="header" href="#signatures-are-contracts-not-type-checking-rituals">Signatures Are Contracts, Not Type-Checking Rituals</a></h2>
+<h2 id="signatures-are-contracts-not-type-checking-rituals"><a class="header" href="#signatures-are-contracts-not-type-checking-rituals">Signatures are contracts, not type-checking rituals</a></h2>
 <p>Many bad C++ APIs come from treating the signature as the smallest set of types that compiles. That approach ignores the fact that parameter and return choices are documentation with teeth.</p>
 <p>Take a parser boundary.</p>
 <pre><code class="language-cpp">auto parse_frame(std::span&lt;const std::byte&gt; bytes)
     -&gt; std::expected&lt;Frame, ParseError&gt;;
 </code></pre>
-<p>This single line communicates several things immediately.</p>
-<ul>
-<li>The function borrows contiguous read-only bytes.</li>
-<li>It does not require ownership of the source buffer.</li>
-<li>A frame is produced as an owned value.</li>
-<li>Failure is expected and explicit.</li>
-</ul>
+<p>This single line communicates several things at once: the function borrows contiguous read-only bytes, does not require ownership of the source buffer, produces a frame as an owned value, and makes failure explicit.</p>
 <p>Compare that with <code>Frame parse_frame(const std::vector&lt;std::byte&gt;&amp;);</code>. That version implies a container choice the parser does not need, hides failure policy, and says nothing about whether the returned <code>Frame</code> contains borrowed views into the input or independent owned data.</p>
 <p>The example project’s HTTP parser follows the same pattern. In <code>examples/web-api/src/modules/http.cppm</code>, <code>parse_request</code> borrows its input and returns an owned result:</p>
 <pre><code class="language-cpp">[[nodiscard]] inline std::optional&lt;Request&gt;
@@ -205,7 +199,7 @@ parse_request(std::string_view raw);
 </code></pre>
 <p>The function accepts a <code>string_view</code> into a stack buffer, parses method, path, headers, and body, and returns a fully owned <code>Request</code> with <code>std::string</code> members. The caller’s buffer can be reused or destroyed immediately after the call returns. That borrow-in, own-out contract is visible in the signature alone.</p>
 <p>The difference is not stylistic polish. It is whether the call site can reason about the contract without opening the implementation.</p>
-<h2 id="borrowing-parameters-should-look-borrowed"><a class="header" href="#borrowing-parameters-should-look-borrowed">Borrowing Parameters Should Look Borrowed</a></h2>
+<h2 id="borrowing-parameters-should-look-borrowed"><a class="header" href="#borrowing-parameters-should-look-borrowed">Borrowing parameters should look borrowed</a></h2>
 <p>If a function reads caller-owned data during the call and does not retain it, the signature should express borrowing directly.</p>
 <p>For text, <code>std::string_view</code> is usually the right parameter type when null termination is irrelevant and no ownership transfer occurs. For contiguous binary or element sequences, <code>std::span&lt;const T&gt;</code> is usually the right read-only form. For mutable borrowed access, <code>std::span&lt;T&gt;</code> or a non-const reference may be appropriate depending on whether the abstraction is sequence-shaped or object-shaped.</p>
 <p>This has two advantages.</p>
@@ -214,7 +208,7 @@ parse_request(std::string_view raw);
 <li>The contract is honest. Borrowing stays borrowing.</li>
 </ol>
 <p>The main misuse is allowing borrowed parameters to leak into retained state. A function that accepts <code>string_view</code> and then caches it beyond the call is not clever; it is lying about the contract.</p>
-<h3 id="dangling-borrows-the-cost-of-getting-this-wrong"><a class="header" href="#dangling-borrows-the-cost-of-getting-this-wrong">Dangling Borrows: The Cost of Getting This Wrong</a></h3>
+<h3 id="dangling-borrows-the-cost-of-getting-this-wrong"><a class="header" href="#dangling-borrows-the-cost-of-getting-this-wrong">Dangling borrows: the cost of getting this wrong</a></h3>
 <p>When a borrowed parameter outlives its source, the result is undefined behavior that often manifests as intermittent corruption rather than a clean crash:</p>
 <pre><code class="language-cpp">class Logger {
 public:
@@ -247,7 +241,7 @@ private:
 };
 </code></pre>
 <p>That is why a useful review heuristic is simple: if the parameter type says borrow, all retention must be visible in the implementation as an explicit copy or transformation to an owning type.</p>
-<h2 id="pass-by-value-when-the-callee-needs-its-own-copy-anyway"><a class="header" href="#pass-by-value-when-the-callee-needs-its-own-copy-anyway">Pass by Value When the Callee Needs Its Own Copy Anyway</a></h2>
+<h2 id="pass-by-value-when-the-callee-needs-its-own-copy-anyway"><a class="header" href="#pass-by-value-when-the-callee-needs-its-own-copy-anyway">Pass by value when the callee needs its own copy anyway</a></h2>
 <p>One of the most useful modern C++ patterns is passing by value when the callee intends to store or otherwise own the argument. This often surprises people trained to avoid copies at all costs.</p>
 <p>Consider a request object that stores a tenant name.</p>
 <pre><code class="language-cpp">class RequestContext {
@@ -267,9 +261,9 @@ private:
 <li>There is no temptation to retain a borrowed view accidentally.</li>
 </ul>
 <p>The rule is not “always pass expensive types by const reference.” The rule is “pass by value when ownership transfer into the callee is the intended contract and the extra move/copy story is acceptable.”</p>
-<h3 id="wrong-parameter-choices-and-their-costs"><a class="header" href="#wrong-parameter-choices-and-their-costs">Wrong Parameter Choices and Their Costs</a></h3>
+<h3 id="wrong-parameter-choices-and-their-costs"><a class="header" href="#wrong-parameter-choices-and-their-costs">Wrong parameter choices and their costs</a></h3>
 <p>The cost of getting parameter passing wrong is not always dramatic, but it compounds across hot paths and large objects.</p>
-<p><strong>Unnecessary copy from <code>const std::string&amp;</code> when ownership is needed:</strong></p>
+<p>An unnecessary copy from <code>const std::string&amp;</code> when ownership is needed:</p>
 <pre><code class="language-cpp">class Registry {
 public:
     void register_name(const std::string&amp; name) {
@@ -297,7 +291,7 @@ make_error(ErrorCode code, std::string detail) {
 }
 </code></pre>
 <p>Callers passing a string literal or a temporary pay zero copy cost; callers passing an lvalue pay one copy that the function would have needed anyway. The signature honestly communicates that <code>detail</code> will be owned by the resulting error.</p>
-<p><strong>Forced allocation from <code>const std::vector&lt;T&gt;&amp;</code> when <code>std::span</code> suffices:</strong></p>
+<p>A forced allocation from <code>const std::vector&lt;T&gt;&amp;</code> when <code>std::span</code> suffices:</p>
 <pre><code class="language-cpp">// Anti-pattern: forces callers to allocate a vector even if data is in an array or span.
 double average(const std::vector&lt;double&gt;&amp; values);
 
@@ -312,12 +306,12 @@ auto avg = average(std::vector&lt;double&gt;(readings.begin(), readings.end()));
 auto avg = average(readings);
 </code></pre>
 <p>The tradeoff is that pass-by-value can be wrong for polymorphic types, very large aggregates where copying lvalues is rarely desired, or APIs where retention is conditional and uncommon. As always, the semantic contract comes first.</p>
-<h2 id="non-const-reference-means-more-than-mutability"><a class="header" href="#non-const-reference-means-more-than-mutability">Non-const Reference Means More Than Mutability</a></h2>
+<h2 id="non-const-reference-means-more-than-mutability"><a class="header" href="#non-const-reference-means-more-than-mutability">Non-const reference means more than mutability</a></h2>
 <p>A non-const reference parameter is strong syntax. It says the caller must provide a live object, null is not meaningful, and the callee may mutate that exact object. This is sometimes the right contract. It is also overused.</p>
 <p>Use a non-const reference when the mutation is central to the operation and callers should see it as the main point of the call. Sorting a vector in place, filling a provided output buffer, or advancing a parser state object may fit.</p>
 <p>Do not use non-const references merely to avoid returning a value or because out-parameters feel familiar from C APIs. Out-parameters weaken readability when the result is conceptually the output of the function rather than an object the caller is deliberately handing over for mutation.</p>
 <p>In modern C++, returning a value is usually clearer for primary results. Reserve non-const reference parameters for genuine in-place mutation or multi-object coordination where mutation is the real contract.</p>
-<h2 id="raw-pointers-are-mostly-for-optionality-and-interop"><a class="header" href="#raw-pointers-are-mostly-for-optionality-and-interop">Raw Pointers Are Mostly for Optionality and Interop</a></h2>
+<h2 id="raw-pointers-are-mostly-for-optionality-and-interop"><a class="header" href="#raw-pointers-are-mostly-for-optionality-and-interop">Raw pointers are mostly for optionality and interop</a></h2>
 <p>Raw pointers still have legitimate roles in interfaces. The cleanest modern use is to represent an optional borrowed object or to interoperate with lower-level APIs.</p>
 <p>That is a narrower role than many codebases give them.</p>
 <p>A <code>T*</code> parameter should usually mean one of two things:</p>
@@ -327,12 +321,12 @@ auto avg = average(readings);
 </ol>
 <p>If null is not meaningful, a reference is usually clearer. If ownership is being transferred, <code>std::unique_ptr&lt;T&gt;</code> or another owning type is clearer. If the object is an array or contiguous sequence, <code>std::span&lt;T&gt;</code> is usually clearer. A naked pointer that means “non-null borrowed maybe-single maybe-many maybe-retained” is semantic debt.</p>
 <p>The same principle applies to return types. Returning a raw owning pointer from ordinary modern C++ APIs is almost always the wrong signal. Returning a raw observer pointer can be fine when absence is meaningful and lifetime is controlled elsewhere.</p>
-<h2 id="return-owned-meaning-not-storage-accidents"><a class="header" href="#return-owned-meaning-not-storage-accidents">Return Owned Meaning, Not Storage Accidents</a></h2>
+<h2 id="return-owned-meaning-not-storage-accidents"><a class="header" href="#return-owned-meaning-not-storage-accidents">Return owned meaning, not storage accidents</a></h2>
 <p>Return types deserve the same discipline as parameters. The main question is whether the caller should receive owned meaning, borrowed access, or a decision-bearing wrapper such as <code>expected</code> or <code>optional</code>.</p>
 <p>For many APIs, returning an owned value is the cleanest design even when it involves a move. This keeps lifetime local, makes composition easier, and avoids callers depending on internal storage. Modern C++23 move semantics make value returns cheap enough in many cases that the clarity win dominates.</p>
 <p>Borrowed return types are appropriate only when the source lifetime is obvious, stable, and truly part of the contract. Returning <code>std::string_view</code> into internal storage is fine only when the storage clearly outlives the view and callers can use that fact safely. Across broad boundaries, this is often a poor trade because it exports lifetime reasoning the callee could have kept private.</p>
 <p>Optionality and failure should also be explicit in the return type rather than smuggled through sentinel values. A search returning “maybe found” fits <code>std::optional&lt;T&gt;</code> or an observer pointer if lifetime semantics require it. A parse or load operation whose failure is decision-relevant fits <code>std::expected&lt;T, E&gt;</code>. A function that returns an empty string or <code>-1</code> on failure is usually making the API weaker than the implementation needs it to be.</p>
-<h2 id="anti-pattern-one-signature-several-hidden-stories"><a class="header" href="#anti-pattern-one-signature-several-hidden-stories">Anti-pattern: One Signature, Several Hidden Stories</a></h2>
+<h2 id="anti-pattern-one-signature-several-hidden-stories"><a class="header" href="#anti-pattern-one-signature-several-hidden-stories">Anti-pattern: one signature, several hidden stories</a></h2>
 <p>This kind of API survives in many codebases because it seems flexible.</p>
 <pre><code class="language-cpp">// Anti-pattern: signature hides ownership, failure, and buffer contract.
 bool encode_record(const Record&amp; record,
@@ -356,7 +350,7 @@ auto append_encoded_record(const Record&amp; record,
     -&gt; std::expected&lt;void, EncodeError&gt;;
 </code></pre>
 <p>Now the caller chooses between owned result production and append-style mutation, and the failure contract is explicit. The two different operations no longer pretend to be one generic “flexible” interface.</p>
-<h2 id="factories-and-acquisition-functions-must-state-ownership-up-front"><a class="header" href="#factories-and-acquisition-functions-must-state-ownership-up-front">Factories and Acquisition Functions Must State Ownership Up Front</a></h2>
+<h2 id="factories-and-acquisition-functions-must-state-ownership-up-front"><a class="header" href="#factories-and-acquisition-functions-must-state-ownership-up-front">Factories and acquisition functions must state ownership up front</a></h2>
 <p>Creation functions are where unclear ownership becomes especially expensive. A factory returning <code>T*</code> leaves callers asking who deletes it. A factory writing into an out-parameter plus bool return often hides partial-construction rules. A factory returning <code>shared_ptr&lt;T&gt;</code> by default may impose shared ownership long before the design proved it necessary.</p>
 <p>For ordinary exclusive ownership, <code>std::unique_ptr&lt;T&gt;</code> is usually the clearest result. For value-like created objects, return the value directly or use <code>expected&lt;T, E&gt;</code> when failure belongs at the boundary. For shared ownership, return <code>shared_ptr&lt;T&gt;</code> only when the product being created is genuinely intended for shared lifetime.</p>
 <p>The difference is concrete:</p>
@@ -396,12 +390,12 @@ void setup() {
 </code></pre>
 <p>Neither function uses out-parameters or bool return codes. The ownership story is the same as the <code>unique_ptr</code> factory above, adapted for value types: the caller moves a value in, gets back either a valid owned result or an explicit error.</p>
 <p>The important point is not the specific vocabulary type. It is that creation boundaries are where ownership should become unmistakable.</p>
-<h2 id="api-surface-is-also-cost-surface"><a class="header" href="#api-surface-is-also-cost-surface">API Surface Is Also Cost Surface</a></h2>
+<h2 id="api-surface-is-also-cost-surface"><a class="header" href="#api-surface-is-also-cost-surface">API surface is also cost surface</a></h2>
 <p>Signature choices influence cost in ways that matter to callers.</p>
 <p>A <code>std::function</code> parameter may allocate and type-erase even when the callback is used only synchronously. A <code>std::span&lt;const T&gt;</code> avoids forcing callers into a container representation. A <code>std::string</code> by-value sink constructor may permit efficient moves from temporaries. Returning an owned vector may allocate once but eliminate a long-lived lifetime hazard. These are design tradeoffs, not micro-optimizations.</p>
 <p>The right discipline is to expose costs the caller should know about and avoid accidental ones the caller cannot infer. A good signature does not promise zero cost. It makes the important costs unsurprising.</p>
 <p>That is also why broad “convenience” overload sets can become harmful. When an API accepts every combination of pointer, string, span, vector, and view, the overload surface can become harder to reason about than the original problem. Prefer a small number of semantically crisp forms.</p>
-<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and Review</a></h2>
+<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and review</a></h2>
 <p>Function signatures are one of the cheapest places to catch design mistakes early.</p>
 <p>Useful review questions:</p>
 <ol>

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -185,12 +185,12 @@
 <p>Application code can get away with local convenience for a surprisingly long time. Library code cannot. Once an API escapes its original caller set, every vague ownership contract, every overloaded error channel, every accidental allocation, and every unstable type dependency becomes somebody else’s problem. The library may still compile. It becomes expensive to trust.</p>
 <p>The production question for this chapter is therefore not “how do I write a nice API?” It is “what does a reusable modern C++23 library have to make explicit so that other teams can adopt it without inheriting hidden coupling, unstable behavior, or unverifiable claims?” The answer starts with scope. A good reusable library makes a narrow promise, expresses that promise in types and contracts that survive real use, and refuses to leak its implementation economics into the whole dependency graph.</p>
 <p>The sample shape here is a parsing and transformation library used by several services and command-line tools. That is a useful domain because it brings together most of the hard pressures: input boundaries, allocation behavior, diagnostics, performance expectations, extensibility, and packaging.</p>
-<h2 id="start-by-choosing-a-narrow-promise"><a class="header" href="#start-by-choosing-a-narrow-promise">Start by Choosing a Narrow Promise</a></h2>
+<h2 id="start-by-choosing-a-narrow-promise"><a class="header" href="#start-by-choosing-a-narrow-promise">Start by choosing a narrow promise</a></h2>
 <p>Many bad libraries fail before the first line of public API. They are designed as “the shared place for everything related to X.” That usually means they accumulate multiple responsibilities, grow extension points for unrelated concerns, and become difficult to version because every change touches somebody.</p>
 <p>A reusable library should instead make one narrow promise. Parse and validate this format. Normalize these records. Expose this storage abstraction. Compute these derived values. The promise can be substantial. It should still have a clear center.</p>
 <p>This sounds obvious, but it changes interface design immediately. A narrow promise leads to a small vocabulary of public types, a small set of failure categories, and a smaller number of places where callers need customization. A vague promise pushes complexity outward into templates, callback forests, configuration maps, and documentation that reads like negotiated truce.</p>
 <p>The most important library design decision is therefore not whether to use modules, concepts, or <code>std::expected</code>. It is where the public contract stops.</p>
-<h2 id="public-types-should-encode-ownership-and-invariants-directly"><a class="header" href="#public-types-should-encode-ownership-and-invariants-directly">Public Types Should Encode Ownership and Invariants Directly</a></h2>
+<h2 id="public-types-should-encode-ownership-and-invariants-directly"><a class="header" href="#public-types-should-encode-ownership-and-invariants-directly">Public types should encode ownership and invariants directly</a></h2>
 <p>Callers should not need repository context to answer basic questions about ownership, lifetime, mutability, or validity. If the library returns a view, the caller should know what owns the underlying data. If it accepts a callback, the callback lifetime and threading expectations should be obvious. If a configuration object may be invalid, the invalid state should be representable only long enough to validate it.</p>
 <p>Value types are often the right center of gravity for library APIs because they travel well across teams and tests. They make copying cost visible, move semantics deliberate, and invariants attachable to construction or validation boundaries. Borrowed inputs such as <code>std::string_view</code> and <code>std::span</code> are still excellent for call boundaries, but they should be used only when the library can complete its work within the borrowed lifetime or copy what it must retain.</p>
 <h3 id="intentional-partial-a-caller-facing-api-with-explicit-contracts"><a class="header" href="#intentional-partial-a-caller-facing-api-with-explicit-contracts">Intentional partial: a caller-facing API with explicit contracts</a></h3>
@@ -216,8 +216,8 @@ struct document {
     -&gt; std::expected&lt;document, parse_error&gt;;
 </code></pre>
 <p>This excerpt does a few useful things. It separates caller-controlled policy from input bytes. It makes allocation strategy visible without forcing a global allocator policy. It returns a domain error rather than a transport-specific or parser-internal type. It also makes result checking harder to forget through <code>[[nodiscard]]</code> and <code>std::expected</code>.</p>
-<p>The tradeoff is that the function signature is less minimal than <code>document parse(std::string_view)</code>. That is fine. Reusable libraries do not get paid for looking compact in slides. They get paid for making costs and contracts legible.</p>
-<h2 id="make-failure-shape-stable"><a class="header" href="#make-failure-shape-stable">Make Failure Shape Stable</a></h2>
+<p>The tradeoff is that the function signature is less minimal than <code>document parse(std::string_view)</code>. That is fine. Reusable libraries are not rewarded for looking compact in slides. They are rewarded for making costs and contracts legible.</p>
+<h2 id="make-failure-shape-stable"><a class="header" href="#make-failure-shape-stable">Make failure shape stable</a></h2>
 <p>Application code can sometimes afford to let exceptions and internal error categories drift because one team controls both sides. Libraries should be much stricter. The caller must know which failures are part of the contract, which are programming errors, and which remain implementation accidents.</p>
 <p>That usually leads to one of three designs.</p>
 <ol>
@@ -227,7 +227,7 @@ struct document {
 </ol>
 <p>The right choice depends on the domain. Parsing, validation, and recoverable business-rule failures usually fit <code>std::expected</code> well. Low-level infrastructure libraries integrated into exception-based application frameworks may reasonably use exceptions. What matters most is consistency. A library that returns <code>std::expected</code> for some recoverable failures, throws for others, and leaks <code>std::system_error</code> from one backend but not another is forcing callers to reverse-engineer policy from implementation.</p>
 <p>Do not make the public error surface too granular. Callers need distinctions they can act on. They rarely benefit from twenty parser-internal states that only the library can interpret. Keep the stable categories small, then provide optional richer diagnostics through separate channels.</p>
-<h2 id="separate-mechanism-from-policy-without-abstracting-everything"><a class="header" href="#separate-mechanism-from-policy-without-abstracting-everything">Separate Mechanism from Policy Without Abstracting Everything</a></h2>
+<h2 id="separate-mechanism-from-policy-without-abstracting-everything"><a class="header" href="#separate-mechanism-from-policy-without-abstracting-everything">Separate mechanism from policy without abstracting everything</a></h2>
 <p>Reusable libraries often need some customization: allocation, logging hooks, host-owned diagnostics, clock sources, I/O adapters, or user-defined handlers. This is where teams either over-template the entire surface or bury the library inside runtime-polymorphic interfaces that allocate and dispatch everywhere.</p>
 <p>The better approach is to choose a small number of explicit policy seams and keep the core mechanism concrete. Concepts help when the customization must stay zero-overhead and compile-time checked. Type erasure or callback interfaces help when binary boundaries, plugin models, or operational decoupling matter more than template transparency.</p>
 <p>For example, an internal parsing engine probably does not need to be a giant policy-based template on logging, allocation, diagnostics, and error formatting simultaneously. It can parse concretely, accept a <code>std::pmr::memory_resource&amp;</code>, and optionally emit diagnostics through a narrow sink interface. That keeps most call sites simple while still allowing hosts to control the expensive or environment-specific parts.</p>
@@ -324,7 +324,7 @@ auto parse(std::string_view input) -&gt; document {
 }
 </code></pre>
 <p>For richer diagnostics beyond the category, provide a separate channel (a diagnostic sink, an error details accessor, or a structured log) rather than overloading the primary error type with implementation-specific fields that callers cannot act on programmatically.</p>
-<h2 id="versioning-and-abi-need-a-policy-not-optimism"><a class="header" href="#versioning-and-abi-need-a-policy-not-optimism">Versioning and ABI Need a Policy, Not Optimism</a></h2>
+<h2 id="versioning-and-abi-need-a-policy-not-optimism"><a class="header" href="#versioning-and-abi-need-a-policy-not-optimism">Versioning and ABI need a policy, not optimism</a></h2>
 <p>Even an internal shared library benefits from treating versioning as part of design rather than release paperwork. The practical question is what kinds of change the library promises callers they can survive. Source compatibility, ABI compatibility, wire-format stability, serialized-data stability, and semantic compatibility are related but different promises.</p>
 <p>For many C++ libraries, the easiest honest policy is source compatibility within a major version and no blanket ABI promise across arbitrary toolchains. That is often a stronger real-world posture than pretending ABI stability while exposing standard-library types, inline-heavy templates, or platform-dependent layout in the public surface.</p>
 <p>If ABI stability does matter, the design must change accordingly. That usually means narrower exported surfaces, opaque types, PIMPL-like boundaries, stricter exception policy, reduced template exposure, and controlled compiler and standard-library assumptions. Those are not finishing touches. They affect the entire API shape.</p>
@@ -388,7 +388,7 @@ namespace v1 {
 // Linker symbols are distinct, so v1 and v2 can coexist in one binary.
 </code></pre>
 <p>Modules improve build structure and distribution hygiene, but they do not erase ABI reality. Likewise, concepts improve diagnostics and constraints, but they do not automatically make a heavily templated library versionable. Treat these tools as local improvements, not policy substitutes.</p>
-<h2 id="documentation-should-answer-integration-questions"><a class="header" href="#documentation-should-answer-integration-questions">Documentation Should Answer Integration Questions</a></h2>
+<h2 id="documentation-should-answer-integration-questions"><a class="header" href="#documentation-should-answer-integration-questions">Documentation should answer integration questions</a></h2>
 <p>Library documentation for experienced programmers should focus on adoption decisions, not feature advertising. A caller evaluating a reusable library needs to know:</p>
 <ul>
 <li>What problem the library owns and what it refuses to own.</li>
@@ -400,11 +400,11 @@ namespace v1 {
 </ul>
 <p>Short, production-looking examples help here, especially when they show the normal error path and configuration boundary. Huge tutorial walkthroughs usually do not. The purpose of the docs is to let another team integrate the library without learning internal folklore.</p>
 <p>Performance claims deserve the same restraint. Do not say the library is fast. Say what was measured, under what workload, against what baseline, and where the cost model is sensitive. Parsing libraries often have costs that depend heavily on allocation strategy, input size distribution, and failure rate. Say that directly.</p>
-<h2 id="verification-should-match-the-librarys-public-promises"><a class="header" href="#verification-should-match-the-librarys-public-promises">Verification Should Match the Library’s Public Promises</a></h2>
+<h2 id="verification-should-match-the-librarys-public-promises"><a class="header" href="#verification-should-match-the-librarys-public-promises">Verification should match the library’s public promises</a></h2>
 <p>A reusable library needs stronger verification discipline than a leaf application component because callers cannot inspect all of your assumptions. Tests should therefore map directly to public promises.</p>
 <p>If the library guarantees stable parsing behavior for a documented format version, keep fixture-based contract tests. If it guarantees that malformed input returns structured failures without undefined behavior, run fuzzing and sanitizers on the public parse entry points. If it claims bounded allocations under certain modes, benchmark or instrument that claim. If it exposes host-provided diagnostics, test that the sink receives stable event categories rather than implementation chatter.</p>
 <p>This is also where compatibility checks belong. If source compatibility across minor versions is part of the promise, keep integration tests or sample clients that exercise old call patterns. If ABI matters, test produced artifacts in a way that actually checks symbol and layout expectations. “It still compiled on my machine” is not a compatibility policy.</p>
-<h2 id="know-when-not-to-build-a-library-yet"><a class="header" href="#know-when-not-to-build-a-library-yet">Know When Not To Build a Library Yet</a></h2>
+<h2 id="know-when-not-to-build-a-library-yet"><a class="header" href="#know-when-not-to-build-a-library-yet">Know when not to build a library yet</a></h2>
 <p>Teams often create shared libraries too early. If only one application uses the code, if the domain vocabulary is still moving weekly, or if the supposed reuse is mostly organizational aspiration, forcing a stable public surface can freeze bad assumptions into place. Sometimes the right answer is to keep the component internal until the contract stabilizes.</p>
 <p>This is not an argument against reuse. It is an argument for charging the real cost of public APIs. Once other teams depend on the library, changing semantics, ownership, or error policy becomes much more expensive than changing internal code. Reuse is valuable when the problem and contract are mature enough to deserve that cost.</p>
 <h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>

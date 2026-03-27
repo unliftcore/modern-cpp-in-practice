@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -250,8 +250,8 @@ import webapi.json;         // JsonSerializable concept
 import webapi.repository;   // TaskRepository
 import webapi.task;         // Task, TaskId
 </code></pre>
-<p>Several things are worth noting. First, the global module fragment (between <code>module;</code> and <code>export module ...;</code>) is where standard library headers live. These headers predate the module system and must be included textually. Second, each <code>import</code> names a specific module – there is no transitive inclusion. <code>handlers.cppm</code> imports <code>webapi.error</code> but does not accidentally pull in everything that <code>error.cppm</code> itself includes. Third, the <code>export</code> keyword controls visibility precisely: only exported names are reachable by importers. Private helpers, internal implementation details, and non-exported types stay invisible.</p>
-<p>The consuming side is equally clean. In <code>main.cpp</code>, six import declarations replace what would have been a chain of <code>#include</code> directives and all their transitive dependencies:</p>
+<p>The global module fragment (between <code>module;</code> and <code>export module ...;</code>) is where standard library headers live, since they predate the module system and must be included textually. Each <code>import</code> names a specific module – there is no transitive inclusion. <code>handlers.cppm</code> imports <code>webapi.error</code> but does not accidentally pull in everything that <code>error.cppm</code> itself includes. The <code>export</code> keyword controls visibility: only exported names are reachable by importers. Private helpers and non-exported types stay invisible.</p>
+<p>The consuming side is simpler too. In <code>main.cpp</code>, six import declarations replace what would have been a chain of <code>#include</code> directives and all their transitive dependencies:</p>
 <pre><code class="language-cpp">// examples/web-api/src/main.cpp
 import webapi.handlers;
 import webapi.http;
@@ -376,7 +376,7 @@ struct session_api_v1 {
 <p>Do not reach for pimpl just because headers are messy. Modules may solve that source problem better for internal builds. Pimpl is primarily a representation and compatibility tool, not a style requirement.</p>
 <h2 id="modules-in-real-build-systems"><a class="header" href="#modules-in-real-build-systems">Modules in Real Build Systems</a></h2>
 <p>C++23-first advice has to stay realistic. Modules are valuable and still operationally uneven across toolchains, package managers, and mixed-language build systems.</p>
-<p>Inside a controlled build environment with GCC 14+, Clang 18+, or MSVC 17.10+, modules can reduce parse overhead and make dependency intent clearer. In heterogeneous environments, the module artifact model, build graph integration, and package-manager support may still impose friction. That friction is not an argument against modules. It is a reminder that adoption belongs to build architecture, not only to language enthusiasm.</p>
+<p>Inside a controlled build environment with GCC 14+, Clang 18+, or MSVC 17.10+, modules can reduce parse overhead and make dependency intent clearer. In heterogeneous environments, the module artifact model, build graph integration, and package-manager support may still impose friction. That friction is not an argument against modules. It is a reminder that adoption belongs to build architecture, not just to language enthusiasm.</p>
 <p>A good default is pragmatic:</p>
 <ol>
 <li>Use modules first for internal components built together.</li>
@@ -387,7 +387,7 @@ struct session_api_v1 {
 <h2 id="versioning-policy-is-part-of-the-interface"><a class="header" href="#versioning-policy-is-part-of-the-interface">Versioning Policy Is Part of the Interface</a></h2>
 <p>Packaging without versioning policy is wishful thinking. Consumers need to know what kind of change is allowed between releases: source-compatible only, ABI-compatible within a major version, or no promises beyond exact build matching.</p>
 <p>This policy affects technical design. If ABI compatibility within a major version matters, your public types must be narrowed aggressively and your rollout process must include ABI review. If consumers rebuild from source, the policy can be looser and the interfaces more idiomatic.</p>
-<p>Versioning is not only about semantic version numbers. It is also about symbol versioning where available, inline namespace strategy for source-level APIs, feature detection, deprecation windows, and package metadata that correctly describes compiler and runtime requirements.</p>
+<p>Versioning goes beyond semantic version numbers. It includes symbol versioning where available, inline namespace strategy for source-level APIs, feature detection, deprecation windows, and package metadata that correctly describes compiler and runtime requirements.</p>
 <h2 id="memory-exceptions-and-ownership-across-the-boundary"><a class="header" href="#memory-exceptions-and-ownership-across-the-boundary">Memory, Exceptions, and Ownership Across the Boundary</a></h2>
 <p>Most cross-library failures are not glamorous. They come from ownership mismatches.</p>
 <p>If one side allocates memory and the other deallocates it, the allocator contract must be explicit. If exceptions are allowed to cross the boundary, runtime and compiler assumptions must align. If the boundary uses callbacks, retention and thread-affinity rules must be documented. If background work continues during unload, the packaging design is already unsafe.</p>

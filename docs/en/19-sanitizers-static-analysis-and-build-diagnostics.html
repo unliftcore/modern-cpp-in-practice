@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -185,7 +185,7 @@
 <p>Testing strategy tells you what behavior to exercise. This chapter is about the mechanical bug-finding stack that should run alongside that exercise: compiler warnings, sanitizers, static analysis, and build configurations that preserve useful diagnostics. These tools do not tell you whether the design is correct. They tell you whether the program stepped into a bug class that humans routinely miss in review.</p>
 <p>That distinction matters. A test can assert that cancellation leaves no visible partial state. AddressSanitizer can tell you that the cleanup path touched freed memory while attempting to honor that contract. A contract test can prove that a parser rejects malformed input. UndefinedBehaviorSanitizer can tell you that one rejection path signed-overflowed while computing a buffer size. Observability can later tell you that a production build is crashing in a path you never exercised under sanitizer. Each layer answers a different question.</p>
 <p>For native systems, the cost of skipping this layer is predictable. The bug is found later, reproduced less reliably, and diagnosed with worse evidence. If the build only produces optimized binaries with stripped symbols, weak warnings, and no analyzer or sanitizer jobs, the team has chosen slower debugging as policy.</p>
-<h2 id="treat-diagnostics-as-build-products-not-developer-preferences"><a class="header" href="#treat-diagnostics-as-build-products-not-developer-preferences">Treat Diagnostics as Build Products, Not Developer Preferences</a></h2>
+<h2 id="treat-diagnostics-as-build-products-not-developer-preferences"><a class="header" href="#treat-diagnostics-as-build-products-not-developer-preferences">Treat diagnostics as build products, not developer preferences</a></h2>
 <p>The first mistake is organizational, not technical. Teams often treat warnings and analysis as optional local tooling, which means they drift by compiler, machine, and mood. Production C++ needs the opposite posture. Diagnostic fidelity should be part of the build contract.</p>
 <p>At minimum, your repository should define named build modes that answer distinct questions.</p>
 <div class="table-wrapper">
@@ -222,7 +222,7 @@ if(ENABLE_TSAN)
 endif()
 </code></pre>
 <p>A new engineer clones the repository and runs <code>cmake -G Ninja -DENABLE_ASAN=ON</code> or <code>-DENABLE_TSAN=ON</code>. The lanes are discoverable, version-controlled, and produce distinct binaries. That is what “named build modes” looks like in practice.</p>
-<h2 id="warnings-are-a-policy-surface"><a class="header" href="#warnings-are-a-policy-surface">Warnings Are a Policy Surface</a></h2>
+<h2 id="warnings-are-a-policy-surface"><a class="header" href="#warnings-are-a-policy-surface">Warnings are a policy surface</a></h2>
 <p>Compiler warnings are the cheapest analysis you have, and teams still waste them. One common failure mode is warning inflation: thousands of preexisting warnings train everyone to ignore the channel. The other is warning minimalism: fear of noise causes the team to enable so little that suspicious code passes silently.</p>
 <p>The practical target is narrower and stricter.</p>
 <ul>
@@ -233,10 +233,10 @@ endif()
 </ul>
 <p>This is not about aesthetic cleanliness. Warnings often expose real review problems: narrowing conversions, missing overrides, ignored return values, shadowing that hides ownership state, switch exhaustiveness gaps, or accidental copies in hot paths. Some warnings are stylistic and should stay off. That is fine. The point is to make the enabled set defensible and stable.</p>
 <p>Be especially careful with blanket suppression at target level. When a third-party header or generated source is noisy, isolate it rather than muting the same diagnostic across the repository. Teams often create future blind spots by solving one vendor problem with project-wide suppression.</p>
-<h2 id="sanitizers-turn-silent-corruption-into-actionable-failures"><a class="header" href="#sanitizers-turn-silent-corruption-into-actionable-failures">Sanitizers Turn Silent Corruption Into Actionable Failures</a></h2>
+<h2 id="sanitizers-turn-silent-corruption-into-actionable-failures"><a class="header" href="#sanitizers-turn-silent-corruption-into-actionable-failures">Sanitizers turn silent corruption into actionable failures</a></h2>
 <p>Sanitizers are valuable because they change failure mode. Instead of a memory bug manifesting as a distant crash or impossible state, it stops near the violation with a stack trace and an explanation of the bug class.</p>
 <p>For most production C++ codebases, three sanitizer configurations carry the highest value.</p>
-<h3 id="addresssanitizer-and-leak-detection"><a class="header" href="#addresssanitizer-and-leak-detection">AddressSanitizer and Leak Detection</a></h3>
+<h3 id="addresssanitizer-and-leak-detection"><a class="header" href="#addresssanitizer-and-leak-detection">AddressSanitizer and leak detection</a></h3>
 <p>AddressSanitizer is the standard first line because it finds a wide set of bugs that otherwise waste enormous time: use-after-free, heap buffer overflow, stack use-after-return in some configurations, double free, and related memory-lifetime violations. Leak detection, where available, adds another useful signal for test processes and short-lived tools.</p>
 <p>ASan is especially effective when paired with the testing strategies from the previous chapter. Failure-path tests, fuzzers, and integration scenarios drive execution into branches where ownership mistakes live. ASan then converts those mistakes into reproducible failures.</p>
 <h3 id="the-bug-that-works-without-asan"><a class="header" href="#the-bug-that-works-without-asan">The bug that “works” without ASan</a></h3>
@@ -295,7 +295,7 @@ previously allocated by thread T0 here:
 <pre><code>runtime error: signed integer overflow: 32768 * 32768 cannot be
 represented in type 'int'
 </code></pre>
-<p>The fix is to use unsigned arithmetic or to check for overflow before the multiplication. The point is that this class of bug is silent, optimizer-sensitive, and often security-relevant – exactly what UBSan is for.</p>
+<p>The fix is to use unsigned arithmetic or to check for overflow before the multiplication. The point is that this class of bug is silent, optimizer-sensitive, and often security-relevant – the class of bug UBSan is built to catch.</p>
 <h3 id="threadsanitizer"><a class="header" href="#threadsanitizer">ThreadSanitizer</a></h3>
 <p>TSan is expensive and often noisy around custom synchronization, lock-free code, and some coroutine or foreign-runtime integrations. It is still worth running because data races remain among the most expensive native bugs to diagnose after the fact.</p>
 <h3 id="the-data-race-that-tests-never-catch"><a class="header" href="#the-data-race-that-tests-never-catch">The data race that tests never catch</a></h3>
@@ -344,9 +344,9 @@ void report_stats(service_stats const&amp; stats) {
 <p>The fix is to use <code>std::atomic&lt;std::int64_t&gt;</code> with appropriate memory ordering, or to protect the struct with a mutex if the fields must be read consistently together. The important point is that no amount of conventional testing would have found this – the test needs TSan to convert a scheduling-dependent corruption into a deterministic failure.</p>
 <p>The operational pattern is usually different from ASan. Run TSan in a narrower CI lane or nightly job. Feed it tests that deliberately stress shared-state paths, shutdown, retries, and cancellation. Keep the suppression file short and justified. If TSan reports a race in supposedly benign statistics code, do not dismiss it reflexively. Benign races have a habit of becoming real ones after the next feature.</p>
 <p>Avoid stacking TSan with other heavy sanitizers in the same build. Separate jobs make failures easier to interpret and keep the timing distortion manageable.</p>
-<p>The example project’s <code>TaskRepository</code> (in <code>examples/web-api/src/modules/repository.cppm</code>) is a concrete case where TSan validates a correct synchronization pattern. The repository protects its internal <code>std::vector&lt;Task&gt;</code> with a <code>std::shared_mutex</code>, using <code>std::shared_lock</code> for read paths (<code>find_by_id</code>, <code>find_all</code>) and <code>std::scoped_lock</code> for write paths (<code>create</code>, <code>update</code>, <code>remove</code>). Building with <code>-DENABLE_TSAN=ON</code> and exercising concurrent readers and writers confirms that this locking discipline has no data races – exactly the kind of evidence that conventional tests alone cannot provide.</p>
-<h2 id="static-analysis-scales-review-attention"><a class="header" href="#static-analysis-scales-review-attention">Static Analysis Scales Review Attention</a></h2>
-<p>Static analysis is most useful when it is selective and boring. If the analyzer produces pages of stylistic noise, the team will stop reading it. If it is tuned toward patterns that actually matter in your codebase, it becomes a force multiplier for review.</p>
+<p>The example project’s <code>TaskRepository</code> (in <code>examples/web-api/src/modules/repository.cppm</code>) is a case where TSan validates a correct synchronization pattern. The repository protects its internal <code>std::vector&lt;Task&gt;</code> with a <code>std::shared_mutex</code>, using <code>std::shared_lock</code> for read paths (<code>find_by_id</code>, <code>find_all</code>) and <code>std::scoped_lock</code> for write paths (<code>create</code>, <code>update</code>, <code>remove</code>). Building with <code>-DENABLE_TSAN=ON</code> and exercising concurrent readers and writers confirms that this locking discipline has no data races – evidence that conventional tests alone cannot provide.</p>
+<h2 id="static-analysis-scales-review-attention"><a class="header" href="#static-analysis-scales-review-attention">Static analysis scales review attention</a></h2>
+<p>Static analysis is most useful when it is selective and boring. If the analyzer produces pages of stylistic noise, the team will stop reading it. If it is tuned toward patterns that actually matter in your codebase, it extends what reviewers can catch.</p>
 <p>Useful targets in modern C++ typically include:</p>
 <ul>
 <li>Dangling views or references caused by temporary lifetime mistakes.</li>
@@ -357,9 +357,9 @@ void report_stats(service_stats const&amp; stats) {
 <li>Concurrency hazards such as locking inconsistencies or unsafe capture of shared state.</li>
 </ul>
 <p>Compiler-integrated analysis, <code>clang-tidy</code>, the Clang static analyzer, and platform-specific tools such as MSVC <code>/analyze</code> each catch somewhat different things. Use more than one if your toolchain supports it, but keep the output curated. A small enforced rule set that consistently catches real problems is better than a sprawling configuration everybody bypasses.</p>
-<p>This is also where repository-specific knowledge belongs. If your service code should never ignore <code>std::expected</code> results from transport adapters, add checks and wrappers that make that hard to do silently. If your library forbids exceptions at the ABI boundary, analyze for that policy directly or enforce it via build and API structure. Static analysis becomes substantially better when it knows what your contracts are.</p>
-<h2 id="preserve-diagnostic-quality-in-release-artifacts"><a class="header" href="#preserve-diagnostic-quality-in-release-artifacts">Preserve Diagnostic Quality in Release Artifacts</a></h2>
-<p>One of the most damaging habits in native development is treating debuggability as a debug-build-only concern. Production failures happen in release builds. If those artifacts do not preserve enough information to map crashes and latency problems back to code, you have made later observability dramatically weaker.</p>
+<p>This is also where repository-specific knowledge belongs. If your service code should never ignore <code>std::expected</code> results from transport adapters, add checks and wrappers that make that hard to do silently. If your library forbids exceptions at the ABI boundary, analyze for that policy directly or enforce it via build and API structure. Static analysis improves when it knows what your contracts are.</p>
+<h2 id="preserve-diagnostic-quality-in-release-artifacts"><a class="header" href="#preserve-diagnostic-quality-in-release-artifacts">Preserve diagnostic quality in release artifacts</a></h2>
+<p>One of the most damaging habits in native development is treating debuggability as a debug-build-only concern. Production failures happen in release builds. If those artifacts do not preserve enough information to map crashes and latency problems back to code, you have made later observability much harder.</p>
 <p>Release artifacts should normally preserve at least these properties.</p>
 <ul>
 <li>External symbol files or symbol servers so stacks can be symbolized after deployment.</li>
@@ -370,7 +370,7 @@ void report_stats(service_stats const&amp; stats) {
 </ul>
 <p>Depending on platform and sensitivity, that may also include frame pointers, split DWARF or PDB handling, map files, and archived link commands. The exact mechanics are toolchain-specific. The policy is not: if you cannot reproduce the diagnostic shape of the shipped binary, incident response slows down immediately.</p>
 <p>This is why build diagnostics belong in the chapter with sanitizers and analysis rather than in the observability chapter. Observability consumes these artifacts later, but the decision to produce them is a build decision.</p>
-<h2 id="ci-should-stage-cost-not-pretend-cost-does-not-exist"><a class="header" href="#ci-should-stage-cost-not-pretend-cost-does-not-exist">CI Should Stage Cost, Not Pretend Cost Does Not Exist</a></h2>
+<h2 id="ci-should-stage-cost-not-pretend-cost-does-not-exist"><a class="header" href="#ci-should-stage-cost-not-pretend-cost-does-not-exist">CI should stage cost, not pretend cost does not exist</a></h2>
 <p>A mature pipeline does not run every expensive check on every edit. It stages them by cost and by bug class.</p>
 <p>For example:</p>
 <ul>
@@ -380,7 +380,7 @@ void report_stats(service_stats const&amp; stats) {
 </ul>
 <p>The tradeoff is obvious: slower checks find bugs later in the day. The answer is not to drop them. The answer is to place them where they are sustainable and visible.</p>
 <p>Do not let sanitizer or analyzer failures become advisory-only noise. If a lane is too flaky to gate anything, fix the flakiness or narrow its scope. A permanently red analysis job is organizationally equivalent to not having the job.</p>
-<h2 id="what-these-tools-will-not-do"><a class="header" href="#what-these-tools-will-not-do">What These Tools Will Not Do</a></h2>
+<h2 id="what-these-tools-will-not-do"><a class="header" href="#what-these-tools-will-not-do">What these tools will not do</a></h2>
 <p>This tooling stack is powerful, but its limits should stay explicit.</p>
 <ul>
 <li>Sanitizers do not prove correctness; they only instrument exercised executions.</li>

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -200,7 +200,7 @@
 <p>If you skip this classification step, the wrong abstraction can look acceptable for years. A synchronous hook might accidentally require heap allocation because it is modeled as <code>std::function</code>. A background task system might store borrowed callback state because its API looked convenient. A plugin system might expose C++ class hierarchies across compiler boundaries and call that architecture. The mistakes are structural, not syntactic.</p>
 <h2 id="virtual-dispatch-good-for-stable-object-protocols"><a class="header" href="#virtual-dispatch-good-for-stable-object-protocols">Virtual Dispatch: Good for Stable Object Protocols</a></h2>
 <p>Virtual functions are still the clearest tool when you need a stable protocol over a family of long-lived objects. A storage backend interface, a message sink, or a strategy object chosen once and reused heavily can all fit this model.</p>
-<p>The strengths are straightforward:</p>
+<p>The strengths are well understood:</p>
 <ol>
 <li>Ownership is usually explicit in the surrounding object graph.</li>
 <li>The protocol is easy to document as named operations.</li>
@@ -323,7 +323,7 @@ auto handler = std::function&lt;void()&gt;{
 <h2 id="callback-forms-borrowed-owned-and-one-shot"><a class="header" href="#callback-forms-borrowed-owned-and-one-shot">Callback Forms: Borrowed, Owned, and One-Shot</a></h2>
 <p>The word “callback” hides three different contracts.</p>
 <h3 id="borrowed-synchronous-callbacks"><a class="header" href="#borrowed-synchronous-callbacks">Borrowed synchronous callbacks</a></h3>
-<p>These are invoked during the current call and not retained. Logging visitors, per-record validation hooks, or traversal callbacks often fit here. The crucial property is that the callee does not store the callable.</p>
+<p>These are invoked during the current call and not retained. Logging visitors, per-record validation hooks, or traversal callbacks often fit here. The key property is that the callee does not store the callable.</p>
 <p>In this case, forcing the API through an owning wrapper is usually unnecessary. A templated callable parameter may be simplest when the call stays internal. If you need a non-templated surface, a lightweight borrowed callable view can work, but standard C++23 does not yet ship <code>function_ref</code>. Many teams therefore use constrained templates for synchronous hooks inside a component and reserve type erasure for cases that genuinely need ownership.</p>
 <h3 id="owned-deferred-callbacks"><a class="header" href="#owned-deferred-callbacks">Owned deferred callbacks</a></h3>
 <p>A queue, scheduler, timer wheel, or asynchronous client often needs to retain work beyond the current stack frame. This is the natural home for <code>std::move_only_function</code> or a custom erased task type with explicit allocation rules.</p>
@@ -361,7 +361,7 @@ void wire(EventSource&amp; source, Session&amp; session) {
     // RISK: if EventSource stores the handler past Session lifetime, this dangles.
 }
 </code></pre>
-<p>The problem is not only the reference capture. The problem is that the API failed to state whether the handler is borrowed for one operation, stored until unregistration, invoked concurrently, or called during destruction. The abstraction chose generality over a usable contract.</p>
+<p>The reference capture is the immediate hazard, but the deeper problem is that the API failed to state whether the handler is borrowed for one operation, stored until unregistration, invoked concurrently, or called during destruction. The abstraction chose generality over a usable contract.</p>
 <p>A stronger design names the ownership and lifetime model explicitly. If the callback is retained, registration should return a handle or registration object whose lifetime governs subscription. If the callback is synchronous, the API should not accept an owning erased callable just to appear generic.</p>
 <p>The <code>main.cpp</code> in <code>examples/web-api/</code> demonstrates scoped lifetime discipline for captured references. The <code>TaskRepository</code> is declared before the router and handlers, and the server is declared last. Because C++ destroys local variables in reverse order of construction, the repository outlives every handler and middleware that captures a reference to it. This ordering is not accidental – it is the structural guarantee that no erased callable will ever dangle on its captured <code>repo</code> reference. When callbacks capture by reference, the enclosing scope must enforce that the referent outlives the callable. Scoping order in <code>main()</code> is where that guarantee lives.</p>
 <h2 id="virtual-protocol-or-erased-callable"><a class="header" href="#virtual-protocol-or-erased-callable">Virtual Protocol or Erased Callable?</a></h2>

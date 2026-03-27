@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -181,12 +181,12 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="benchmarking-and-profiling-without-lying-to-yourself"><a class="header" href="#benchmarking-and-profiling-without-lying-to-yourself">Benchmarking and Profiling Without Lying to Yourself</a></h1>
-<h2 id="production-problem"><a class="header" href="#production-problem">Production Problem</a></h2>
+                        <h1 id="benchmarking-and-profiling-without-lying-to-yourself"><a class="header" href="#benchmarking-and-profiling-without-lying-to-yourself">Benchmarking and profiling without lying to yourself</a></h1>
+<h2 id="production-problem"><a class="header" href="#production-problem">Production problem</a></h2>
 <p>Performance discussions become expensive when teams confuse numbers with evidence. A benchmark reports a 20 percent win, but the production service does not improve. A profiler shows a hot function, but the real issue is lock contention or off-CPU waiting. A regression slips into main because the benchmark measured the wrong input shape or because someone “optimized” dead work the compiler already removed.</p>
 <p>This chapter is about measurement discipline. The previous chapters covered representation and cost modeling. Here the question is different: how do you gather evidence that is strong enough to change code, justify complexity, or reject a supposed optimization? The answer requires benchmark design, profiler literacy, and a refusal to let attractive charts substitute for causal reasoning.</p>
 <p>Performance work in modern C++ is especially vulnerable to self-deception because the language exposes many powerful local transformations. You can change container type, ownership shape, inlining boundaries, allocator strategy, range pipelines, coroutine structure, and type-erasure choices. Some of those changes matter. Many do not. Measurement is how you tell the difference.</p>
-<h2 id="choose-the-right-instrument-for-the-question"><a class="header" href="#choose-the-right-instrument-for-the-question">Choose the Right Instrument for the Question</a></h2>
+<h2 id="choose-the-right-instrument-for-the-question"><a class="header" href="#choose-the-right-instrument-for-the-question">Choose the right instrument for the question</a></h2>
 <p>Not every performance question should start with a microbenchmark.</p>
 <p>If you are deciding between two data representations for a tight loop, a controlled benchmark may be exactly right. If you are debugging why request latency spikes under burst load, profiling a realistic system or gathering production traces is more appropriate. If you suspect lock contention, scheduler behavior and blocking time matter more than a standalone throughput loop. If a regression appears only in end-to-end service traffic, a synthetic isolated benchmark may actively mislead.</p>
 <p>Use a simple hierarchy:</p>
@@ -197,7 +197,7 @@
 <li>Use production observability to confirm the change matters in the environment that pays the bill.</li>
 </ul>
 <p>Confusing these layers is one of the fastest ways to waste weeks.</p>
-<h2 id="a-benchmark-must-state-its-claim"><a class="header" href="#a-benchmark-must-state-its-claim">A Benchmark Must State Its Claim</a></h2>
+<h2 id="a-benchmark-must-state-its-claim"><a class="header" href="#a-benchmark-must-state-its-claim">A benchmark must state its claim</a></h2>
 <p>A trustworthy benchmark starts with a sentence, not with code. “Compare lookup latency of sorted contiguous storage versus hash lookup for a read-mostly route table of 1k, 10k, and 100k entries with realistic key lengths.” That is a claim. “Benchmark containers” is not.</p>
 <p>The sentence should identify:</p>
 <ul>
@@ -209,18 +209,18 @@
 </ul>
 <p>If you cannot write that sentence, you do not yet know what the benchmark means.</p>
 <p>This requirement matters because performance is workload-shaped. A benchmark over random integer keys may tell you nothing about a production router that uses string views with strong prefix locality. A benchmark over uniform hash hits may hide the collision behavior of real skewed keys. A benchmark that rebuilds a container every iteration may punish a design whose production cost is dominated by lookup after a one-time build.</p>
-<h2 id="benchmark-the-whole-relevant-operation"><a class="header" href="#benchmark-the-whole-relevant-operation">Benchmark the Whole Relevant Operation</a></h2>
+<h2 id="benchmark-the-whole-relevant-operation"><a class="header" href="#benchmark-the-whole-relevant-operation">Benchmark the whole relevant operation</a></h2>
 <p>One common lie is measuring a convenient fragment instead of the decision boundary that matters. For example, a parsing pipeline is “optimized” by measuring only token conversion after the input is already resident in cache and after allocations are pre-reserved. A container comparison measures lookup while excluding construction, sorting, deduplication, and memory reclamation even though the production workload rebuilds the structure frequently.</p>
 <p>A benchmark does not need to be huge. It does need to include the costs the design imposes in reality. If an API choice forces allocation, copying, hashing, or validation before the line you currently measure, those costs belong in the measurement unless you can justify excluding them.</p>
 <p>This is where the cost model from Chapter 16 should inform the benchmark. Measure the actual boundary where the costs accumulate. Otherwise the result is technically correct and operationally useless.</p>
 <p>In a real project, the benchmarkable surfaces are often less obvious than <code>vector&lt;int&gt;</code> but more instructive. Consider the example project in <code>examples/web-api/</code>:</p>
 <ul>
-<li><strong><code>json::serialize_array()</code></strong> (<code>json.cppm</code>) iterates a range and builds a JSON array by repeated string concatenation. Benchmarking this function across varying collection sizes (10, 100, 1000 tasks) would reveal whether the concatenation strategy or the <code>to_json()</code> cost per element dominates, and whether pre-reserving the result string matters.</li>
-<li><strong><code>TaskRepository::find_by_id()</code></strong> (<code>repository.cppm</code>) performs a linear scan with <code>std::ranges::find</code> under a <code>shared_lock</code>. A benchmark comparing this against an <code>unordered_map&lt;TaskId, Task&gt;</code> alternative would need to include the locking cost and test at realistic repository sizes – not just the raw find.</li>
-<li><strong><code>Router::to_handler()</code></strong> (<code>router.cppm</code>) captures the route table by value and returns a lambda that performs a linear scan on every request dispatch. Benchmarking route dispatch at 5, 50, and 500 registered routes would show whether the linear scan remains acceptable or whether a sorted-vector or trie approach is justified. The benchmark must include the full dispatch path – matching method, comparing patterns, and invoking the handler – not just the loop.</li>
+<li><code>json::serialize_array()</code> (<code>json.cppm</code>) iterates a range and builds a JSON array by repeated string concatenation. Benchmarking this function across varying collection sizes (10, 100, 1000 tasks) would reveal whether the concatenation strategy or the <code>to_json()</code> cost per element dominates, and whether pre-reserving the result string matters.</li>
+<li><code>TaskRepository::find_by_id()</code> (<code>repository.cppm</code>) performs a linear scan with <code>std::ranges::find</code> under a <code>shared_lock</code>. A benchmark comparing this against an <code>unordered_map&lt;TaskId, Task&gt;</code> alternative would need to include the locking cost and test at realistic repository sizes – not just the raw find.</li>
+<li><code>Router::to_handler()</code> (<code>router.cppm</code>) captures the route table by value and returns a lambda that performs a linear scan on every request dispatch. Benchmarking route dispatch at 5, 50, and 500 registered routes would show whether the linear scan remains acceptable or whether a sorted-vector or trie approach is justified. The benchmark must include the full dispatch path – matching method, comparing patterns, and invoking the handler – not just the loop.</li>
 </ul>
 <p>These are the kinds of benchmark claims worth writing in plain language before writing code: “Compare route dispatch latency with linear scan versus sorted vector at 5, 50, and 500 routes with realistic HTTP method and path distributions.”</p>
-<h2 id="control-for-compiler-and-harness-artifacts"><a class="header" href="#control-for-compiler-and-harness-artifacts">Control for Compiler and Harness Artifacts</a></h2>
+<h2 id="control-for-compiler-and-harness-artifacts"><a class="header" href="#control-for-compiler-and-harness-artifacts">Control for compiler and harness artifacts</a></h2>
 <p>C++ can produce especially misleading microbenchmarks because the optimizer is extremely willing to remove, fold, hoist, and vectorize code that is not anchored to observable behavior. Benchmark harnesses exist partly to prevent this, but they do not eliminate the need for skepticism.</p>
 <p>At minimum:</p>
 <ul>
@@ -231,7 +231,7 @@
 <li>Inspect generated code when a surprising result appears.</li>
 </ul>
 <p>If a benchmark claims that a complex operation takes almost no time, assume the optimizer removed work until proven otherwise. If a benchmark shows enormous variance, assume the environment is unstable or the workload is underspecified until proven otherwise.</p>
-<h3 id="flawed-benchmark-dead-code-elimination"><a class="header" href="#flawed-benchmark-dead-code-elimination">Flawed Benchmark: Dead Code Elimination</a></h3>
+<h3 id="flawed-benchmark-dead-code-elimination"><a class="header" href="#flawed-benchmark-dead-code-elimination">Flawed benchmark: dead code elimination</a></h3>
 <p>This is the single most common microbenchmark lie. The compiler sees that a result is never used and removes the computation entirely:</p>
 <pre><code class="language-cpp">// BROKEN: the compiler may eliminate the entire loop because
 // 'total' is never observed.
@@ -259,7 +259,7 @@ static void BM_good_dce(benchmark::State&amp; state) {
 }
 </code></pre>
 <p><code>benchmark::DoNotOptimize</code> is not magic. On most implementations it acts as an opaque read of the value (often an inline asm that the compiler treats as potentially observing the variable). Use it on the final result, not on every intermediate step, or you risk inhibiting legitimate optimizations the production code would also benefit from. If you are unsure whether DCE is affecting your results, compile with <code>-S</code> and inspect the assembly.</p>
-<h3 id="flawed-benchmark-measuring-setup-instead-of-work"><a class="header" href="#flawed-benchmark-measuring-setup-instead-of-work">Flawed Benchmark: Measuring Setup Instead of Work</a></h3>
+<h3 id="flawed-benchmark-measuring-setup-instead-of-work"><a class="header" href="#flawed-benchmark-measuring-setup-instead-of-work">Flawed benchmark: measuring setup instead of work</a></h3>
 <pre><code class="language-cpp">// BROKEN: construction cost dominates. The benchmark is
 // measuring vector allocation and initialization, not lookup.
 static void BM_bad_lookup(benchmark::State&amp; state) {
@@ -281,7 +281,7 @@ static void BM_good_lookup(benchmark::State&amp; state) {
     }
 }
 </code></pre>
-<h3 id="flawed-benchmark-wrong-baseline"><a class="header" href="#flawed-benchmark-wrong-baseline">Flawed Benchmark: Wrong Baseline</a></h3>
+<h3 id="flawed-benchmark-wrong-baseline"><a class="header" href="#flawed-benchmark-wrong-baseline">Flawed benchmark: wrong baseline</a></h3>
 <p>Comparing two designs against an unfair baseline is subtler and more dangerous:</p>
 <pre><code class="language-cpp">// MISLEADING: comparing hash lookup against linear scan.
 // Concludes "hash map is 100x faster" -- but the real alternative
@@ -298,7 +298,7 @@ static void BM_linear_scan(benchmark::State&amp; state) {
 }
 </code></pre>
 <p>The right baseline is the realistic alternative, not the worst possible option. Always state what the benchmark is comparing against and why that alternative is the one the team would actually choose.</p>
-<h3 id="flawed-benchmark-warm-cache-illusion"><a class="header" href="#flawed-benchmark-warm-cache-illusion">Flawed Benchmark: Warm Cache Illusion</a></h3>
+<h3 id="flawed-benchmark-warm-cache-illusion"><a class="header" href="#flawed-benchmark-warm-cache-illusion">Flawed benchmark: warm cache illusion</a></h3>
 <pre><code class="language-cpp">// MISLEADING: data fits in L2 cache and is hot from the previous
 // iteration.  Production accesses the same structure after
 // processing unrelated data that evicts it from cache.
@@ -315,10 +315,10 @@ static void BM_warm_cache(benchmark::State&amp; state) {
 }
 </code></pre>
 <p>If the production access pattern encounters cold data, either make the working set large enough to exceed cache, or explicitly flush cache lines between iterations (platform-specific and fragile, but sometimes necessary for honest results).</p>
-<h3 id="google-benchmark-pitfalls"><a class="header" href="#google-benchmark-pitfalls">Google Benchmark Pitfalls</a></h3>
+<h3 id="google-benchmark-pitfalls"><a class="header" href="#google-benchmark-pitfalls">Google Benchmark pitfalls</a></h3>
 <p>Google Benchmark (<code>benchmark::</code>) is widely used and generally solid, but several recurring mistakes deserve mention:</p>
 <ol>
-<li><strong>Forgetting <code>benchmark::ClobberMemory()</code></strong>: <code>DoNotOptimize</code> prevents dead stores of a value, but it does not force the compiler to assume memory has changed. If your benchmark modifies a data structure in place, the compiler may hoist reads above writes across iterations. Use <code>benchmark::ClobberMemory()</code> after mutations to force a reload:</li>
+<li>Forgetting <code>benchmark::ClobberMemory()</code>. <code>DoNotOptimize</code> prevents dead stores of a value, but it does not force the compiler to assume memory has changed. If your benchmark modifies a data structure in place, the compiler may hoist reads above writes across iterations. Use <code>benchmark::ClobberMemory()</code> after mutations to force a reload:</li>
 </ol>
 <pre><code class="language-cpp">static void BM_modify(benchmark::State&amp; state) {
     std::vector&lt;int&gt; v(10'000, 0);
@@ -333,32 +333,32 @@ static void BM_warm_cache(benchmark::State&amp; state) {
 </code></pre>
 <ol start="2">
 <li>
-<p><strong>Not using <code>state.SetItemsProcessed()</code></strong>: Without it, the output shows only time per iteration, making it hard to compare benchmarks that process different batch sizes. Always call <code>state.SetItemsProcessed(state.iterations() * num_items)</code> so the output includes a throughput column.</p>
+<p>Not using <code>state.SetItemsProcessed()</code>. Without it, the output shows only time per iteration, making it hard to compare benchmarks that process different batch sizes. Always call <code>state.SetItemsProcessed(state.iterations() * num_items)</code> so the output includes a throughput column.</p>
 </li>
 <li>
-<p><strong>Ignoring <code>state.PauseTiming()</code> / <code>state.ResumeTiming()</code> overhead</strong>: These calls use clock reads that themselves take 20-100 ns on many platforms. If the operation you are measuring takes less than a microsecond, the pause/resume overhead dominates. For sub-microsecond work, keep setup outside the loop entirely or amortize it across many iterations.</p>
+<p>Ignoring <code>state.PauseTiming()</code> / <code>state.ResumeTiming()</code> overhead. These calls use clock reads that themselves take 20-100 ns on many platforms. If the operation you are measuring takes less than a microsecond, the pause/resume overhead dominates. For sub-microsecond work, keep setup outside the loop entirely or amortize it across many iterations.</p>
 </li>
 <li>
-<p><strong>Benchmarking only one size</strong>: Use <code>-&gt;Range(8, 1 &lt;&lt; 20)</code> or <code>-&gt;DenseRange()</code> to test across sizes. A design that wins at 1K elements may lose at 1M. Performance is not a scalar.</p>
+<p>Benchmarking only one size. Use <code>-&gt;Range(8, 1 &lt;&lt; 20)</code> or <code>-&gt;DenseRange()</code> to test across sizes. A design that wins at 1K elements may lose at 1M. Performance is not a scalar.</p>
 </li>
 </ol>
 <p>Use a serious harness when possible. The exact library is less important than the discipline: stable repetition, clear setup boundaries, and explicit prevention of dead-code elimination. When a benchmark is intentionally partial because the repository does not standardize on a harness, say so and document the omitted scaffolding.</p>
-<h2 id="measuring-noise-instead-of-signal"><a class="header" href="#measuring-noise-instead-of-signal">Measuring Noise Instead of Signal</a></h2>
+<h2 id="measuring-noise-instead-of-signal"><a class="header" href="#measuring-noise-instead-of-signal">Measuring noise instead of signal</a></h2>
 <p>Even with a correct benchmark, environmental noise can dominate the result. Frequency scaling, thermal throttling, background processes, NUMA effects, and interrupt coalescing all inject variance that has nothing to do with your code change.</p>
 <p>Practical defenses:</p>
 <ul>
-<li><strong>Pin CPU frequency</strong> during benchmarks (<code>cpupower frequency-set -g performance</code> on Linux, or disable turbo boost). A benchmark that runs at 4.5 GHz on one iteration and 3.2 GHz on the next is measuring the governor, not your code.</li>
-<li><strong>Isolate cores</strong> (<code>isolcpus</code> kernel parameter or <code>taskset</code> / <code>numactl</code>) to prevent scheduler interference.</li>
-<li><strong>Run multiple trials</strong> and report median, not mean. Median is robust to occasional spikes from interrupts or page faults. Mean is dragged by outliers.</li>
-<li><strong>Require statistical significance</strong> before declaring a win. A 3% improvement with 5% coefficient of variation is noise. Google Benchmark supports <code>--benchmark_repetitions=N</code> and reports stddev; use it.</li>
-<li><strong>Compare on the same machine, same boot, same binary</strong> when possible. Cross-machine comparisons require careful normalization and are generally less trustworthy.</li>
+<li>Pin CPU frequency during benchmarks (<code>cpupower frequency-set -g performance</code> on Linux, or disable turbo boost). A benchmark that runs at 4.5 GHz on one iteration and 3.2 GHz on the next is measuring the governor, not your code.</li>
+<li>Isolate cores (<code>isolcpus</code> kernel parameter or <code>taskset</code> / <code>numactl</code>) to prevent scheduler interference.</li>
+<li>Run multiple trials and report median, not mean. Median is robust to occasional spikes from interrupts or page faults. Mean is dragged by outliers.</li>
+<li>Require statistical significance before declaring a win. A 3% improvement with 5% coefficient of variation is noise. Google Benchmark supports <code>--benchmark_repetitions=N</code> and reports stddev; use it.</li>
+<li>Compare on the same machine, same boot, same binary when possible. Cross-machine comparisons require careful normalization and are generally less trustworthy.</li>
 </ul>
 <p>If a benchmark result changes by more than 1-2% between identical runs on an idle machine, the benchmark setup needs fixing before the result means anything.</p>
-<h2 id="distribution-matters-more-than-a-single-number"><a class="header" href="#distribution-matters-more-than-a-single-number">Distribution Matters More Than a Single Number</a></h2>
+<h2 id="distribution-matters-more-than-a-single-number"><a class="header" href="#distribution-matters-more-than-a-single-number">Distribution matters more than a single number</a></h2>
 <p>Average runtime is a weak summary. Many production systems care about percentiles, variance, and worst-case behavior under skew. A representation that improves mean throughput while making tail latency worse under bursty allocation or lock contention may still be a regression. Likewise, a benchmark that reports only “nanoseconds per iteration” can hide bimodal behavior caused by rehash, page faults, branch predictor flips, or occasional large allocations.</p>
 <p>Read performance numbers the way you would read availability or latency telemetry. Ask about spread, not just center. Ask whether outliers are noise, environment instability, or real behavior from the design. Ask whether the benchmark shape forces rare expensive events often enough to matter.</p>
 <p>For CI regression control, this means using thresholds and trend analysis carefully. A noisy benchmark can create false alarms that train teams to ignore the signal. A too-forgiving threshold can let meaningful regressions accumulate. Stable benchmark design is usually more valuable than elaborate reporting.</p>
-<h2 id="profilers-answer-different-questions"><a class="header" href="#profilers-answer-different-questions">Profilers Answer Different Questions</a></h2>
+<h2 id="profilers-answer-different-questions"><a class="header" href="#profilers-answer-different-questions">Profilers answer different questions</a></h2>
 <p>A profiler is not a slower benchmark. It is a sampling or instrumentation tool for understanding where time, allocations, cache misses, or waits occur in a real process. Use it when you do not yet know where the bottleneck is, or when a microbenchmark result needs validation against full-system behavior.</p>
 <p>Different profilers reveal different failure classes:</p>
 <ul>
@@ -369,7 +369,7 @@ static void BM_warm_cache(benchmark::State&amp; state) {
 </ul>
 <p>Do not ask one tool to answer a question it cannot see. A CPU profiler will not explain why threads are mostly idle waiting on a lock. An allocation flame graph will not tell you whether a faster allocator would matter if traversal cost still dominates. A wall-clock trace may show a slow request without distinguishing CPU work from scheduler delay.</p>
 <p>On Linux, that may mean combining <code>perf</code>, allocator profiling, and tracing. On Windows, it may mean ETW-based tools, Visual Studio Profiler, or Windows Performance Analyzer. On macOS, Instruments fills a similar role. The tool choice is secondary to the habit: pair the question with the instrument that can actually answer it.</p>
-<h2 id="correlate-benchmarks-with-profiles"><a class="header" href="#correlate-benchmarks-with-profiles">Correlate Benchmarks With Profiles</a></h2>
+<h2 id="correlate-benchmarks-with-profiles"><a class="header" href="#correlate-benchmarks-with-profiles">Correlate benchmarks with profiles</a></h2>
 <p>Benchmarking and profiling should constrain each other.</p>
 <p>If a microbenchmark says a change should help because it reduces allocations, the profiler in a realistic process should show fewer allocations or less time in allocation-heavy paths. If a profile says a loop is hot because of cache misses in a pointer-rich traversal, a benchmark should isolate that traversal shape and test alternatives. If the two disagree, do not average them into comfort. Investigate the mismatch.</p>
 <p>Common causes of mismatch include:</p>
@@ -380,11 +380,11 @@ static void BM_warm_cache(benchmark::State&amp; state) {
 <li>The measured change affected code size, inlining, or branch behavior in the full binary differently than in isolation.</li>
 </ul>
 <p>Good performance work narrows these gaps. Bad performance work ignores them.</p>
-<h2 id="beware-representative-inputs-that-are-not"><a class="header" href="#beware-representative-inputs-that-are-not">Beware “Representative” Inputs That Are Not</a></h2>
+<h2 id="beware-representative-inputs-that-are-not"><a class="header" href="#beware-representative-inputs-that-are-not">Beware “representative” inputs that are not</a></h2>
 <p>Teams often sabotage measurement by using tidy synthetic inputs. Keys are uniformly random. Messages are the same size. Queues are never bursty. Hash tables never experience realistic load factors. Parsers never see malformed or adversarial data. These inputs are easier to generate and easier to stabilize. They are also often wrong.</p>
 <p>Representative input does not mean copying production traffic blindly. It means preserving the properties that drive cost: size distribution, skew, repetition, mutation ratio, working-set size, and failure-path frequency. For a cache, that may mean a Zipf-like access pattern rather than uniform keys. For a parser, it may mean a realistic mix of short and long fields plus a small rate of malformed records. For a scheduler or queue, it may mean burst patterns rather than a flat arrival rate.</p>
 <p>When data privacy or operational constraints prevent real traces, at least synthesize distributions intentionally. A benchmark over unrealistic inputs is not neutral. It actively trains the team on the wrong problem.</p>
-<h2 id="performance-claims-must-survive-code-review"><a class="header" href="#performance-claims-must-survive-code-review">Performance Claims Must Survive Code Review</a></h2>
+<h2 id="performance-claims-must-survive-code-review"><a class="header" href="#performance-claims-must-survive-code-review">Performance claims must survive code review</a></h2>
 <p>Treat performance changes as reviewable design work, not as heroic experiments. A credible change should come with a compact evidence package:</p>
 <ul>
 <li>The performance question being answered.</li>
@@ -394,12 +394,12 @@ static void BM_warm_cache(benchmark::State&amp; state) {
 <li>The tradeoffs introduced: code complexity, memory footprint, API restrictions, portability, or maintenance cost.</li>
 </ul>
 <p>This forces a useful discipline. It prevents “seems faster on my machine” from entering the codebase as institutional memory. It also creates artifacts future reviewers can re-run when compilers, standard libraries, or workload shape changes alter the answer.</p>
-<h2 id="regression-control-is-an-engineering-system-not-a-dashboard"><a class="header" href="#regression-control-is-an-engineering-system-not-a-dashboard">Regression Control Is an Engineering System, Not a Dashboard</a></h2>
+<h2 id="regression-control-is-an-engineering-system-not-a-dashboard"><a class="header" href="#regression-control-is-an-engineering-system-not-a-dashboard">Regression control is an engineering system, not a dashboard</a></h2>
 <p>It is tempting to add a benchmark job to CI and call performance solved. In practice, regression control works only when the measured benchmarks are stable, cheap enough to run at the right frequency, and tied to code paths the team actually cares about. A flaky nightly benchmark suite that no one trusts is not safety. It is ritual.</p>
 <p>A practical setup usually includes a small set of highly stable microbenchmarks for known hot kernels, a separate heavier performance workflow for broader load tests, and production observability that tracks latency, throughput, CPU time, and memory effects after release. The layers differ in cost and fidelity. You need all three because no single layer is enough.</p>
-<h2 id="what-honest-measurement-looks-like"><a class="header" href="#what-honest-measurement-looks-like">What Honest Measurement Looks Like</a></h2>
-<p>Honest measurement is modest. It does not promise universal truths from one benchmark. It does not confuse profile heat with immediate blame. It does not assume an optimization matters just because it is visible in assembly. It ties a number to a workload, a question, and a decision.</p>
-<p>That attitude is more important than any specific toolchain. Hardware changes, compilers improve, standard library implementations shift, and production traffic evolves. The habit you want in a C++ team is not attachment to one profiler or framework. It is the refusal to make performance claims without evidence that matches the decision being made.</p>
+<h2 id="what-honest-measurement-looks-like"><a class="header" href="#what-honest-measurement-looks-like">What honest measurement looks like</a></h2>
+<p>Honest measurement is modest. It does not promise universal truths from one benchmark, confuse profile heat with immediate blame, or assume an optimization matters just because it is visible in assembly. It ties a number to a workload, a question, and a decision.</p>
+<p>Hardware changes, compilers improve, standard library implementations shift, and production traffic evolves. The habit worth building is not attachment to one profiler or framework. It is the refusal to make performance claims without evidence that matches the decision being made.</p>
 <h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
 <ul>
 <li>Pick the measurement tool that matches the question: benchmark, profile, load test, or production telemetry.</li>
