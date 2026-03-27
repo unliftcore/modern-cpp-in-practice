@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -185,14 +185,14 @@
 <p>Once ownership is clear, the next production question is semantic rather than mechanical: what kind of thing is this object supposed to be?</p>
 <p>Modern C++ code gets harder than it needs to be when every type is treated as mutable state with methods attached. Some objects are values. They represent a self-contained piece of meaning, can often be copied or replaced wholesale, and should be easy to compare and test. Some objects carry identity. They represent a specific session, account, worker, or connection whose continuity matters across time even as its fields change. Mixing those roles inside one vague type creates bugs that look unrelated: broken equality, unstable cache keys, accidental aliasing, poor concurrency behavior, and APIs that cannot say whether mutation changes “the same thing” or creates a new one.</p>
 <p>This chapter is about keeping those categories sharp and enforcing invariants so the types remain trustworthy under pressure. It is not a chapter about parameter passing or ownership transfer mechanics. Those belong elsewhere. The focus here is modeling: deciding when a type should behave like a value, when identity must remain explicit, and how invariants stop the object graph from becoming a bag of fields.</p>
-<h2 id="values-and-entities-solve-different-problems"><a class="header" href="#values-and-entities-solve-different-problems">Values and Entities Solve Different Problems</a></h2>
+<h2 id="values-and-entities-solve-different-problems"><a class="header" href="#values-and-entities-solve-different-problems">Values and entities solve different problems</a></h2>
 <p>A value is defined by what it contains, not by where it came from. Two values that represent the same configuration, time window, or money amount should usually be interchangeable. You can copy them, compare them, and move them between threads without inventing a story about which one is the “real” instance.</p>
 <p>An entity or identity-bearing object is different. A live client session is not interchangeable with another session that happens to have the same fields at one moment. A connection object may reconnect, accumulate statistics, and hold synchronization state while still remaining the same connection from the system’s point of view. Identity exists so the program can talk about continuity over time.</p>
 <p>This sounds obvious. The design damage appears when teams fail to decide which category a type belongs to.</p>
 <p>If an <code>Order</code> type is mutable, shared, equality-comparable by every field, and also used as a cache key, the program now has several incompatible stories about what that object means. If a configuration snapshot is wrapped in a reference-counted mutable object even though callers only need an immutable set of values, the code has paid for aliasing and lifetime complexity without gaining semantic power.</p>
 <p>The useful default is stronger than many codebases realize: if a type does not need continuity across time, design it as a value first.</p>
-<h2 id="value-types-reduce-accidental-coupling"><a class="header" href="#value-types-reduce-accidental-coupling">Value Types Reduce Accidental Coupling</a></h2>
-<p>Value semantics are powerful because they reduce invisible sharing. A caller gets its own copy or moved instance. Mutation is local. Equality can often be structural. Tests can build small examples without allocating object graphs or mocking infrastructure.</p>
+<h2 id="value-types-reduce-accidental-coupling"><a class="header" href="#value-types-reduce-accidental-coupling">Value types reduce accidental coupling</a></h2>
+<p>Value semantics reduce invisible sharing. A caller gets its own copy or moved instance. Mutation is local. Equality can often be structural. Tests can build small examples without allocating object graphs or mocking infrastructure.</p>
 <p>Configuration is a good example. Many systems model configuration as a globally shared mutable object because updates exist somewhere in the product. That choice infects code that only needs a stable snapshot.</p>
 <p>Usually the better design is this:</p>
 <ul>
@@ -201,7 +201,7 @@
 <li>Let consumers hold the snapshot they were given.</li>
 </ul>
 <p>That design makes each reader’s world explicit. Code processing one request can reason against one configuration value. There is no half-updated object graph, no lock required merely to read a timeout value, and no mystery about whether two callers are looking at the same mutable instance.</p>
-<h3 id="what-goes-wrong-without-value-semantics"><a class="header" href="#what-goes-wrong-without-value-semantics">What Goes Wrong Without Value Semantics</a></h3>
+<h3 id="what-goes-wrong-without-value-semantics"><a class="header" href="#what-goes-wrong-without-value-semantics">What goes wrong without value semantics</a></h3>
 <p>When configuration is modeled as a shared mutable object rather than a value snapshot, aliasing bugs appear:</p>
 <pre><code class="language-cpp">// Anti-pattern: shared mutable configuration.
 struct AppConfig {
@@ -231,8 +231,8 @@ void handle_request(RequestContext&amp; ctx) {
     // Entire request sees a single consistent configuration.
 }
 </code></pre>
-<p>The deeper point is that values compose well. They can sit inside containers, cross threads, participate in deterministic tests, and form stable inputs to hashing or comparison. Identity-bearing objects can do those things too, but they require more rules and more caution. Use that complexity only when the model truly needs it.</p>
-<h2 id="invariants-are-the-reason-to-have-types-at-all"><a class="header" href="#invariants-are-the-reason-to-have-types-at-all">Invariants Are the Reason to Have Types at All</a></h2>
+<p>Values compose well. They can sit inside containers, cross threads, participate in deterministic tests, and form stable inputs to hashing or comparison. Identity-bearing objects can do those things too, but they require more rules and more caution. Use that complexity only when the model needs it.</p>
+<h2 id="invariants-are-the-reason-to-have-types-at-all"><a class="header" href="#invariants-are-the-reason-to-have-types-at-all">Invariants are the reason to have types at all</a></h2>
 <p>A type that permits invalid combinations of state is often just a struct-shaped bug carrier.</p>
 <p>An invariant is a condition that should hold whenever an object is observable by the rest of the program. A time window may require <code>start &lt;= end</code>. A money amount may require a currency and a bounded integer representation. A batching policy may require <code>max_items &gt; 0</code> and <code>flush_interval &gt; 0ms</code>. A connection state object may forbid “authenticated but not connected.”</p>
 <p>The point of an invariant is not to make the constructor fancier. It is to shrink the number of invalid states that later code must defend against.</p>
@@ -271,7 +271,7 @@ private:
 </code></pre>
 <p>The details of error transport belong more fully in the next chapter, but the modeling point is already clear: a <code>RetryPolicy</code> should not exist in a nonsense state. Once created, code using it should not have to ask whether the delays are inverted or the attempt count is zero unless those are valid meanings the domain actually wants.</p>
 <p>If a type does not enforce its invariants, the burden moves outward into every caller and every code review.</p>
-<h3 id="what-happens-when-invariants-are-not-enforced"><a class="header" href="#what-happens-when-invariants-are-not-enforced">What Happens When Invariants Are Not Enforced</a></h3>
+<h3 id="what-happens-when-invariants-are-not-enforced"><a class="header" href="#what-happens-when-invariants-are-not-enforced">What happens when invariants are not enforced</a></h3>
 <p>Compare the factory-validated <code>RetryPolicy</code> above with a plain aggregate that leaves validation to callers:</p>
 <pre><code class="language-cpp">// Anti-pattern: invariants left to the caller.
 struct RetryPolicy {
@@ -303,7 +303,7 @@ void schedule_retries(const RetryPolicy&amp; policy) {
 }
 </code></pre>
 <p>Every path that stores a <code>Task</code> goes through <code>validate()</code> first, including updates — the repository re-validates after mutation. The invariant is owned by the type, not by individual callers.</p>
-<h2 id="anti-pattern-entity-semantics-smuggled-into-a-value-type"><a class="header" href="#anti-pattern-entity-semantics-smuggled-into-a-value-type">Anti-pattern: Entity Semantics Smuggled Into a Value Type</a></h2>
+<h2 id="anti-pattern-entity-semantics-smuggled-into-a-value-type"><a class="header" href="#anti-pattern-entity-semantics-smuggled-into-a-value-type">Anti-pattern: entity semantics smuggled into a value type</a></h2>
 <p>One recurring failure is a type that looks like a value because it is copied and compared, but actually carries identity-bearing mutation.</p>
 <pre><code class="language-cpp">// Anti-pattern: one type tries to be both a value and a live entity.
 struct Job {
@@ -320,11 +320,11 @@ struct Job {
 <li>a value type such as <code>JobSpec</code> or <code>JobSnapshot</code> for the stable domain data,</li>
 <li>and an identity-bearing runtime object such as <code>JobExecution</code> that owns synchronization, progress, and cancellation state.</li>
 </ul>
-<p>That split clarifies which parts are serializable, comparable, cacheable, and safe to move across threads, and which parts model a live process in the system.</p>
-<p>The companion web-api project demonstrates this separation cleanly. <code>Task</code> is a pure value type — copyable, comparable, serializable — while <code>TaskRepository</code> is the identity-bearing entity that owns a <code>shared_mutex</code>, an ID generator, and the mutable collection. The value carries domain data; the entity manages lifecycle and synchronization. Neither tries to do the other’s job.</p>
-<h2 id="equality-should-match-meaning"><a class="header" href="#equality-should-match-meaning">Equality Should Match Meaning</a></h2>
+<p>That split makes clear which parts are serializable, comparable, cacheable, and safe to move across threads, and which parts model a live process.</p>
+<p>The companion web-api project demonstrates this separation. <code>Task</code> is a value type (copyable, comparable, serializable) while <code>TaskRepository</code> is the identity-bearing entity that owns a <code>shared_mutex</code>, an ID generator, and the mutable collection. The value carries domain data; the entity manages lifecycle and synchronization.</p>
+<h2 id="equality-should-match-meaning"><a class="header" href="#equality-should-match-meaning">Equality should match meaning</a></h2>
 <p>One of the best tests for whether a type has a coherent semantic role is whether equality is obvious.</p>
-<p>For many value types, equality should be structural. Two validated endpoint configurations with the same host, port, and TLS mode are the same value. Two money amounts with the same currency and minor units are the same value. Two time ranges with the same endpoints are the same value.</p>
+<p>For many value types, equality should be structural. Two validated endpoint configurations with the same host, port, and TLS mode are the same value. Two money amounts with the same currency and minor units are the same value.</p>
 <p>For identity-bearing objects, structural equality is often actively misleading. Two live sessions with the same user id and remote address are not the same session. Two connections pointed at the same shard are not interchangeable if each carries different lifecycle state and pending work.</p>
 <p>If a team cannot answer what equality should mean for a type, the type is probably mixing value data with identity-bearing runtime concerns.</p>
 <p>The companion web-api project keeps this straightforward. <code>Task</code> declares a defaulted three-way comparison, making equality purely structural:</p>
@@ -332,8 +332,8 @@ struct Job {
 [[nodiscard]] auto operator&lt;=&gt;(const Task&amp;) const = default;
 </code></pre>
 <p>Because <code>Task</code> is a value, structural equality is the right answer. The identity-bearing <code>TaskRepository</code> has no equality operator at all — comparing two repositories would be meaningless.</p>
-<p>This matters operationally. Equality influences cache keys, deduplication logic, diff generation, test assertions, and change detection. A semantically vague type tends to produce semantically vague equality, which then breaks several systems at once.</p>
-<h3 id="shallow-copies-and-aliasing-a-concrete-trap"><a class="header" href="#shallow-copies-and-aliasing-a-concrete-trap">Shallow Copies and Aliasing: A Concrete Trap</a></h3>
+<p>This matters in practice. Equality influences cache keys, deduplication logic, diff generation, test assertions, and change detection. A semantically vague type produces semantically vague equality, which then breaks several systems at once.</p>
+<h3 id="shallow-copies-and-aliasing-a-concrete-trap"><a class="header" href="#shallow-copies-and-aliasing-a-concrete-trap">Shallow copies and aliasing: a concrete trap</a></h3>
 <p>When a type looks like a value but shares internal state through pointers or references, copies become aliases rather than independent values:</p>
 <pre><code class="language-cpp">// Anti-pattern: shallow copy creates aliasing bugs.
 struct Route {
@@ -364,7 +364,7 @@ void reconfigure(Route primary) {
 };
 </code></pre>
 <p>Now <code>Route</code> behaves as a value. Copies are independent. Mutation through <code>with_endpoint</code> produces a new value without disturbing the original. No aliasing surprise is possible.</p>
-<h2 id="mutation-should-respect-the-modeling-choice"><a class="header" href="#mutation-should-respect-the-modeling-choice">Mutation Should Respect the Modeling Choice</a></h2>
+<h2 id="mutation-should-respect-the-modeling-choice"><a class="header" href="#mutation-should-respect-the-modeling-choice">Mutation should respect the modeling choice</a></h2>
 <p>Values and entities tolerate mutation differently.</p>
 <p>For value types, the cleanest design is often immutability after validation or at least mutation through narrow operations that preserve invariants. Replacing a configuration snapshot or producing a new routing table is frequently easier to reason about than mutating one shared instance in place.</p>
 <p>For entities, mutation is natural because the object models continuity over time. But that does not justify public writable fields or unconstrained setters. An entity still needs a controlled state machine. A <code>Connection</code> may transition from <code>connecting</code> to <code>ready</code> to <code>draining</code> to <code>closed</code>; it should not permit arbitrary combinations just because the fields are individually legal.</p>
@@ -413,15 +413,15 @@ private:
 };
 </code></pre>
 <p>Callers cannot produce an invalid <code>TimeWindow</code>. The invariant <code>start &lt;= end</code> is enforced once, in the type, rather than diffusely across every mutation site.</p>
-<h2 id="small-domain-types-are-worth-the-ceremony"><a class="header" href="#small-domain-types-are-worth-the-ceremony">Small Domain Types Are Worth the Ceremony</a></h2>
+<h2 id="small-domain-types-are-worth-the-ceremony"><a class="header" href="#small-domain-types-are-worth-the-ceremony">Small domain types are worth the ceremony</a></h2>
 <p>Experienced programmers sometimes resist tiny wrapper types because they look like ceremony compared with plain integers or strings. In production C++, these types often pay for themselves quickly.</p>
 <p>An <code>AccountId</code>, <code>ShardId</code>, <code>TenantName</code>, <code>BytesPerSecond</code>, or <code>Deadline</code> type can eliminate argument swaps, clarify logs, and make invalid combinations harder to express. Just as importantly, these types can carry invariants and conversions locally instead of distributing them across parsing, storage, and formatting code.</p>
 <p>The warning is that a wrapper type is only useful if it actually sharpens meaning. A thin shell around <code>std::string</code> that preserves all invalid states and adds no semantic operations is mostly noise. The right question is whether the type enforces or communicates a real distinction the system cares about.</p>
-<h2 id="concurrency-gets-easier-when-values-stay-values"><a class="header" href="#concurrency-gets-easier-when-values-stay-values">Concurrency Gets Easier When Values Stay Values</a></h2>
-<p>Many concurrency problems are secretly modeling problems. Shared mutable state is hard largely because the program uses identity-bearing objects where immutable values would have been enough.</p>
-<p>Threading a validated snapshot through a pipeline is easy to reason about. Sharing a mutable configuration service object with interior locking across the same pipeline is much harder. Passing a value-oriented request descriptor into work queues is easier than passing a live session object with hidden aliasing and synchronization.</p>
-<p>This does not mean every concurrent system can eliminate entities. It means value semantics are one of the most effective ways to reduce the amount of state that must be shared and synchronized. When the code can replace mutation with snapshot publication or message passing of values, both correctness and reviewability improve.</p>
-<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and Review</a></h2>
+<h2 id="concurrency-gets-easier-when-values-stay-values"><a class="header" href="#concurrency-gets-easier-when-values-stay-values">Concurrency gets easier when values stay values</a></h2>
+<p>Many concurrency problems are modeling problems in disguise. Shared mutable state is hard largely because the program uses identity-bearing objects where immutable values would have been enough.</p>
+<p>Threading a validated snapshot through a pipeline is easy to reason about. Sharing a mutable configuration service object with interior locking across the same pipeline is much harder. Passing a value-oriented request descriptor into work queues is simpler than passing a live session object with hidden aliasing and synchronization.</p>
+<p>This does not mean every concurrent system can eliminate entities. But value semantics are one of the most effective ways to reduce the amount of state that must be shared and synchronized. When mutation can be replaced with snapshot publication or message passing of values, both correctness and reviewability improve.</p>
+<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and review</a></h2>
 <p>Types that claim semantic roles should be reviewed against those roles directly.</p>
 <p>Useful review questions:</p>
 <ol>

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -181,12 +181,12 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="errors-results-and-failure-boundaries"><a class="header" href="#errors-results-and-failure-boundaries">Errors, Results, and Failure Boundaries</a></h1>
+                        <h1 id="errors-results-and-failure-boundaries"><a class="header" href="#errors-results-and-failure-boundaries">Errors, results, and failure boundaries</a></h1>
 <p>Most large C++ systems do not fail because they chose the wrong single error mechanism. They fail because several mechanisms are used at once with no layer policy. One subsystem throws exceptions, another returns status codes, a third logs and continues, and a fourth converts every failure into <code>false</code>. Individually, each choice may have looked reasonable. Together they produce code where callers cannot tell which operations may fail, which failures are recoverable, where diagnostics were emitted, or whether cleanup and rollback still ran.</p>
 <p>The production question is not “exceptions or <code>std::expected</code>?” The production question is where each error model belongs, how failure information crosses boundaries, and which parts of the system are responsible for translation, logging, and crash decisions.</p>
 <p>That boundary focus matters because error handling is architectural. A parsing layer, a domain layer, a storage adapter, and a process entry point all face different constraints. Conflating them is what makes code noisy and operationally fragile.</p>
 <p>This chapter keeps the distinctions sharp. It does not try to outlaw exceptions or declare <code>std::expected</code> a universal replacement. It argues for a policy that preserves useful failure information without letting every low-level mechanism leak across the whole codebase.</p>
-<h2 id="start-by-classifying-failure"><a class="header" href="#start-by-classifying-failure">Start by Classifying Failure</a></h2>
+<h2 id="start-by-classifying-failure"><a class="header" href="#start-by-classifying-failure">Start by classifying failure</a></h2>
 <p>Not every failure deserves the same transport.</p>
 <p>At a minimum, production code should distinguish among these categories:</p>
 <ol>
@@ -197,7 +197,7 @@
 </ol>
 <p>These categories influence both recovery and observability. Invalid input is often expected at system edges and should usually become a local error result with enough detail to reject the request or config cleanly. Environmental failure may need translation, retry policy, or escalation. Contract violation often means the program or subsystem has already lost a key invariant; that is closer to crash territory than to “return an error and continue.” Startup failure is special because there may be no useful degraded mode at all. Failing fast can be the correct behavior.</p>
 <p>Once these categories are explicit, API design gets easier. Not every function should expose every class of failure directly. A high-level domain function should not need to understand a vendor-specific SQL error enumeration if the only actionable outcomes are <code>not_found</code>, <code>conflict</code>, and <code>temporarily_unavailable</code>.</p>
-<h3 id="the-error-code-only-approach-and-its-pitfalls"><a class="header" href="#the-error-code-only-approach-and-its-pitfalls">The Error-Code-Only Approach and Its Pitfalls</a></h3>
+<h3 id="the-error-code-only-approach-and-its-pitfalls"><a class="header" href="#the-error-code-only-approach-and-its-pitfalls">The error-code-only approach and its pitfalls</a></h3>
 <p>Before <code>std::expected</code> and before exceptions were widely adopted, C++ codebases (and C codebases that C++ inherited) relied on integer error codes and sentinel return values. That approach is still common, and its failure modes are worth examining concretely.</p>
 <pre><code class="language-cpp">// Error-code-only style: caller must check, but nothing enforces it.
 enum ConfigErrorCode { kOk = 0, kFileNotFound = 1, kParseError = 2, kInvalidValue = 3 };
@@ -225,8 +225,8 @@ make_error(ErrorCode code, std::string detail) {
     return std::unexpected&lt;Error&gt;{Error{code, std::move(detail)}};
 }
 </code></pre>
-<p><code>Error</code> carries a typed <code>ErrorCode</code> enum and a human-readable detail string — structured enough for programmatic branching, descriptive enough for diagnostics. No integer codes are exposed to callers; every failure path goes through <code>Result&lt;T&gt;</code>.</p>
-<h2 id="exceptions-are-good-for-unwinding-and-local-clarity"><a class="header" href="#exceptions-are-good-for-unwinding-and-local-clarity">Exceptions Are Good for Unwinding and Local Clarity</a></h2>
+<p><code>Error</code> carries a typed <code>ErrorCode</code> enum and a human-readable detail string, structured enough for programmatic branching and descriptive enough for diagnostics. No integer codes are exposed to callers; every failure path goes through <code>Result&lt;T&gt;</code>.</p>
+<h2 id="exceptions-are-good-for-unwinding-and-local-clarity"><a class="header" href="#exceptions-are-good-for-unwinding-and-local-clarity">Exceptions are good for unwinding and local clarity</a></h2>
 <p>Exceptions remain valuable in C++ because stack unwinding composes naturally with RAII. When a constructor fails halfway through a resource-owning object graph, exceptions let the language drive destruction without hand-written cleanup ladders. When a local implementation has several nested helper calls and any of them can fail in the same way, exceptions can keep the main path readable.</p>
 <p>That does not make exceptions a universal boundary model.</p>
 <p>Their strengths are real:</p>
@@ -242,7 +242,7 @@ make_error(ErrorCode code, std::string detail) {
 <li>and they invite sloppy layering when low-level exception types leak into high-level code.</li>
 </ul>
 <p>The right conclusion is modest. Exceptions are often a good internal mechanism inside a layer. They are usually a poor language for broad subsystem boundaries unless the codebase has committed to that model consistently and can enforce it.</p>
-<h2 id="stdexpected-is-strong-at-decision-boundaries"><a class="header" href="#stdexpected-is-strong-at-decision-boundaries"><code>std::expected</code> Is Strong at Decision Boundaries</a></h2>
+<h2 id="stdexpected-is-strong-at-decision-boundaries"><a class="header" href="#stdexpected-is-strong-at-decision-boundaries"><code>std::expected</code> is strong at decision boundaries</a></h2>
 <p><code>std::expected&lt;T, E&gt;</code> is not better than exceptions in the abstract. It is better when the caller is expected to make a visible decision based on the failure.</p>
 <p>Parsing, validation, boundary translation, and request-level operations often fall into this category. The call site usually needs to branch, emit a structured rejection, choose retry behavior, or attach context. Returning an <code>expected</code> makes that decision point explicit.</p>
 <p>Consider a configuration loader:</p>
@@ -281,7 +281,7 @@ void startup() {
 </code></pre>
 <p>With <code>std::expected&lt;ServiceConfig, ConfigError&gt;</code>, the caller can branch on <code>ConfigErrorCode::file_not_found</code> versus <code>ConfigErrorCode::parse_error</code>, choose different recovery strategies, and still access a human-readable message for logging. The type system carries the decision-relevant information rather than burying it in a string.</p>
 <p>The danger with <code>expected</code> is over-propagation. If every tiny helper returns <code>expected</code> merely because a public boundary does, the implementation can become littered with repetitive forwarding logic that obscures the main algorithm. Keep <code>expected</code> where the error belongs in the design. Do not force it through every private function unless that really improves local clarity.</p>
-<h2 id="anti-pattern-side-effect-errors-with-no-boundary-policy"><a class="header" href="#anti-pattern-side-effect-errors-with-no-boundary-policy">Anti-pattern: Side-Effect Errors With No Boundary Policy</a></h2>
+<h2 id="anti-pattern-side-effect-errors-with-no-boundary-policy"><a class="header" href="#anti-pattern-side-effect-errors-with-no-boundary-policy">Anti-pattern: side-effect errors with no boundary policy</a></h2>
 <p>One of the most common production failures is logging plus partial status plus occasional throwing, all in the same subsystem.</p>
 <pre><code class="language-cpp">// Anti-pattern: side effects and transport are mixed.
 bool refresh_profile(Cache&amp; cache, DbClient&amp; db, UserId user_id) {
@@ -302,7 +302,7 @@ bool refresh_profile(Cache&amp; cache, DbClient&amp; db, UserId user_id) {
 </code></pre>
 <p>This function is expensive to use because the caller does not know what <code>false</code> means, which failures were already logged, or whether it still needs to add context. If several layers follow this pattern, incidents become noisy and under-explained at the same time.</p>
 <p>Boundary code should choose one transport and one logging policy. Either the function returns a structured failure and leaves logging to a higher layer that can attach request context, or it handles the failure completely and makes that clear in the contract. Mixing both is how duplicate logs and missing decisions enter a system.</p>
-<h2 id="anti-pattern-silent-failures-from-unchecked-returns"><a class="header" href="#anti-pattern-silent-failures-from-unchecked-returns">Anti-pattern: Silent Failures From Unchecked Returns</a></h2>
+<h2 id="anti-pattern-silent-failures-from-unchecked-returns"><a class="header" href="#anti-pattern-silent-failures-from-unchecked-returns">Anti-pattern: silent failures from unchecked returns</a></h2>
 <p>A subtler variant of the side-effect problem is code that converts failures into default values without any signal to the caller.</p>
 <pre><code class="language-cpp">// Anti-pattern: failure becomes a silent default.
 int get_retry_limit(const Config&amp; cfg) {
@@ -326,7 +326,7 @@ int get_retry_limit(const Config&amp; cfg) {
 }
 </code></pre>
 <p>Or, if the caller should decide whether a missing value is acceptable, return the <code>expected</code> or <code>optional</code> directly and let the boundary make the policy choice.</p>
-<h2 id="translate-near-volatile-dependencies"><a class="header" href="#translate-near-volatile-dependencies">Translate Near Volatile Dependencies</a></h2>
+<h2 id="translate-near-volatile-dependencies"><a class="header" href="#translate-near-volatile-dependencies">Translate near volatile dependencies</a></h2>
 <p>Boundary translation is where most error design work should happen.</p>
 <p>A storage adapter may receive driver exceptions, status codes, retry hints, or platform errors. The rest of the system usually does not want those details directly. It wants decision-relevant categories and maybe enough attached context for diagnostics.</p>
 <p>That means translation should happen close to the unstable dependency, not in business logic three layers away.</p>
@@ -362,13 +362,13 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
                                  result.error().to_json());
 }
 </code></pre>
-<p>Domain logic works exclusively with <code>Result&lt;T&gt;</code>. The translation to HTTP status codes and JSON error bodies happens in a single function at the handler boundary — no domain code imports HTTP concepts, and no handler code inspects error internals beyond calling the translation.</p>
-<h2 id="constructors-destructors-and-startup-need-different-rules"><a class="header" href="#constructors-destructors-and-startup-need-different-rules">Constructors, Destructors, and Startup Need Different Rules</a></h2>
+<p>Domain logic works exclusively with <code>Result&lt;T&gt;</code>. The translation to HTTP status codes and JSON error bodies happens in a single function at the handler boundary. No domain code imports HTTP concepts, and no handler code inspects error internals beyond calling the translation.</p>
+<h2 id="constructors-destructors-and-startup-need-different-rules"><a class="header" href="#constructors-destructors-and-startup-need-different-rules">Constructors, destructors, and startup need different rules</a></h2>
 <p>Error policy should respect lifecycle context.</p>
 <p>Constructors are often a good place to use exceptions because partial construction plus RAII is one of C++’s strongest combinations. A resource-owning object that cannot be made valid should usually refuse to exist. Returning a half-initialized object plus status is rarely an improvement.</p>
 <p>Destructors are the opposite. Throwing across destruction is usually catastrophic or forbidden by the design. If cleanup can fail meaningfully, the type may need an explicit <code>close</code>, <code>flush</code>, or <code>commit</code> operation that reports failure while the object is still in a controlled state. The destructor then becomes best-effort cleanup or final safety net.</p>
 <p>Startup is its own case. At process startup, configuration loading, dependency initialization, and binding to ports often have only one sensible failure policy: produce a clear diagnostic and fail the process. That is not the same as saying every startup helper should call <code>std::exit</code>. It means the top-level startup boundary should own the decision and the lower layers should return enough structured information to make that failure obvious and precise.</p>
-<h2 id="diagnostics-must-be-rich-without-being-contagious"><a class="header" href="#diagnostics-must-be-rich-without-being-contagious">Diagnostics Must Be Rich Without Being Contagious</a></h2>
+<h2 id="diagnostics-must-be-rich-without-being-contagious"><a class="header" href="#diagnostics-must-be-rich-without-being-contagious">Diagnostics must be rich without being contagious</a></h2>
 <p>Good error handling preserves context. Bad error handling spreads context-building code into every branch until the main behavior disappears.</p>
 <p>Useful failure information often includes:</p>
 <ul>
@@ -379,16 +379,16 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 </ul>
 <p>The trick is to keep the error object meaningful without letting it become a dump of every internal detail. A domain-facing error type should expose what callers need to decide and what operators need to diagnose, not every low-level exception string encountered on the way.</p>
 <p>This is one reason named error types matter. <code>expected&lt;T, std::string&gt;</code> is quick to write and weak as a system design. Strings are good final diagnostics and poor architectural contracts.</p>
-<h2 id="where-to-log"><a class="header" href="#where-to-log">Where to Log</a></h2>
+<h2 id="where-to-log"><a class="header" href="#where-to-log">Where to log</a></h2>
 <p>The cleanest default is to log at boundaries that have enough context to make the event operationally useful.</p>
 <p>That usually means request boundaries, background job supervisors, startup entry points, and outer retry loops. It usually does not mean every helper that notices failure. Logging too early strips context. Logging at every layer duplicates noise. Logging nowhere until the process dies loses evidence.</p>
 <p>The core rule is simple: the layer that decides what the failure means operationally is usually the right place to log it.</p>
 <p>That rule works well with <code>expected</code>-style boundaries and with exception translation. Lower layers preserve information. Boundary layers classify, add context, decide recovery, and emit the event once.</p>
-<h2 id="contract-violations-are-not-just-another-error-path"><a class="header" href="#contract-violations-are-not-just-another-error-path">Contract Violations Are Not Just Another Error Path</a></h2>
+<h2 id="contract-violations-are-not-just-another-error-path"><a class="header" href="#contract-violations-are-not-just-another-error-path">Contract violations are not just another error path</a></h2>
 <p>Some failures indicate that the program received bad input. Others indicate that the program broke its own assumptions.</p>
 <p>If an invariant that should have been enforced earlier is now false, or a supposedly unreachable state is reached, pretending this is just another recoverable business error often hides a deeper bug. That does not always require immediate process termination, but it does require different treatment from routine validation failure.</p>
 <p>A good codebase makes these distinctions explicit. Input failure is modeled as input failure. Backend unavailability is modeled as environmental failure. Internal invariant breakage is surfaced as a bug, not normalized into an ordinary “operation failed” code path.</p>
-<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and Review</a></h2>
+<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and review</a></h2>
 <p>Failure handling should be reviewed as a system property, not function by function in isolation.</p>
 <p>Useful review questions:</p>
 <ol>

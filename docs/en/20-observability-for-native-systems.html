@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -185,7 +185,7 @@
 <p>Testing and sanitizers reduce how often bugs escape. They do not eliminate production failures, and they do not explain live behavior under real load, real data, real dependency failures, and real rollout conditions. That is what observability is for.</p>
 <p>In native systems, poor observability is unusually expensive. When a managed service stalls, you may still have a runtime with rich exceptions, heap snapshots, and standardized tracing hooks. In C++ you may instead have a partially symbolized crash, a thread pool stuck behind one blocked dependency, RSS growth that does not cleanly map to logical ownership, and operators who only know that latency tripled after a deployment. If logs, metrics, traces, and dump artifacts were not designed into the system before the incident, the investigation starts from guesswork.</p>
 <p>This chapter is about runtime evidence. Keep the boundary sharp. Tests ask whether the code meets a contract before shipping. Sanitizers and static analysis mechanically search for bug classes in development and CI. Observability answers a different question: when a native system is running for real, what signals let engineers explain failure, overload, or degradation fast enough to act?</p>
-<h2 id="start-from-operating-questions"><a class="header" href="#start-from-operating-questions">Start From Operating Questions</a></h2>
+<h2 id="start-from-operating-questions"><a class="header" href="#start-from-operating-questions">Start from operating questions</a></h2>
 <p>Observability is weak when it begins as “add some logs.” It gets strong when it begins with operating questions.</p>
 <p>For a service, those questions may be:</p>
 <ul>
@@ -276,7 +276,7 @@
 </code></pre>
 <p>Now the on-call engineer filters by <code>request_id</code>, sees that the timeout happened during <code>store</code> with <code>dependency=blob_store</code>, checks the <code>upload_duration_ms</code> histogram by shard, and discovers that shard-3 latency spiked at 09:40. The blob store dashboard confirms the dependency was degraded. Total investigation time drops from hours to minutes.</p>
 <p>Both versions of <code>handle_upload</code> do the same work: validate, store, notify. The difference is not more code. It is code that was written with operating questions in mind from the start.</p>
-<h2 id="logs-should-explain-decisions-and-state-transitions"><a class="header" href="#logs-should-explain-decisions-and-state-transitions">Logs Should Explain Decisions and State Transitions</a></h2>
+<h2 id="logs-should-explain-decisions-and-state-transitions"><a class="header" href="#logs-should-explain-decisions-and-state-transitions">Logs should explain decisions and state transitions</a></h2>
 <p>Logs are most useful when they capture decisions the system made and the state that mattered at the time, not when they narrate every function call. In native systems, this discipline matters even more because the volume and overhead of logging can become a performance problem quickly.</p>
 <p>Good production logs are structured, sparse, and stable.</p>
 <ul>
@@ -314,7 +314,7 @@ return [](const http::Request&amp; req, const http::Handler&amp; next) -&gt; htt
     return resp;
 };
 </code></pre>
-<p>Every response carries method, path, status code, and latency. That is not yet production-grade structured logging – the fields are embedded in formatted text rather than emitted as machine-queryable key-value pairs – but it demonstrates the right instinct: capture identity (route), outcome (status), and timing (latency) at a single cross-cutting point. Evolving this toward a structured JSON or key-value emitter is a straightforward next step.</p>
+<p>Every response carries method, path, status code, and latency. That is not yet production-grade structured logging – the fields are embedded in formatted text rather than emitted as machine-queryable key-value pairs – but it demonstrates the right instinct: capture identity (route), outcome (status), and timing (latency) at a single cross-cutting point. Moving to a structured JSON or key-value emitter is a natural evolution.</p>
 <h3 id="unstructured-versus-structured-logging-in-practice"><a class="header" href="#unstructured-versus-structured-logging-in-practice">Unstructured versus structured logging in practice</a></h3>
 <p>The difference between unstructured and structured logs matters most during incidents, when the person reading logs is under time pressure and may not have written the code.</p>
 <pre><code class="language-cpp">// Unstructured: human-readable but machine-hostile.
@@ -332,7 +332,7 @@ ctx.log(severity::error, "dependency_connect_failed", {
 });
 </code></pre>
 <p>Now <code>dependency_connect_failed</code> events can be counted, filtered by dependency name, and correlated with specific requests. The field names are stable across code changes, so dashboards and alerts do not break when someone rewords a log message.</p>
-<h2 id="metrics-should-track-throughput-saturation-and-failure-shape"><a class="header" href="#metrics-should-track-throughput-saturation-and-failure-shape">Metrics Should Track Throughput, Saturation, and Failure Shape</a></h2>
+<h2 id="metrics-should-track-throughput-saturation-and-failure-shape"><a class="header" href="#metrics-should-track-throughput-saturation-and-failure-shape">Metrics should track throughput, saturation, and failure shape</a></h2>
 <p>Metrics answer questions that logs answer poorly: rates, distributions, long-term drift, and comparative behavior across instances. For native systems, the most useful metrics usually fall into three families.</p>
 <p>The first is throughput and latency: request rate, task completion rate, retry rate, and latency histograms for important stages. Use histograms for latency, not just averages. Native performance failures are often tail problems.</p>
 <p>The second is saturation: queue depth, worker utilization, open file descriptors, connection pool occupancy, allocator pressure, pending timers, and outstanding background tasks. These tell you whether the system is busy in a healthy way or accumulating work it cannot retire.</p>
@@ -340,7 +340,7 @@ ctx.log(severity::error, "dependency_connect_failed", {
 <p>The example project’s <code>ErrorCode</code> enum (in <code>examples/web-api/src/modules/error.cppm</code>) illustrates the foundation for failure-shape metrics. The closed set – <code>not_found</code>, <code>bad_request</code>, <code>conflict</code>, <code>internal_error</code> – with its <code>constexpr to_http_status()</code> mapping gives every failure a stable category. In a production evolution, you would increment a counter dimensioned by <code>ErrorCode</code> at the handler boundary, turning the type system’s classification into queryable metric labels without inventing ad-hoc string tags.</p>
 <p>Use labels conservatively. High-cardinality labels are one of the fastest ways to turn a metrics system into an expensive liability. Request ID, user ID, file path, arbitrary exception text, and raw peer address usually do not belong as labels. Region, route, dependency name, result category, and bounded shard identifiers often do.</p>
 <p>Gauges also deserve suspicion. They are easy to add and easy to misread. If a queue depth gauge jumps, is that a brief burst or a persistent trend? Pair gauges with rates or histograms when possible so operators can tell whether the state is draining.</p>
-<h2 id="traces-need-to-follow-asynchronous-ownership-not-just-synchronous-calls"><a class="header" href="#traces-need-to-follow-asynchronous-ownership-not-just-synchronous-calls">Traces Need To Follow Asynchronous Ownership, Not Just Synchronous Calls</a></h2>
+<h2 id="traces-need-to-follow-asynchronous-ownership-not-just-synchronous-calls"><a class="header" href="#traces-need-to-follow-asynchronous-ownership-not-just-synchronous-calls">Traces need to follow asynchronous ownership, not just synchronous calls</a></h2>
 <p>In distributed services and async native systems, traces are the only practical way to see where end-to-end time went. But C++ code often loses trace value by failing to preserve context across executors, callbacks, thread hops, and coroutine suspension.</p>
 <p>If a request enters a service, enqueues background work, awaits a downstream call, and later resumes on another worker, the trace should still describe one coherent operation. That requires explicit propagation of trace context at the boundaries where ownership of work crosses time.</p>
 <p>This is where earlier design decisions matter. Structured concurrency and explicit cancellation scopes make tracing cleaner because the parent-child relationships are already meaningful. Detached work and ad hoc thread spawning make traces fragment into unrelated spans.</p>
@@ -353,7 +353,7 @@ ctx.log(severity::error, "dependency_connect_failed", {
 <li>Time lost to cancellation, shutdown, or overload shedding.</li>
 </ul>
 <p>Do not create spans for every helper function. That produces trace noise without causal value. The purpose of tracing is to explain latency structure and dependency shape, not to restate the call graph.</p>
-<p>The middleware pipeline in the example project (see <code>middleware::chain()</code> in <code>examples/web-api/src/modules/middleware.cppm</code>) is a natural carrier for trace context propagation. Each middleware wraps the next handler and has access to both the request and the response. A tracing middleware inserted into the pipeline can start a span before calling <code>next</code>, attach it to the request context, and close the span after the response returns. Because the pipeline already composes as a chain of <code>std::function</code> wrappers, adding a tracing stage requires no changes to handler signatures – exactly the kind of cross-cutting insertion point that makes trace propagation practical.</p>
+<p>The middleware pipeline in the example project (see <code>middleware::chain()</code> in <code>examples/web-api/src/modules/middleware.cppm</code>) is a natural carrier for trace context propagation. Each middleware wraps the next handler and has access to both the request and the response. A tracing middleware inserted into the pipeline can start a span before calling <code>next</code>, attach it to the request context, and close the span after the response returns. Because the pipeline already composes as a chain of <code>std::function</code> wrappers, adding a tracing stage requires no changes to handler signatures – a clean cross-cutting insertion point for trace propagation.</p>
 <h3 id="without-trace-context-the-invisible-queue"><a class="header" href="#without-trace-context-the-invisible-queue">Without trace context: the invisible queue</a></h3>
 <p>A common failure mode in async native services is latency that lives in queueing, not in execution. Without trace propagation across executor boundaries, this is invisible:</p>
 <pre><code class="language-cpp">// No trace context propagation. The span only covers execution, not waiting.
@@ -385,7 +385,7 @@ void enqueue_work(thread_pool&amp; pool, request req) {
 }
 </code></pre>
 <p>Now the trace shows two spans – queueing and execution – both linked to the parent request. When queue time dominates, it is immediately visible in the trace waterfall. This is the kind of latency that metrics alone (average processing time) systematically hide.</p>
-<h2 id="crash-diagnostics-are-part-of-observability-not-a-separate-emergency-hobby"><a class="header" href="#crash-diagnostics-are-part-of-observability-not-a-separate-emergency-hobby">Crash Diagnostics Are Part of Observability, Not a Separate Emergency Hobby</a></h2>
+<h2 id="crash-diagnostics-are-part-of-observability-not-a-separate-emergency-hobby"><a class="header" href="#crash-diagnostics-are-part-of-observability-not-a-separate-emergency-hobby">Crash diagnostics are part of observability, not a separate emergency hobby</a></h2>
 <p>Native services and tools need a crash story before the first crash. That story includes more than “enable dumps.” You need to know where dumps go, how they are symbolized, how they map to exact builds, how operators correlate them with logs and traces, and which process metadata is attached.</p>
 <p>At minimum, a crash event should be linkable to:</p>
 <ul>
@@ -397,7 +397,7 @@ void enqueue_work(thread_pool&amp; pool, request req) {
 </ul>
 <p>The build work from the previous chapter is what makes this viable. Symbol servers, build IDs, and release metadata are build concerns. Their operational payoff shows up here when an incident happens at 03:00 and the on-call engineer needs a useful stack instead of raw addresses.</p>
 <p>Crash reporting also needs policy. Some components should fail fast because continuing risks data corruption. Others can isolate a failing request or plugin and keep the host alive. Observability should make that decision legible after the fact. If the process aborts intentionally on invariant violation, emit enough context before termination that the crash is distinguishable from an arbitrary segfault.</p>
-<h2 id="resource-visibility-matters-more-in-native-systems"><a class="header" href="#resource-visibility-matters-more-in-native-systems">Resource Visibility Matters More in Native Systems</a></h2>
+<h2 id="resource-visibility-matters-more-in-native-systems"><a class="header" href="#resource-visibility-matters-more-in-native-systems">Resource visibility matters more in native systems</a></h2>
 <p>A recurring operational problem in C++ services is confusing logical work growth with memory bugs. RSS climbs, latency rises, and everyone asks whether there is a leak. Sometimes there is. Often the explanation is less clean: allocator retention, oversized caches, unbounded queues, stalled consumers, mmap growth, file descriptor leaks, or fragmentation under a new traffic pattern.</p>
 <p>You cannot solve that with one metric. You need a set of resource signals that connect runtime behavior to likely causes.</p>
 <ul>
@@ -410,7 +410,7 @@ void enqueue_work(thread_pool&amp; pool, request req) {
 <li>Cache size and eviction metrics for components that intentionally retain memory.</li>
 </ul>
 <p>The point is not to expose every allocator bin or kernel counter. The point is to make the likely failure modes distinguishable. If memory climbs while queue depth and backlog age also climb, overload is a stronger hypothesis than a pure leak. If memory climbs while queue depth stays flat and handle counts rise, a resource leak becomes more plausible. Observability should narrow the search space.</p>
-<h2 id="libraries-need-host-owned-telemetry-boundaries"><a class="header" href="#libraries-need-host-owned-telemetry-boundaries">Libraries Need Host-Owned Telemetry Boundaries</a></h2>
+<h2 id="libraries-need-host-owned-telemetry-boundaries"><a class="header" href="#libraries-need-host-owned-telemetry-boundaries">Libraries need host-owned telemetry boundaries</a></h2>
 <p>A reusable library should not assume a global logging framework, metrics backend, or tracing SDK. That creates the same dependency inversion problems discussed earlier in the book, now in operational form. Libraries should instead expose a narrow diagnostics boundary that the host can implement.</p>
 <h3 id="intentional-partial-a-library-facing-diagnostics-sink"><a class="header" href="#intentional-partial-a-library-facing-diagnostics-sink">Intentional partial: a library-facing diagnostics sink</a></h3>
 <pre><code class="language-cpp">enum class severity { debug, info, warning, error };
@@ -434,7 +434,7 @@ struct diagnostics_sink {
 </code></pre>
 <p>This kind of interface keeps the library honest. It can report parse failures, retries, cache evictions, or reload timings without hard-coding a vendor SDK into every binary that uses it. The host decides how to attach request IDs, export metrics, or bridge into traces.</p>
 <p>The tradeoff is deliberate abstraction work. For a small internal-only component, direct integration may be acceptable. For a reusable library, host-owned telemetry is usually the cleaner long-term design.</p>
-<h2 id="what-to-avoid"><a class="header" href="#what-to-avoid">What To Avoid</a></h2>
+<h2 id="what-to-avoid"><a class="header" href="#what-to-avoid">What to avoid</a></h2>
 <p>Native observability goes wrong in familiar ways.</p>
 <ul>
 <li>Logging every allocation, lock acquisition, or function entry in the hope that more data is always safer.</li>

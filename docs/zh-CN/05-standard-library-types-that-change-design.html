@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-99b64400.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -182,23 +182,23 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="改变设计的标准库类型"><a class="header" href="#改变设计的标准库类型">改变设计的标准库类型</a></h1>
-<p>标准库真正重要的时刻，不是充当工具层，而是它开始改变 API 所能表达的含义。在生产级 C++ 中，这种转变集中体现在一小组词汇类型上。它们让借用关系变得显式，把缺失和失败区分开来，表达封闭的备选集合，也避免了所有权信息散落在函数签名中。</p>
-<p>本章不打算逐一浏览头文件。要讨论的问题更聚焦，也更实用：在 C++23 代码库中，哪些标准类型应该改变你编写日常代码的设计方式？这些类型又会在哪些场景下产生误导或带来额外开销？</p>
-<p>问题在边界处最为突出。一个典型服务的流程是：从网络解析字节，将借来的文本交给校验环节，构造领域值，记录局部失败，最后将结果写入存储或发往下游服务。如果这些步骤全靠裸指针、哨兵值和重容器的函数签名来表达，代码虽然能编译，但契约仍然是模糊的。读者不得不从实现细节中去猜测所有权、生命周期、可空性和错误含义——而这些信息恰恰最不应该被藏在实现里。</p>
+<p>标准库真正发挥作用的地方，不是当工具层用，而是它改变了 API 能表达什么含义。在生产级 C++ 中，这体现在一小组词汇类型（vocabulary types）上。它们让借用关系变得显式，把缺失和失败区分开来，表达封闭的备选集合，避免所有权信息散落在函数签名中。</p>
+<p>本章不逐一浏览头文件。问题更聚焦：在 C++23 代码库中，哪些标准类型应该改变你日常的设计方式？它们又在哪些场景下会产生误导或带来额外开销？</p>
+<p>问题在边界处最突出。典型服务的流程是：从网络解析字节，将借来的文本交给校验环节，构造领域值，记录局部失败，最后写入存储或发往下游。如果这些步骤全靠裸指针、哨兵值和重容器的函数签名来表达，代码能编译，但契约是模糊的。读者只能从实现细节中猜测所有权、生命周期、可空性和错误含义，而这些信息最不该藏在实现里。</p>
 <h2 id="借用类型会改变-api-形状"><a class="header" href="#借用类型会改变-api-形状">借用类型会改变 API 形状</a></h2>
-<p><code>std::string_view</code> 和 <code>std::span</code> 是现代 C++ 中最重要的日常设计类型，因为它们将访问与所有权分离。这看似微不足道，实则影响深远。一旦代码库统一采用借用类型，函数签名就不会再暗示不必要的内存分配，也不会再假装拥有那些它只是查看一下的数据。</p>
+<p><code>std::string_view</code> 和 <code>std::span</code> 是现代 C++ 中最常用的设计类型，因为它们将访问与所有权分离。一旦代码库统一采用借用类型，函数签名就不再暗示不必要的内存分配，也不再假装拥有那些只是查看一下的数据。</p>
 <p>以一个遥测数据采集层为例，它需要解析按行组织的文本记录和二进制属性 blob：</p>
 <pre><code class="language-cpp">struct MetricRecord {
-std::string name;
-std::int64_t value;
-std::vector&lt;std::byte&gt; attributes;
+    std::string name;
+    std::int64_t value;
+    std::vector&lt;std::byte&gt; attributes;
 };
 
 auto parse_metric_line(std::string_view line,
-   std::span&lt;const std::byte&gt; attribute_bytes)
--&gt; std::expected&lt;MetricRecord, ParseError&gt;;
+                       std::span&lt;const std::byte&gt; attribute_bytes)
+    -&gt; std::expected&lt;MetricRecord, ParseError&gt;;
 </code></pre>
-<p>这个签名一目了然地传达了几件重要的事：</p>
+<p>这个签名一目了然：</p>
 <ul>
 <li>函数借用了两个输入，不取得所有权。</li>
 <li>文本输入不要求以 null 结尾。</li>
@@ -206,7 +206,7 @@ auto parse_metric_line(std::string_view line,
 <li>解析结果的所有权仅通过返回值转移。</li>
 <li>失败与缺失是两码事。</li>
 </ul>
-<p>而老式的替代写法会模糊这些信息。<code>const std::string&amp;</code> 暗示某处持有字符串的所有权，即便调用方手里的只是更大 buffer 中的一个切片。<code>const std::vector&lt;std::byte&gt;&amp;</code> 毫无理由地排斥了栈 buffer、<code>std::array</code>、内存映射区域和 packet 视图。<code>const char*</code> 则悄悄带回了生命周期歧义和 C 风格字符串的隐含假设。</p>
+<p>老式写法会模糊这些信息。<code>const std::string&amp;</code> 暗示某处持有字符串所有权，即便调用方手里只是更大 buffer 的一个切片。<code>const std::vector&lt;std::byte&gt;&amp;</code> 无理由地排斥了栈 buffer、<code>std::array</code>、内存映射区域和 packet 视图。<code>const char*</code> 则悄悄带回了生命周期歧义和 C 风格字符串的隐含假设。</p>
 <p>为了更直观地感受差异，来看看在借用类型出现之前，同一个边界是怎么写的：</p>
 <pre><code class="language-cpp">// Pre-C++17: raw pointer + length, no type safety on the binary side
 auto parse_metric_line(const char* line, std::size_t line_len,
@@ -218,41 +218,41 @@ auto parse_metric_line(const std::string&amp; line,
                        const std::vector&lt;unsigned char&gt;&amp; attribute_bytes)
     -&gt; MetricRecord; // throws on failure, no way to distinguish absence from error
 </code></pre>
-<p>“指针加长度”版本完全没有类型系统层面的支持——无论是连续性、只读访问，还是”这段二进制 buffer 表示的是字节而非字符”这一事实。调用方必须为每个参数手动维护两个裸值，而参数错位 bug（比如把 <code>attr_len</code> 传到本应是 <code>line_len</code> 的位置）也能悄无声息地通过编译。容器引用版本则强迫所有调用方都分配 <code>std::string</code> 和 <code>std::vector</code>，哪怕数据本来就在内存映射文件或栈 buffer 里。两种版本都无法通过类型系统表达所有权契约。</p>
-<p>借用类型确实需要使用者自律。<code>std::string_view</code> 仅在其数据源仍然存活且未被修改时才安全；<code>std::span</code> 仅在其引用的存储仍然有效时才安全。这不是缺陷，恰恰是设计意图——它们迫使接口在类型系统中明确声明：这里发生的是借用，而非所有权转移。</p>
+<p>“指针加长度”版本完全没有类型系统的支持，无论是连续性、只读访问，还是”这段二进制 buffer 是字节而非字符”。调用方必须为每个参数手动维护两个裸值，参数错位 bug（比如把 <code>attr_len</code> 传到 <code>line_len</code> 的位置）能悄无声息地通过编译。容器引用版本则强迫所有调用方分配 <code>std::string</code> 和 <code>std::vector</code>，哪怕数据本来就在内存映射文件或栈 buffer 里。两种版本都无法通过类型系统表达所有权契约。</p>
+<p>借用类型需要使用者自律。<code>std::string_view</code> 仅在数据源仍然存活且未被修改时才安全；<code>std::span</code> 仅在其引用的存储仍然有效时才安全。这就是设计意图：它们迫使接口在类型系统中声明，这里发生的是借用而非所有权转移。</p>
 <p>典型的出错方式是：生命周期保证仅在局部范围内成立，却把借用存了下来。</p>
 <pre><code class="language-cpp">class RequestContext {
 public:
-void set_tenant(std::string_view tenant) {
-tenant_ = tenant; // BUG: borrowed view may outlive caller storage
-}
+    void set_tenant(std::string_view tenant) {
+        tenant_ = tenant; // BUG: borrowed view may outlive caller storage
+    }
 
 private:
-std::string_view tenant_;
+    std::string_view tenant_;
 };
 </code></pre>
-<p>这不是回避 <code>std::string_view</code> 的理由，而是说明应该把它的使用范围限制在：函数参数、局部算法中的临时拼接，以及生命周期契约一目了然、便于评审的返回类型。如果对象需要持久保存数据，就用 <code>std::string</code>。如果子系统需要稳定的二进制数据所有权，就用容器或专用 buffer 类型来存储。</p>
-<p>示例项目清晰地演示了这种“借用到拥有“的转换。在 <code>examples/web-api/src/modules/task.cppm</code> 中，<code>Task::from_json</code> 接受一个 <code>string_view</code> 来借用原始 JSON body，但返回的 <code>optional&lt;Task&gt;</code> 的 <code>std::string</code> 成员独立拥有自己的数据：</p>
+<p>这不是回避 <code>std::string_view</code> 的理由，而是说它的使用范围应限于：函数参数、局部算法中的临时拼接、生命周期契约清晰且便于评审的返回类型。对象需要持久保存数据就用 <code>std::string</code>；子系统需要稳定的二进制数据所有权就用容器或专用 buffer 类型。</p>
+<p>示例项目演示了这种“借用到拥有“的转换。在 <code>examples/web-api/src/modules/task.cppm</code> 中，<code>Task::from_json</code> 接受 <code>string_view</code> 借用原始 JSON body，但返回的 <code>optional&lt;Task&gt;</code> 的 <code>std::string</code> 成员独立拥有数据：</p>
 <pre><code class="language-cpp">[[nodiscard]] static std::optional&lt;Task&gt; from_json(std::string_view sv);
 </code></pre>
-<p>函数从借来的输入中提取字段值，move 进拥有型字符串，返回一个自包含的 <code>Task</code>。调用方的 buffer 在函数返回后可以立即复用或销毁。这正是前文所述的模式：检查时借用，存储时拥有。</p>
-<p>实践中有一个简单好用的评审准则：这个对象只是看一下调用方的数据，还是需要留下来长期持有？如果是后者，用借用类型做成员变量就已经值得警惕了。</p>
+<p>函数从借来的输入中提取字段值，move 进拥有型字符串，返回自包含的 <code>Task</code>。调用方的 buffer 在函数返回后可以立即复用或销毁。检查时借用，存储时拥有。</p>
+<p>评审时有个简单准则：这个对象只是看一下调用方的数据，还是需要长期持有？如果是后者，用借用类型做成员变量就该警惕了。</p>
 <h2 id="optionalexpected-和-variant-解决的是不同问题"><a class="header" href="#optionalexpected-和-variant-解决的是不同问题"><code>optional</code>、<code>expected</code> 和 <code>variant</code> 解决的是不同问题</a></h2>
-<p>把某一种词汇类型当作万能方案，生产代码的维护成本就会迅速攀升。<code>std::optional</code>、<code>std::expected</code> 和 <code>std::variant</code> 各自建模的语义截然不同。在它们之间做选择是设计决策，不是风格偏好。</p>
-<p>当值的缺失属于正常情况、本身不构成错误时，用 <code>std::optional&lt;T&gt;</code>。缓存查找可能未命中，配置覆盖项可能没有设置，HTTP 请求可能带幂等键、也可能不带。如果调用方只需根据”有还是没有”来分支，无需额外解释原因，<code>optional</code> 就是正确的选择。</p>
-<p>当失败信息对控制流、日志记录或用户可见行为有实际影响时，用 <code>std::expected&lt;T, E&gt;</code>。解析、校验、协议协商以及边界 I/O 通常属于这一类。如果这些操作返回 <code>optional</code>，失败原因就被丢掉了，只能另辟蹊径来传递诊断信息。</p>
-<p>当结果是若干合法领域状态中的一种，而非成功与失败的二元对立时，用 <code>std::variant&lt;A, B, ...&gt;</code>。消息系统可能将命令建模为若干种 packet 形态之一；调度器可能用 <code>std::variant&lt;TimerTask, IoTask, ShutdownTask&gt;</code> 来表示不同类型的工作。这不是失败，而是一个显式的封闭集合。</p>
+<p>把某一种词汇类型当万能方案，维护成本会迅速攀升。<code>std::optional</code>、<code>std::expected</code> 和 <code>std::variant</code> 各自建模的语义不同。在它们之间做选择是设计决策，不是风格偏好。</p>
+<p>值的缺失属于正常情况、本身不构成错误时，用 <code>std::optional&lt;T&gt;</code>。缓存查找可能未命中，配置覆盖项可能没有设置，HTTP 请求可能带幂等键也可能不带。调用方只需根据”有还是没有”来分支，无需额外解释原因，<code>optional</code> 就是正确的选择。</p>
+<p>失败信息对控制流、日志记录或用户可见行为有实际影响时，用 <code>std::expected&lt;T, E&gt;</code>。解析、校验、协议协商和边界 I/O 通常属于这一类。如果这些操作返回 <code>optional</code>，失败原因就丢掉了，只能另辟蹊径传递诊断信息。</p>
+<p>结果是若干合法领域状态之一，而非成功与失败的二元对立时，用 <code>std::variant&lt;A, B, ...&gt;</code>。消息系统可能把命令建模为若干种 packet 形态之一；调度器可能用 <code>std::variant&lt;TimerTask, IoTask, ShutdownTask&gt;</code> 表示不同类型的工作。这不是失败，是一个显式的封闭集合。</p>
 <p>常见的错误是把这三者混为一谈，当成”不确定性的通用包装”。</p>
 <ul>
 <li><code>optional</code> 用于“也许有”。</li>
 <li><code>expected</code> 用于“成功，或者附带解释的失败”。</li>
 <li><code>variant</code> 用于“若干有效形式之一”。</li>
 </ul>
-<p>示例项目直观地体现了这种区分。在 <code>examples/web-api/src/modules/repository.cppm</code> 中，一次可能找不到结果的查找使用 <code>optional</code>：</p>
+<p>示例项目体现了这种区分。在 <code>examples/web-api/src/modules/repository.cppm</code> 中，一次可能找不到结果的查找使用 <code>optional</code>：</p>
 <pre><code class="language-cpp">[[nodiscard]] std::optional&lt;Task&gt; find_by_id(TaskId id) const;
 </code></pre>
-<p>没有需要报告的错误——task 要么存在，要么不存在。如果这里返回 <code>expected</code>，就会迫使调用方检查一个它根本无法采取行动的错误。<code>optional</code> 才是“普通缺失“的正确信号。</p>
-<p>把定位理清楚之后，很多 API 层面的争论就迎刃而解了。</p>
+<p>没有需要报告的错误，task 要么存在要么不存在。如果返回 <code>expected</code>，就迫使调用方检查一个它根本无法采取行动的错误。<code>optional</code> 才是“普通缺失“的正确信号。</p>
+<p>定位理清楚之后，很多 API 层面的争论自然消解。</p>
 <h3 id="这些类型出现之前设计是什么样的"><a class="header" href="#这些类型出现之前设计是什么样的">这些类型出现之前，设计是什么样的</a></h3>
 <p>在 <code>std::optional</code> 之前，“可能有一个值”的标准习惯用法是哨兵值或输出参数：</p>
 <pre><code class="language-cpp">// Sentinel: -1 means "not found." Every caller must know the convention.
@@ -264,7 +264,7 @@ bool find_port(const Config&amp; cfg, int* out_port);
 // Nullable pointer: caller must check for null, and ownership is ambiguous.
 const Config* find_override(std::string_view key); // null means absent... or error?
 </code></pre>
-<p>每一种写法都迫使调用方记住一套口头约定。<code>-1</code> 或 <code>nullptr</code> 之类的哨兵值在类型系统中毫无痕迹，没有任何机制能阻止调用方拿哨兵值去做算术运算。输出参数颠倒了数据流方向，让链式调用变得很别扭。而 <code>std::optional&lt;int&gt;</code> 把”可能缺失”的语义编码进了类型本身，编译器也能帮你强制执行检查。</p>
+<p>每种写法都迫使调用方记住一套口头约定。<code>-1</code> 或 <code>nullptr</code> 之类的哨兵值在类型系统中毫无痕迹，没有机制阻止调用方拿哨兵值做算术运算。输出参数颠倒了数据流方向，链式调用很别扭。<code>std::optional&lt;int&gt;</code> 把”可能缺失”的语义编码进类型本身，编译器也能帮你强制检查。</p>
 <p>在 <code>std::variant</code> 出现之前，封闭备选集合通常靠 <code>union</code> 加 enum 判别字段再加人工纪律来实现：</p>
 <pre><code class="language-cpp">// C-style tagged union: no automatic destruction, no compiler-checked exhaustiveness
 enum class ValueKind { Integer, Float, String };
@@ -286,43 +286,43 @@ void process(const Value&amp; v) {
     }
 }
 </code></pre>
-<p><code>union</code> 虽然能存放数据，但语言本身并不保证 <code>kind</code> 与当前激活成员保持同步。每新增一个备选项，就得手动更新所有 <code>switch</code> 分支，而编译器也未必会对遗漏发出警告。<code>std::variant</code> 将当前激活的备选项纳入类型的运行时状态，重新赋值时自动正确析构旧值；配合 <code>std::visit</code>，编译器还能在分支遗漏时给出警告。</p>
-<p>假设一个配置加载器有三种可能的结果：没找到覆盖项、解析出了有效覆盖项、或者拒绝了格式错误的输入。三者在语义上截然不同。把它们硬塞进 <code>optional&lt;Config&gt;</code> 就丢掉了”格式错误为何被拒绝”的信息。返回 <code>expected&lt;optional&lt;Config&gt;, ConfigError&gt;</code> 看起来有点重，但它精确表述了契约：缺失是正常的，格式错误才是失败。</p>
-<p>在服务边界上，同样的精确性也至关重要。如果内部客户端库返回 <code>variant&lt;Response, RetryAfter, Redirect&gt;</code>，调用方就可以对合法的协议结果做模式匹配。而如果返回的是 <code>expected&lt;Response, Error&gt;</code>，那么重试和重定向就算属于正常控制流，也会被错误地归入异常路径。</p>
-<p>示例项目在领域边界上采用了这一方式。在 <code>examples/web-api/src/modules/error.cppm</code> 中，一个项目级的类型别名让这一模式在整个代码库中保持一致：</p>
+<p><code>union</code> 能存放数据，但语言本身不保证 <code>kind</code> 与当前激活成员保持同步。每新增一个备选项就得手动更新所有 <code>switch</code> 分支，编译器也未必对遗漏发出警告。<code>std::variant</code> 将当前激活的备选项纳入类型的运行时状态，重新赋值时自动析构旧值；配合 <code>std::visit</code>，编译器能在分支遗漏时给出警告。</p>
+<p>假设一个配置加载器有三种可能结果：没找到覆盖项、解析出有效覆盖项、拒绝了格式错误的输入。三者语义不同。硬塞进 <code>optional&lt;Config&gt;</code> 就丢掉了”格式错误为何被拒绝”的信息。返回 <code>expected&lt;optional&lt;Config&gt;, ConfigError&gt;</code> 看起来有点重，但它精确表述了契约：缺失是正常的，格式错误才是失败。</p>
+<p>服务边界上同样如此。如果内部客户端库返回 <code>variant&lt;Response, RetryAfter, Redirect&gt;</code>，调用方可以对合法的协议结果做模式匹配。而如果返回 <code>expected&lt;Response, Error&gt;</code>，重试和重定向即便属于正常控制流，也会被错误地归入异常路径。</p>
+<p>示例项目在领域边界上用了这种方式。在 <code>examples/web-api/src/modules/error.cppm</code> 中，一个项目级类型别名让模式在整个代码库中保持一致：</p>
 <pre><code class="language-cpp">template &lt;typename T&gt;
 using Result = std::expected&lt;T, Error&gt;;
 </code></pre>
 <p>然后在 <code>examples/web-api/src/modules/repository.cppm</code> 中，可能因有意义的原因而失败的创建操作返回 <code>Result&lt;Task&gt;</code>：</p>
 <pre><code class="language-cpp">[[nodiscard]] Result&lt;Task&gt; create(Task task);
 </code></pre>
-<p>如果校验拒绝了输入，调用方会收到一个包含错误码和人类可读详情的 <code>Error</code>——而非一个光秃秃的 <code>false</code> 或空 optional。<code>examples/web-api/src/modules/handlers.cppm</code> 中的 <code>create_task</code> handler 在边界处把 <code>Result</code> 翻译为 HTTP 响应，无需 out 参数或异常处理：</p>
+<p>校验拒绝输入时，调用方会收到包含错误码和人类可读详情的 <code>Error</code>，而非光秃秃的 <code>false</code> 或空 optional。<code>examples/web-api/src/modules/handlers.cppm</code> 中的 <code>create_task</code> handler 在边界处把 <code>Result</code> 翻译为 HTTP 响应，无需 out 参数或异常处理：</p>
 <pre><code class="language-cpp">auto result = repo.create(std::move(*parsed));
 return result_to_response(result, 201);
 </code></pre>
-<p><code>expected</code> 也会改变异常策略。在那些很少使用异常、或禁止异常跨越特定边界的代码库中，<code>expected</code> 让错误处理保持局部化和显式化，无需退化到状态码加输出参数的老路子。不过这里存在真实的取舍：如果把 <code>expected</code> 一路传递到每个私有辅助函数，原本简洁的直线式代码就会变成重复的错误传播样板。应该把它留在错误信息确实重要的边界上。在封闭的实现内部，局部异常边界或更细粒度的辅助函数拆分，往往能写出更清晰的代码。</p>
+<p><code>expected</code> 也会改变异常策略。在很少使用异常或禁止异常跨越特定边界的代码库中，<code>expected</code> 让错误处理保持局部化和显式化，无需退化到状态码加输出参数的老路。但取舍是真实的：如果把 <code>expected</code> 一路传递到每个私有辅助函数，直线式代码会变成重复的错误传播样板。把它留在错误信息确实有用的边界上。封闭实现内部，局部异常边界或更细粒度的函数拆分，往往更清晰。</p>
 <h2 id="容器不应该假装自己是契约"><a class="header" href="#容器不应该假装自己是契约">容器不应该假装自己是契约</a></h2>
-<p>C++ 代码中最顽固的设计错误之一，是函数明明只需要一个序列，参数类型却用了拥有型容器。签名中出现 <code>std::vector&lt;T&gt;</code> 很少是无意的中立选择——它隐含了分配策略、连续性和调用方的数据表示方式。有时这确实是故意的，但更多时候纯属偶然。</p>
+<p>C++ 代码中最顽固的设计错误之一：函数明明只需要一个序列，参数类型却用了拥有型容器。签名中出现 <code>std::vector&lt;T&gt;</code> 很少是中立选择，它隐含了分配策略、连续性和调用方的数据表示方式。有时是故意的，更多时候纯属偶然。</p>
 <p>如果函数只读取序列，就接受 <code>std::span&lt;const T&gt;</code>；如果需要对调用方的连续存储做可变访问，就接受 <code>std::span&lt;T&gt;</code>；如果需要接管所有权，就显式使用拥有型类型；如果需要特定关联容器（因为查找复杂度或键稳定性本身就是契约的一部分），那就直接写明。</p>
-<p>这一区分在库设计中尤为关键。如果压缩库暴露的接口是 <code>compress(const std::vector&lt;std::byte&gt;&amp;)</code>，就等于暗中替所有调用方决定了输入 buffer 的存储方式。更好的边界几乎总是一个字节借用 range，通常是 <code>std::span&lt;const std::byte&gt;</code>。怎么持有数据，留给调用方自己决定——可以是池化 buffer、内存映射文件区域、栈数组或 vector。</p>
-<p>反方向的错误同样常见：函数实际上生成了拥有型数据，返回类型却是视图。解析器内部构造了局部 vector，却返回 <code>std::span&lt;const Header&gt;</code>——这就是错的。正确做法是返回 <code>std::vector&lt;Header&gt;</code> 或拥有型领域对象。借用类型在如实反映数据关系时能提升 API 质量；如果只是用来逃避契约本就要求的那次拷贝，反而会让 API 变差。</p>
-<p>还有一个关于可变性的问题。传入可变容器，往往暴露了远超算法实际所需的操作权限。一个只做追加的函数，没有理由接受整个可变 map——如果真正的契约只是”往里面插入输出”。遇到这种情况，应考虑更窄的抽象：回调 sink、专门的 appender 类型，或下一章讨论的受约束泛型接口。类型应该表达被调用方可以做什么假设，而不仅仅是”什么写法碰巧能编译通过”。</p>
+<p>这一区分在库设计中尤为明显。如果压缩库暴露的接口是 <code>compress(const std::vector&lt;std::byte&gt;&amp;)</code>，就等于替所有调用方决定了输入 buffer 的存储方式。更好的边界几乎总是一个字节借用 range，通常是 <code>std::span&lt;const std::byte&gt;</code>。怎么持有数据留给调用方决定，可以是池化 buffer、内存映射文件区域、栈数组或 vector。</p>
+<p>反方向的错误同样常见：函数生成了拥有型数据，返回类型却是视图。解析器内部构造了局部 vector 却返回 <code>std::span&lt;const Header&gt;</code>，这就错了。正确做法是返回 <code>std::vector&lt;Header&gt;</code> 或拥有型领域对象。借用类型在如实反映数据关系时提升 API 质量；如果只是用来逃避契约本就要求的那次拷贝，反而让 API 变差。</p>
+<p>还有可变性的问题。传入可变容器，往往暴露了远超算法所需的操作权限。一个只做追加的函数没理由接受整个可变 map，如果真正的契约只是”往里面插入输出”。遇到这种情况，应考虑更窄的抽象：回调 sink、专门的 appender 类型，或下一章讨论的受约束泛型接口。类型应该表达被调用方可以做什么假设，而非”什么写法碰巧能编译通过”。</p>
 <h2 id="一个真实边界解析同时不让契约走样"><a class="header" href="#一个真实边界解析同时不让契约走样">一个真实边界：解析，同时不让契约走样</a></h2>
-<p>一个从 socket 接收类 protobuf frame 的原生服务，通常分为三个层次：</p>
+<p>一个从 socket 接收类 protobuf frame 的原生服务通常分三层：</p>
 <ol>
-<li>传输层——拥有 buffer，负责重试读取。</li>
-<li>解析器——借用字节，校验 framing。</li>
-<li>领域层——拥有经过规范化的值。</li>
+<li>传输层：拥有 buffer，负责重试读取。</li>
+<li>解析器：借用字节，校验 framing。</li>
+<li>领域层：拥有经过规范化的值。</li>
 </ol>
-<p>标准库类型应当强化这些层次划分，而不是模糊它们。</p>
-<p>传输层可能需要暴露拥有型 frame 存储，因为它要管理部分读取、容量复用和背压。解析器通常应接受 <code>std::span&lt;const std::byte&gt;</code>——它查看的是调用方拥有的字节，产出要么是领域对象，要么是解析错误。领域层则应返回普通值而非指向 packet buffer 的 span，因为业务逻辑不应无意间继承传输层的生命周期。</p>
-<p>写出来的时候，这些道理似乎显而易见。但一旦某次以性能为名的重构开始把 <code>string_view</code> 和 <code>span</code> 往系统更深处渗透——“为了省掉拷贝”——就没那么显而易见了。那次拷贝有时候恰恰是将稳定的领域对象与易变的传输 buffer 解耦的必要代价。省掉它，可能只是把成本转嫁到了生命周期复杂性、延迟暴露的解析 bug 和更高的评审难度上。</p>
+<p>标准库类型应当强化这些层次划分，而非模糊它们。</p>
+<p>传输层可能需要暴露拥有型 frame 存储，因为它管理部分读取、容量复用和背压。解析器通常应接受 <code>std::span&lt;const std::byte&gt;</code>，查看调用方拥有的字节，产出领域对象或解析错误。领域层应返回普通值而非指向 packet buffer 的 span，因为业务逻辑不应无意间继承传输层的生命周期。</p>
+<p>写出来时，这些道理似乎显而易见。但一旦某次以性能为名的重构开始把 <code>string_view</code> 和 <code>span</code> 往系统更深处渗透，”为了省掉拷贝”，就没那么显而易见了。那次拷贝有时候恰恰是将稳定的领域对象与易变的传输 buffer 解耦的必要代价。省掉它，可能只是把成本转嫁到了生命周期复杂性、延迟暴露的解析 bug 和更高的评审难度上。</p>
 <p>一条实用的原则是：检查边界用借用，语义边界用拥有。而解析代码恰好坐落在两者的交汇点上。</p>
 <h2 id="这些类型在哪里会帮倒忙"><a class="header" href="#这些类型在哪里会帮倒忙">这些类型在哪里会帮倒忙</a></h2>
 <p>词汇类型只有在语义保持清晰时才能改进代码。</p>
-<p>把 <code>std::string_view</code> 当廉价字符串替代品而非借用来用，就会出问题。代码真正需要非连续遍历或稳定所有权时，<code>std::span</code> 反而添乱。<code>std::optional</code> 一旦抹掉了失败原因，就变成了信息黑洞。备选集合是开放式的、或经常跨模块扩展时，<code>std::variant</code> 会越用越痛苦。而 <code>std::expected</code> 如果被深埋在实现内部——本来用局部异常边界或简单的函数拆分就能写得更清楚——它也只会增加噪音。</p>
-<p>另一个常见的失败模式是包装类型层层嵌套，直到 API 变得难以阅读。像 <code>expected&lt;optional&lt;variant&lt;...&gt;&gt;, Error&gt;</code> 这样的类型偶尔确实是正确的，但对读者来说永远不轻松。如果理解一个契约需要这么多“解包“工作，通常说明早就该引入一个具名领域类型了。</p>
-<p>词汇类型的意义不在于不计语法代价地追求最大精度，而在于让核心语义一目了然——评审者无需反推实现，就能看懂所有权、缺失和失败的处理方式。</p>
+<p>把 <code>std::string_view</code> 当廉价字符串替代品而非借用来用就会出问题。代码真正需要非连续遍历或稳定所有权时，<code>std::span</code> 反而添乱。<code>std::optional</code> 一旦抹掉失败原因就变成信息黑洞。备选集合是开放式的或经常跨模块扩展时，<code>std::variant</code> 会越用越痛苦。<code>std::expected</code> 如果被深埋在实现内部，本来用局部异常边界或简单的函数拆分就能写得更清楚，它也只会增加噪音。</p>
+<p>另一个常见问题是包装类型层层嵌套，直到 API 难以阅读。<code>expected&lt;optional&lt;variant&lt;...&gt;&gt;, Error&gt;</code> 这样的类型偶尔是正确的，但对读者永远不轻松。如果理解契约需要这么多“解包“工作，通常说明早该引入一个具名领域类型了。</p>
+<p>词汇类型的意义不在于不计语法代价追求最大精度，而在于让核心语义一目了然，评审者无需反推实现就能看懂所有权、缺失和失败的处理方式。</p>
 <h2 id="验证与评审"><a class="header" href="#验证与评审">验证与评审</a></h2>
 <p>这里的验证重点主要在契约层面：</p>
 <ul>
@@ -332,7 +332,7 @@ return result_to_response(result, 201);
 <li>审查容器参数是否无意间绑定了特定的所有权模式或数据表示。</li>
 <li>将借用视图到拥有值的转换当作有意义的设计决策点来对待，而非偶然的实现细节。</li>
 </ul>
-<p>Sanitizer 很有帮助，特别是当借用视图跨越异步或延迟执行边界时。但它们无法替代 API 评审——许多误用模式在运行时暴露之前，从逻辑上就已经错了。</p>
+<p>Sanitizer 很有帮助，特别是借用视图跨越异步或延迟执行边界时。但它们无法替代 API 评审，许多误用模式在运行时暴露之前，从逻辑上就已经错了。</p>
 <h2 id="要点"><a class="header" href="#要点">要点</a></h2>
 <ul>
 <li>检查边界优先用借用类型，存储边界优先用拥有型类型。</li>

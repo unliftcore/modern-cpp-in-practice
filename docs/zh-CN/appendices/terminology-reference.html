@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "../searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "../searchindex-99b64400.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-8b875a01.js"></script>
@@ -182,15 +182,15 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="附录术语对照表与翻译约定"><a class="header" href="#附录术语对照表与翻译约定">附录：术语对照表与翻译约定</a></h1>
-<p>本附录用于统一简体中文译稿中的术语、语气与表达方式。所有章节都应遵守这里的约定，以保证整套译文在技术含义、措辞风格和读者体验上保持一致。</p>
+<p>本附录统一简体中文译稿的术语、语气与表达方式。所有章节均应遵守这里的约定，保证译文在技术含义、措辞风格和读者体验上一致。</p>
 <h2 id="翻译约定"><a class="header" href="#翻译约定">翻译约定</a></h2>
 <ul>
-<li>面向有经验的程序员，语气直接、克制、技术化，不添加鼓励式口吻或教程式铺垫。</li>
-<li>优先保留设计压力、约束、权衡、失败模式和工程后果，不把原文改写成松散的概念介绍。</li>
-<li>代码、类型名、库名、标准术语、文件名、链接路径和 Markdown 结构保持原样；仅翻译读者可见的自然语言内容。</li>
-<li>对于在中文技术语境中已有稳定译法的术语，采用常见且精确的译名；对容易歧义的术语，首次出现时优先使用本表定义的固定译法。</li>
-<li>需要强调风险、边界或审查判断时，使用简洁、确定的表述，不弱化原文判断力度。</li>
-<li>追求“信、达、雅”，但以“信”和“达”为先：先确保语义准确，再追求中文行文自然。</li>
+<li>面向有经验的程序员，语气直接、克制、技术化，不加鼓励式口吻或教程式铺垫。</li>
+<li>保留设计压力、约束、权衡、失败模式和工程后果，不把原文改写成松散的概念介绍。</li>
+<li>代码、类型名、库名、标准术语、文件名、链接路径和 Markdown 结构保持原样；只翻译读者可见的自然语言内容。</li>
+<li>中文技术语境中已有稳定译法的术语，采用常见且精确的译名；容易歧义的术语，首次出现时使用本表定义的固定译法。</li>
+<li>涉及风险、边界或审查判断时，表述简洁、确定，不弱化原文判断力度。</li>
+<li>以”信”和”达”为先：先确保语义准确，再追求行文自然。</li>
 </ul>
 <h2 id="核心术语对照"><a class="header" href="#核心术语对照">核心术语对照</a></h2>
 <div class="table-wrapper">
@@ -199,34 +199,34 @@
 <tr><th>英文</th><th>统一译法</th><th>说明</th></tr>
 </thead>
 <tbody>
-<tr><td>ownership</td><td>所有权</td><td>指对资源有效性与释放责任的承担。</td></tr>
-<tr><td>borrowing</td><td>借用</td><td>指不接管生命周期的使用。</td></tr>
+<tr><td>ownership</td><td>所有权</td><td>对资源有效性与释放负责。</td></tr>
+<tr><td>borrowing</td><td>借用</td><td>不接管生命周期的使用。</td></tr>
 <tr><td>lifetime</td><td>生命周期</td><td>统一译为“生命周期”，避免与“作用域”混用。</td></tr>
-<tr><td>contract</td><td>契约</td><td>指类型或函数在边界上的承诺。</td></tr>
+<tr><td>contract</td><td>契约</td><td>类型或函数在边界上的承诺。</td></tr>
 <tr><td>invariant</td><td>不变量</td><td>保持数学与工程语义一致。</td></tr>
 <tr><td>value semantics</td><td>值语义</td><td>标准译法。</td></tr>
 <tr><td>identity</td><td>身份</td><td>当对象“作为其自身”重要时使用。</td></tr>
-<tr><td>failure boundary</td><td>失败边界</td><td>不译为“故障边界”，以贴近软件错误处理语境。</td></tr>
-<tr><td>boundary translation</td><td>边界转换</td><td>指在边界处转换失败表示。</td></tr>
+<tr><td>failure boundary</td><td>失败边界</td><td>不译为”故障边界”，贴近软件错误处理语境。</td></tr>
+<tr><td>boundary translation</td><td>边界转换</td><td>在边界处转换失败表示。</td></tr>
 <tr><td>undefined behavior</td><td>未定义行为</td><td>缩写仍可写作 UB。</td></tr>
-<tr><td>reviewable</td><td>可评审</td><td>指足够清晰，便于审查者推理。</td></tr>
+<tr><td>reviewable</td><td>可评审</td><td>足够清晰，便于审查者推理。</td></tr>
 <tr><td>structured concurrency</td><td>结构化并发</td><td>采用并发领域常用译法。</td></tr>
-<tr><td>cancellation</td><td>取消</td><td>指主动停止无效工作的请求。</td></tr>
+<tr><td>cancellation</td><td>取消</td><td>主动停止无效工作的请求。</td></tr>
 <tr><td>suspension boundary</td><td>挂起边界</td><td>保留与协程语义的一致性。</td></tr>
 <tr><td>contention</td><td>争用</td><td>用于锁、核心时间、缓存行等竞争。</td></tr>
 <tr><td>backpressure</td><td>背压</td><td>采用业界常用译法。</td></tr>
 <tr><td>throughput</td><td>吞吐量</td><td>标准译法。</td></tr>
-<tr><td>locality</td><td>局部性</td><td>指硬件访问局部性。</td></tr>
-<tr><td>cost model</td><td>成本模型</td><td>指时间、内存、同步等具体成本来源。</td></tr>
+<tr><td>locality</td><td>局部性</td><td>硬件访问局部性。</td></tr>
+<tr><td>cost model</td><td>成本模型</td><td>时间、内存、同步等具体成本来源。</td></tr>
 <tr><td>hot path</td><td>热路径</td><td>标准译法。</td></tr>
-<tr><td>vocabulary type</td><td>词汇类型</td><td>指用于表达边界契约的标准类型。</td></tr>
+<tr><td>vocabulary type</td><td>词汇类型</td><td>用于表达边界契约的标准类型。</td></tr>
 <tr><td>observability</td><td>可观测性</td><td>标准译法。</td></tr>
-<tr><td>diagnostic build</td><td>诊断构建</td><td>指以发现和解释问题为目标的构建配置。</td></tr>
+<tr><td>diagnostic build</td><td>诊断构建</td><td>以发现和解释问题为目标的构建配置。</td></tr>
 <tr><td>type erasure</td><td>类型擦除</td><td>标准译法。</td></tr>
 <tr><td>call site</td><td>调用点</td><td>根据上下文可写作“调用处”，默认使用“调用点”。</td></tr>
-<tr><td>shutdown</td><td>关闭</td><td>指系统或组件进入停止过程。</td></tr>
+<tr><td>shutdown</td><td>关闭</td><td>系统或组件进入停止过程。</td></tr>
 <tr><td>tradeoff</td><td>权衡</td><td>统一不用“折中”。</td></tr>
-<tr><td>failure mode</td><td>失败模式</td><td>指设计在什么情况下出错。</td></tr>
+<tr><td>failure mode</td><td>失败模式</td><td>设计在什么情况下出错。</td></tr>
 <tr><td>ownership transfer</td><td>所有权转移</td><td>与 move 语义配套使用。</td></tr>
 <tr><td>shared state</td><td>共享状态</td><td>并发章节统一译法。</td></tr>
 <tr><td>tooling</td><td>工具链 / 工具</td><td>结合上下文判断，涉及构建与诊断体系时优先“工具链”。</td></tr>

@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -183,10 +183,10 @@
                     <main>
                         <h1 id="ownership-lifetime-and-raii"><a class="header" href="#ownership-lifetime-and-raii">Ownership, Lifetime, and RAII</a></h1>
 <p>The first production question in modern C++ is not “should this be a class” or “can this be zero-copy.” It is simpler and more dangerous: who owns this resource, how long does it stay valid, and what guarantees cleanup when the happy path stops being happy.</p>
-<p>That question applies to memory, but memory is only part of the story. Real systems own sockets, file descriptors, mutexes, thread joins, temporary directories, telemetry registrations, process handles, mapped files, transaction scopes, and shutdown hooks. The language gives you enough rope to represent all of them badly. The reason ownership deserves the first chapter is not that it is foundational in an academic sense. It is that unclear ownership makes the rest of the design impossible to review with confidence.</p>
+<p>That question applies to memory, but memory is only part of the story. Real systems own sockets, file descriptors, mutexes, thread joins, temporary directories, telemetry registrations, process handles, mapped files, transaction scopes, and shutdown hooks. The language gives you enough rope to represent all of them badly. Ownership deserves the first chapter not because it is foundational in an academic sense, but because unclear ownership makes the rest of the design impossible to review with confidence.</p>
 <p>In production, the expensive failures are rarely dramatic at the call site. A service starts a background flush, captures a raw pointer to request state, and occasionally crashes during deploy. A connection pool closes on the wrong thread because the last <code>shared_ptr</code> release happened in a callback nobody considered part of shutdown. An initialization path half-builds three resources and leaks the second one when the fourth throws. These are not syntax problems. They are ownership problems that became operational incidents.</p>
-<p>RAII remains the main reason modern C++ can manage these situations cleanly. It is not an old idiom that survived by habit. It is the mechanism that lets resource lifetime compose with scope, exceptions, early returns, and partial construction. Used well, RAII makes cleanup boring. That is exactly what you want.</p>
-<h2 id="ownership-must-be-legible"><a class="header" href="#ownership-must-be-legible">Ownership Must Be Legible</a></h2>
+<p>RAII is the main reason modern C++ can manage these situations cleanly. It is not an old idiom that survived by habit; it is the mechanism that lets resource lifetime compose with scope, exceptions, early returns, and partial construction. Used well, RAII makes cleanup boring. That is exactly what you want.</p>
+<h2 id="ownership-must-be-legible"><a class="header" href="#ownership-must-be-legible">Ownership must be legible</a></h2>
 <p>Ownership is a contract, not an implementation detail. A reviewer should be able to point at a type or member and answer three questions quickly.</p>
 <ol>
 <li>What does this object own?</li>
@@ -196,10 +196,10 @@
 <p>If the answers require reading several helper functions, the design is already too implicit.</p>
 <p>This is why modern C++ favors types whose ownership behavior is obvious. <code>std::unique_ptr&lt;T&gt;</code> means exclusive ownership. <code>std::shared_ptr&lt;T&gt;</code> means shared ownership with reference-counted lifetime. A plain object member means the containing object owns that subobject directly. A <code>std::span&lt;T&gt;</code> or <code>std::string_view</code> means borrowing, not retention. These are not stylistic preferences. They are part of how the program communicates lifetime.</p>
 <p>The opposite style is familiar and expensive: a raw pointer member that might own, might observe, and might occasionally be null because shutdown is in progress. That design is cheap to type and expensive to reason about.</p>
-<h2 id="raii-is-about-resources-not-about-new"><a class="header" href="#raii-is-about-resources-not-about-new">RAII Is About Resources, Not About <code>new</code></a></h2>
+<h2 id="raii-is-about-resources-not-about-new"><a class="header" href="#raii-is-about-resources-not-about-new">RAII is about resources, not about <code>new</code></a></h2>
 <p>Many programmers first encounter RAII as “use smart pointers instead of manual <code>delete</code>.” That is directionally correct and far too small.</p>
 <p>RAII means tying a resource to the lifetime of an object whose destructor releases it. The resource might be memory. It might just as easily be a file descriptor, a kernel event, a transaction lock, or a metrics registration that must be unregistered before shutdown completes.</p>
-<h3 id="what-happens-without-raii"><a class="header" href="#what-happens-without-raii">What Happens Without RAII</a></h3>
+<h3 id="what-happens-without-raii"><a class="header" href="#what-happens-without-raii">What happens without RAII</a></h3>
 <p>Before illustrating the RAII pattern, it is worth seeing the manual approach in a fuller form. The following anti-pattern is intentionally buggy, because production codebases still contain code that looks exactly like this.</p>
 <pre><code class="language-cpp">socket_t create_server_socket(std::uint16_t port) {
     socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -372,7 +372,7 @@ void handle_connection(Socket client) const {
 <p>After <code>handle_connection(std::move(client))</code>, the caller-side <code>client</code> no longer owns the descriptor. The move constructor exchanged its file descriptor for <code>invalid_socket_handle</code>, so the moved-from object is harmless when its destructor later runs. Ownership exists in exactly one object at a time.</p>
 <p>Notice what disappeared: there is no cleanup ladder, no <code>try</code>/<code>catch</code> whose main job is teardown, and no convention about who owns which descriptor. The type carries the policy. That is the practical value of RAII.</p>
 <p>The same pattern applies to many non-memory resources. A scoped registration token unregisters in its destructor. A transaction object rolls back unless explicitly committed. A joined-thread wrapper joins during destruction or refuses to be destroyed while still joinable. Once a codebase thinks this way, cleanup paths become local again instead of scattered through error handling.</p>
-<h2 id="anti-pattern-cleanup-by-convention"><a class="header" href="#anti-pattern-cleanup-by-convention">Anti-pattern: Cleanup by Convention</a></h2>
+<h2 id="anti-pattern-cleanup-by-convention"><a class="header" href="#anti-pattern-cleanup-by-convention">Anti-pattern: cleanup by convention</a></h2>
 <p>The alternative to RAII is usually not explicit manual cleanup done perfectly. It is cleanup by convention, which means cleanup gets skipped under stress.</p>
 <pre><code class="language-cpp">// Anti-pattern: ownership and cleanup are split across control flow.
 void publish_snapshot(Publisher&amp; publisher, std::string_view path) {
@@ -411,10 +411,10 @@ void publish_snapshot(Publisher&amp; publisher, std::string_view path) {
 </code></pre>
 <p>The function now has one concern: its actual logic. Cleanup is invisible because it is guaranteed. Adding a third, fourth, or tenth exit path changes nothing about resource safety. That composability is the real payoff of RAII – not prettier code, but correct code under maintenance pressure.</p>
 <p>RAII fixes cleanup-by-convention by moving the release policy into the owning object. Error paths then recover their main job: describing failure rather than describing teardown.</p>
-<h2 id="exclusive-ownership-should-be-the-default"><a class="header" href="#exclusive-ownership-should-be-the-default">Exclusive Ownership Should Be the Default</a></h2>
+<h2 id="exclusive-ownership-should-be-the-default"><a class="header" href="#exclusive-ownership-should-be-the-default">Exclusive ownership should be the default</a></h2>
 <p>Most resources in well-designed systems have one obvious owner at any given time. A request object owns its parsed payload. A connection object owns its socket. A batch owns its buffers. That is why exclusive ownership is the right default mental model.</p>
 <p>In practice this means preferring plain object members or <code>std::unique_ptr</code> when direct containment is not possible. <code>unique_ptr</code> is not a signal that the design is sophisticated. It is a signal that ownership transfers and destruction are explicit. It also composes well with containers, factories, and failure paths because moved-from state is defined and single ownership stays single.</p>
-<p>Shared ownership should be treated as a deliberate exception. There are valid cases: asynchronous fan-out where several components must keep the same immutable state alive, graph-like structures with genuine shared lifetime, caches whose entries remain valid while multiple users still hold them. But <code>shared_ptr</code> is not a generic safety blanket. It changes destruction timing, adds atomic reference-count traffic in many implementations, and often hides the real question: why can no component name the owner?</p>
+<p>Shared ownership should be a deliberate exception. There are valid cases: asynchronous fan-out where several components must keep the same immutable state alive, graph-like structures with genuine shared lifetime, caches whose entries remain valid while multiple users still hold them. But <code>shared_ptr</code> is not a safety blanket. It changes destruction timing, adds atomic reference-count traffic, and often hides the real question: why can no component name the owner?</p>
 <p>If a review finds <code>shared_ptr</code> at a boundary, the follow-up question should be concrete: what lifetime relationship made exclusive ownership impossible here? If the answer is vague, the shared ownership is probably compensating for a design that never decided where the resource belongs.</p>
 <p>A common symptom is shutdown non-determinism. When the last <code>shared_ptr</code> to a resource is released from an unpredictable callback or thread, the destructor runs at an unpredictable time and place:</p>
 <pre><code class="language-cpp">// Risky: destruction timing depends on which callback finishes last.
@@ -429,13 +429,13 @@ void start_fanout(std::shared_ptr&lt;Connection&gt; conn) {
     // metric flush, socket close) now happen at an uncontrolled point.
 }
 </code></pre>
-<p>When destruction order matters – and in production it almost always does – prefer <code>unique_ptr</code> with explicit lifetime scoping, and pass non-owning raw pointers or references to work that is guaranteed to complete within the owner’s lifetime.</p>
-<h2 id="borrowing-needs-tighter-discipline-than-owning"><a class="header" href="#borrowing-needs-tighter-discipline-than-owning">Borrowing Needs Tighter Discipline Than Owning</a></h2>
+<p>When destruction order matters (and in production it almost always does), prefer <code>unique_ptr</code> with explicit lifetime scoping, and pass non-owning raw pointers or references to work that is guaranteed to complete within the owner’s lifetime.</p>
+<h2 id="borrowing-needs-tighter-discipline-than-owning"><a class="header" href="#borrowing-needs-tighter-discipline-than-owning">Borrowing needs tighter discipline than owning</a></h2>
 <p>A system with clear ownership still needs non-owning access. Algorithms inspect caller-owned buffers. Validation reads request metadata. Iterators and views traverse storage without copying it. Borrowing is normal. The mistake is letting borrowed state outlive the owner or making the borrow invisible.</p>
 <p>Modern C++ gives you useful borrowing vocabulary: references, pointers used explicitly as observers, <code>std::span</code>, and <code>std::string_view</code>. These types help, but they do not enforce a good design by themselves. A view member inside a long-lived object is still a lifetime risk if the owner is elsewhere. A callback that captures a reference to stack state is still wrong if the callback runs later.</p>
 <p>That risk becomes more severe under concurrency. A raw pointer or <code>string_view</code> captured into background work is not a small local shortcut. It is a cross-time borrow whose validity now depends on scheduling and shutdown order.</p>
 <p>This is why a useful ownership rule is simple: owning types may cross time freely; borrowed types should cross time only when the owner is visibly stronger and longer-lived than the work using the borrow. If you cannot make that argument quickly, copy or transfer ownership instead.</p>
-<h2 id="move-semantics-define-transfer-not-mere-optimization"><a class="header" href="#move-semantics-define-transfer-not-mere-optimization">Move Semantics Define Transfer, Not Mere Optimization</a></h2>
+<h2 id="move-semantics-define-transfer-not-optimization"><a class="header" href="#move-semantics-define-transfer-not-optimization">Move semantics define transfer, not optimization</a></h2>
 <p>Move semantics are often introduced as a performance topic. In practice they matter first as an ownership topic.</p>
 <p>Moving an object states that the resource changes owners while the source remains valid but no longer responsible for the old resource. That is what makes factories, containers, and pipeline stages composable without inventing bespoke transfer APIs for every type.</p>
 <p>For resource-owning types, good move behavior is part of the type’s correctness story.</p>
@@ -445,8 +445,8 @@ void start_fanout(std::shared_ptr&lt;Connection&gt; conn) {
 <li>Double-release cannot occur.</li>
 </ul>
 <p>This is one reason direct resource wrappers are worth the small amount of code they require. Once the ownership transfer rules live in the type, callers stop hand-transferring raw handles and hoping conventions line up.</p>
-<p>Not every type should be movable, and not every move is cheap. A mutex is typically neither copyable nor movable because moving it would complicate invariants and platform semantics. A large aggregate with direct-buffer ownership may be movable but still not cheap in a hot path. The design question is not “can I default the move operations.” It is “what ownership story should this type allow.”</p>
-<h2 id="lifetime-bugs-often-hide-in-shutdown-and-partial-construction"><a class="header" href="#lifetime-bugs-often-hide-in-shutdown-and-partial-construction">Lifetime Bugs Often Hide in Shutdown and Partial Construction</a></h2>
+<p>Some types should not be movable, and not every move is cheap. A mutex is typically neither copyable nor movable because moving it would complicate invariants and platform semantics. A large aggregate with direct-buffer ownership may be movable but still not cheap in a hot path. The design question is not “can I default the move operations.” It is “what ownership story should this type allow.”</p>
+<h2 id="lifetime-bugs-often-hide-in-shutdown-and-partial-construction"><a class="header" href="#lifetime-bugs-often-hide-in-shutdown-and-partial-construction">Lifetime bugs often hide in shutdown and partial construction</a></h2>
 <p>Programmers tend to think about lifetime during the main work path. Production bugs often show up during startup failure and shutdown instead.</p>
 <p>Partial construction is one example. If an object acquires three resources and the second acquisition throws, the first one must still release correctly. RAII handles this automatically when ownership is layered into members rather than performed manually in constructor bodies with cleanup flags.</p>
 <p>The manual approach is fragile:</p>
@@ -516,8 +516,8 @@ int main() {
 </code></pre>
 <p>No explicit teardown code appears anywhere. If any construction step throws, every previously constructed object is destroyed automatically in reverse order – exactly the guarantee the RAII <code>Pipeline</code> pattern relies on.</p>
 <p>Shutdown is the other major pressure point. Destructors run when the system is already under state transition. Background work may still hold references. Logging infrastructure may be partially torn down. A destructor that blocks indefinitely, calls back into unstable subsystems, or depends on thread affinity that the type never documented can turn a tidy ownership model into a deploy-time failure.</p>
-<p>The lesson is not to fear destructors. The lesson is to keep destructor work narrow and explicit. Release the resource you own. Avoid surprising cross-subsystem behavior. If teardown requires a richer protocol than destruction alone can safely provide, expose an explicit stop or close operation and use the destructor as a final safety net rather than the only cleanup path.</p>
-<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and Review</a></h2>
+<p>The lesson is not to fear destructors, but to keep destructor work narrow and explicit. Release the resource you own. Avoid surprising cross-subsystem behavior. If teardown requires a richer protocol than destruction alone can safely provide, expose an explicit stop or close operation and use the destructor as a final safety net rather than the only cleanup path.</p>
+<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and review</a></h2>
 <p>Ownership design needs explicit review because many lifetime bugs are structurally visible before any tool runs.</p>
 <p>Useful review questions:</p>
 <ol>

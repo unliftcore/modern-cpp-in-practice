@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+            window.path_to_searchindex_js = "searchindex-99b64400.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8b875a01.js"></script>
@@ -182,11 +182,11 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="面向资源与边界缺陷的测试策略"><a class="header" href="#面向资源与边界缺陷的测试策略">面向资源与边界缺陷的测试策略</a></h1>
-<p>C++ 中代价最高的 bug，大多不是”算法算错了数”这种。真正昂贵的是资源与边界缺陷：错误路径上忘关的文件描述符、提交失败后残留的临时文件、取消时泄漏了后台工作、解析器在某个特定字节模式下平时没事而一到高负载就炸，又或者某个库边界悄悄把业务错误变成了进程崩溃。</p>
-<p>只测 happy path 的单元测试，对这些设计施加不了多少压力。它们往往只验证了正常行为，却把生命周期转换、清理保证和边界契约晾在一边。在现代 C++ 中，这笔账很不划算。所有权和错误处理已经足够显式，完全可以围绕它们来设计测试——而且理应如此。一个组件如果持有稀缺资源、跨越进程或 API 边界、又或者在超时、取消、畸形输入、部分失败等场景下有不同行为，那它的测试策略就应该围绕这些事实来构建。</p>
-<p>本章谈的是测试设计，不是工具选型。目标是在代码上线之前，想清楚需要哪些证据。Sanitizer、静态分析和构建诊断是下一章的内容；运行时日志、metrics、trace 和崩溃证据是再下一章的内容。这里要回答的问题更简单：哪些测试能证明，在系统承压时所有权、清理和边界行为依然正确？</p>
+<p>C++ 中代价最高的 bug，大多不是”算法算错了数”。真正昂贵的是资源与边界缺陷：错误路径上忘关的文件描述符、提交失败后残留的临时文件、取消时泄漏了后台工作、解析器在某个特定字节模式下平时没事一到高负载就炸，又或者某个库边界悄悄把业务错误变成了进程崩溃。</p>
+<p>只测 happy path 的单元测试，对这些设计施加不了多少压力。它们只验证了正常行为，把生命周期转换、清理保证和边界契约晾在一边。在现代 C++ 中，这笔账很不划算。所有权和错误处理已经足够显式，完全可以围绕它们来设计测试，而且理应如此。一个组件如果持有稀缺资源、跨越进程或 API 边界、或者在超时、取消、畸形输入、部分失败等场景下有不同行为，它的测试策略就应该围绕这些事实来构建。</p>
+<p>本章谈的是测试设计，不是工具选型。目标是在代码上线之前想清楚需要哪些证据。Sanitizer、静态分析和构建诊断是下一章的内容；运行时日志、metrics、trace 和崩溃证据是再下一章的内容。这里的问题更简单：哪些测试能证明，在系统承压时所有权、清理和边界行为依然正确？</p>
 <h2 id="从失败形状开始而不是从测试金字塔口号开始"><a class="header" href="#从失败形状开始而不是从测试金字塔口号开始">从失败形状开始，而不是从“测试金字塔”口号开始</a></h2>
-<p>泛泛的测试建议到了 C++ 这里很快就不够用了，因为高代价的故障分布极不均匀。如果一个服务的风险主要集中在关闭、取消、临时文件替换、buffer 生命周期和外部协议转换上，测试套件就应该在这些地方投入最多精力。</p>
+<p>泛泛的测试建议到了 C++ 这里很快就不够用了，因为高代价故障的分布极不均匀。如果一个服务的风险集中在关闭、取消、临时文件替换、buffer 生命周期和外部协议转换上，测试套件就应该在这些地方投入最多精力。</p>
 <p>所以要从失败形状入手。</p>
 <p>针对每个组件，问四个问题：</p>
 <ol>
@@ -195,8 +195,8 @@
 <li>哪些输入或调度情况大到无法枚举，但生成起来很便宜？</li>
 <li>哪些行为依赖时间、并发或取消，而不是简单的调用顺序？</li>
 </ol>
-<p>这些问题会自然引出不同的测试形式。资源清理通常需要确定性的故障注入加后置条件检查；边界转换通常需要基于真实 payload 和错误类别的契约测试；输入空间巨大的场景通常需要属性测试（property testing）和 fuzzing；时间敏感的并发通常需要可控的时钟、executor 和关闭编排，而非基于 sleep 的测试。</p>
-<p>覆盖率数字回答不了这些问题。一行代码跑到了，并不能证明回滚确实发生了、所有权依然有效、或者关闭路径在排空后台工作时没有 use-after-free 风险。应该把覆盖率视为一个滞后的完整性信号，而不是组织测试套件的核心原则。</p>
+<p>这些问题会自然引出不同的测试形式。资源清理通常需要确定性的故障注入加后置条件检查；边界转换需要基于真实 payload 和错误类别的契约测试；输入空间巨大的场景需要属性测试（property testing，即基于数学性质而非具体用例的自动化测试）和模糊测试（fuzzing，即用随机/半随机输入自动探测缺陷）；时间敏感的并发需要可控的时钟、executor 和关闭编排，而非基于 sleep 的测试。</p>
+<p>覆盖率数字回答不了这些问题。一行代码跑到了，不能证明回滚确实发生了、所有权依然有效、或者关闭路径在排空后台工作时没有 use-after-free 风险。把覆盖率视为一个滞后的完整性信号，不要当作组织测试套件的核心原则。</p>
 <h2 id="在业务关心的层级上测试资源生命周期"><a class="header" href="#在业务关心的层级上测试资源生命周期">在业务关心的层级上测试资源生命周期</a></h2>
 <p>针对资源 bug 的正确测试，几乎不会去断言某个 helper 被调用了。它断言的是获取、提交、回滚和释放这些环节的可观测契约。</p>
 <p>假设有一个服务需要原子地重写磁盘快照。真正的生产规则不是”先调 <code>write</code>，再调 <code>rename</code>，失败了再 <code>remove</code>”，而是”要么新快照变得可见，要么旧快照保持不变且临时文件被清理掉”。有用的测试应该直接验证这条规则。</p>
@@ -256,8 +256,8 @@ auto write_snapshot_atomically(file_system&amp; fs,
     EXPECT_EQ(fs.read("cache/index.bin"), "old snapshot");
 }
 </code></pre>
-<p>这个 seam 选得恰到好处，因为它正好落在业务边界上。测试没有把半个标准库都 mock 掉，而是只在外部副作用周围建了一个可替换接口，然后检查调用方真正关心的后置条件。</p>
-<p>这个权衡很重要。过度 mock 基础设施只会产出脆弱的测试——它们验证的是 syscall 的调用顺序，而非操作的安全属性。但如果设计中完全不留 seam，失败路径就只能靠大型集成测试来覆盖。折中之道是：在资源边界做一次隔离，然后围绕提交与回滚行为来写测试。</p>
+<p>这个 seam 选得恰到好处，因为它正好落在业务边界上。测试没有把半个标准库都 mock 掉，只在外部副作用周围建了一个可替换接口，然后检查调用方真正关心的后置条件。</p>
+<p>这个权衡很重要。过度 mock 基础设施只会产出脆弱的测试，验证的是 syscall 调用顺序，而非操作的安全属性。但如果设计中完全不留 seam，失败路径就只能靠大型集成测试来覆盖。折中之道是在资源边界做一次隔离，然后围绕提交与回滚行为来写测试。</p>
 <h3 id="过度-mock-何时会掩盖真实-bug"><a class="header" href="#过度-mock-何时会掩盖真实-bug">过度 mock 何时会掩盖真实 bug</a></h3>
 <p>想想“检查实现细节的测试“和“检查安全属性的测试“之间的差别。团队常常会写出这样的测试：</p>
 <pre><code class="language-cpp">// BAD: This test passes, but proves nothing about cleanup.
@@ -272,9 +272,9 @@ TEST(write_snapshot_calls_remove_on_rename_failure)
     write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
 }
 </code></pre>
-<p>这个测试验证了 <code>remove</code> 被调用了，但并没有验证临时文件真的消失了，也没有验证原文件保持完好。一旦有人把清理逻辑重构成 <code>std::filesystem::remove_all</code>，或者改了 staging 路径约定，这个测试就会挂掉——然而 <code>remove</code> 静默失败、临时文件残留这种真实 bug 反而能通过。前面基于 <code>fake_file_system</code> 的测试更强，因为它断言的是可观测的后置条件，而非调用序列。</p>
+<p>这个测试验证了 <code>remove</code> 被调用了，但没有验证临时文件真的消失了，也没有验证原文件保持完好。一旦有人把清理逻辑重构成 <code>std::filesystem::remove_all</code>，或者改了 staging 路径约定，测试就会挂掉。然而 <code>remove</code> 静默失败、临时文件残留这种真实 bug 反而能通过。前面基于 <code>fake_file_system</code> 的测试更强，因为它断言的是可观测的后置条件，而非调用序列。</p>
 <h3 id="资源泄漏测试验证清理而不只是-happy-path-所有权"><a class="header" href="#资源泄漏测试验证清理而不只是-happy-path-所有权">资源泄漏测试：验证清理，而不只是 happy-path 所有权</a></h3>
-<p>当错误路径跳过了构造，或者所有权被错误地 move 走，单靠 RAII 的作用域管理是不够的。有一种出乎意料地常见的模式：资源只在某条特定的失败路径上才会泄漏：</p>
+<p>当错误路径跳过了构造，或者所有权被错误地 move 走，单靠 RAII 的作用域管理是不够的。一种常见的模式是：资源只在某条特定的失败路径上才会泄漏：</p>
 <pre><code class="language-cpp">class connection_pool {
 public:
     auto acquire() -&gt; std::expected&lt;pooled_connection, pool_error&gt;;
@@ -300,7 +300,7 @@ auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
     return receipt{};
 }
 </code></pre>
-<p>只走成功路径的测试看不到这个泄漏；只在失败时检查返回值的测试同样会漏掉。真正能抓住它的测试，断言的是连接池的状态：</p>
+<p>只走成功路径的测试看不到这个泄漏；只在失败时检查返回值的测试同样会漏掉。能抓住它的测试，断言的是连接池的状态：</p>
 <pre><code class="language-cpp">TEST(transfer_releases_source_connection_when_dest_acquire_fails)
 {
     counting_connection_pool pool{.max_connections = 1};
@@ -313,7 +313,7 @@ auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
 </code></pre>
 <p>规律就是：如果你持有稀缺资源，失败路径的测试就该断言资源已被归还，而不只是断言返回了一个错误。</p>
 <h3 id="异常安全从能编译到正确之间的差距"><a class="header" href="#异常安全从能编译到正确之间的差距">异常安全：从“能编译”到“正确”之间的差距</a></h3>
-<p>即便代码路径没有标 <code>noexcept</code>，只要异常安全性很重要，就值得为它写测试。提供强异常保证的容器或缓存尤其如此：</p>
+<p>即便代码路径没有标 <code>noexcept</code>，只要异常安全性很重要，就值得写测试。提供强异常保证的容器或缓存尤其如此：</p>
 <pre><code class="language-cpp">TEST(cache_insert_preserves_existing_entries_on_allocation_failure)
 {
     lru_cache&lt;std::string, std::string&gt; cache(/*capacity=*/4);
@@ -331,12 +331,12 @@ auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
     EXPECT_EQ(cache.size(), 2);
 }
 </code></pre>
-<p>如果缓存只提供基本保证，测试仍然应当验证没有资源泄漏，且缓存处于有效状态（哪怕内容已变）。最坏的情况是压根没有测试——缓存在抛异常时悄悄破坏了内部结构，直到生产环境的内存分配压力下才被发现。</p>
-<p>同样的思路也适用于 socket、事务、受锁保护的 registry、临时目录、子进程 handle，以及持有线程的服务。问自己：在成功、部分失败、重试和关闭各种场景下，稳定的契约分别是什么？把这些契约测出来。</p>
+<p>如果缓存只提供基本保证，测试仍然应当验证没有资源泄漏，且缓存处于有效状态（哪怕内容已变）。最坏的情况是压根没有测试：缓存在抛异常时悄悄破坏了内部结构，直到生产环境的内存分配压力下才被发现。</p>
+<p>同样的思路适用于 socket、事务、受锁保护的 registry、临时目录、子进程 handle，以及持有线程的服务。问自己：在成功、部分失败、重试和关闭各种场景下，稳定的契约分别是什么？把这些契约测出来。</p>
 <h2 id="边界测试应证明转换而不只是解析"><a class="header" href="#边界测试应证明转换而不只是解析">边界测试应证明转换，而不只是解析</a></h2>
-<p>现代 C++ 代码的复杂度往往集中在边界上：网络协议、文件格式、进程边界、插件 API、数据库客户端，以及 C 接口。边界上的 bug 代价高昂，因为它们会同时破坏两侧的假设。一个边界测试应当验证三件事。</p>
-<p>第一，合法输入能正确映射到内部表示，不依赖生命周期上的取巧。如果解析器把 <code>std::string_view</code> 存进了生命周期更长的状态里，边界测试就要证明这个 view 指向的数据有稳定的所有权，或者在必要时做了拷贝。第二，非法或不完整的输入要以正确的错误类别失败。解析失败、传输失败、业务规则拒绝——除非 API 明确就是这么约定的，否则不应混为一谈、走同一条笼统的错误路径。第三，从组件内部格式化输出或转换回外部表示时，排序、转义、单位、版本等不变量要得到保持。</p>
-<p>这里要用真实的测试工件。配置加载器——把真实的示例文件放在测试旁边。HTTP 或 RPC 边界——保留有代表性的 payload，包括畸形 header、超大 body、重复字段、错误编码和不支持的版本号。带 C API 的库——在 ABI 层面写测试，而不只是测内部的 C++ wrapper。如果边界承诺不抛异常，就要在 allocator 压力和非法输入下验证这个承诺。</p>
+<p>现代 C++ 代码的复杂度往往集中在边界上：网络协议、文件格式、进程边界、插件 API、数据库客户端，以及 C 接口。边界上的 bug 代价高，因为它们会同时破坏两侧的假设。一个边界测试应当验证三件事。</p>
+<p>第一，合法输入能正确映射到内部表示，不依赖生命周期上的取巧。如果解析器把 <code>std::string_view</code> 存进了生命周期更长的状态里，边界测试就要证明这个 view 指向的数据有稳定的所有权，或者在必要时做了拷贝。第二，非法或不完整的输入要以正确的错误类别失败。解析失败、传输失败、业务规则拒绝，除非 API 明确就是这么约定的，否则不应混为一谈、走同一条笼统的错误路径。第三，从组件内部格式化输出或转换回外部表示时，排序、转义、单位、版本等不变量要得到保持。</p>
+<p>这里要用真实的测试工件。配置加载器，把真实的示例文件放在测试旁边。HTTP 或 RPC 边界，保留有代表性的 payload，包括畸形 header、超大 body、重复字段、错误编码和不支持的版本号。带 C API 的库，在 ABI 层面写测试，不只是测内部的 C++ wrapper。如果边界承诺不抛异常，就要在 allocator 压力和非法输入下验证这个承诺。</p>
 <p>这些测试不必很大，但必须足够具体。”能 round-trip 一个 JSON 对象”——太弱。”遇到重复主键字段时以 schema error 拒绝，并保持旧配置继续生效”——这才有力。</p>
 <h3 id="手工精选示例容易遗漏的边界情况"><a class="header" href="#手工精选示例容易遗漏的边界情况">手工精选示例容易遗漏的边界情况</a></h3>
 <p>要留意那些单独看上去无害、组合起来却会出问题的边界条件：</p>
@@ -361,19 +361,19 @@ TEST(config_survives_input_destruction)
     EXPECT_EQ(cfg.server_name(), "prod-01");
 }
 </code></pre>
-<p>大多数团队只会写第一个测试，但真正能暴露 bug 的是第二个。再配合 AddressSanitizer（下一章介绍），就能把悄无声息的内存损坏变成确定性的测试失败。</p>
-<p>其他常被遗漏、值得专门写测试的边界极端情况还包括：</p>
+<p>大多数团队只会写第一个测试，但真正能暴露 bug 的是第二个。配合 AddressSanitizer（简称 ASan，一种内存错误检测工具，下一章介绍），就能把悄无声息的内存损坏变成确定性的测试失败。</p>
+<p>其他常被遗漏的边界极端情况：</p>
 <ul>
 <li>空输入、单字节输入，以及恰好落在 buffer 边界上的输入。</li>
 <li>字符串字段中包含嵌入式 null 的 payload——<code>std::string_view::size()</code> 和 C 的 <code>strlen()</code> 对此会给出不同结果。</li>
 <li>依赖方返回的错误响应：协议帧本身是合法的，但状态码出人意料，不只是简单的连接失败。</li>
 <li>在某个 schema 版本里合法、在另一个版本里非法的输入，尤其是涉及版本协商的场景。</li>
 </ul>
-<p>示例项目中有这几种模式的具体实践。在 <code>examples/web-api/tests/test_http.cpp</code> 中，<code>test_parse_request_malformed()</code> 向解析器喂入字符串 <code>"not a valid request"</code>，断言 <code>parse_request()</code> 返回 <code>std::nullopt</code> 而非崩溃或产出半初始化的 <code>Request</code>。这正是那种能抓住“默认假设输入格式正确“的解析器 bug 的畸形输入边界测试。同一文件还测试了 header 缺失的情况（<code>test_header_missing()</code>），确认返回 <code>std::optional</code> 的 <code>header()</code> 方法在 header 不存在时能正确处理缺失，而非返回悬空 view 或默认构造的字符串。</p>
-<p>在 <code>examples/web-api/tests/test_task.cpp</code> 中，边界验证测试同样值得关注。<code>test_task_validation_rejects_empty_title()</code> 和 <code>test_task_validation_rejects_long_title()</code>（后者构造了一个 257 字符的字符串）验证了领域不变量在极端值处依然成立。这些不是验证调用顺序的测试——它们断言的是业务规则：task 标题必须非空且在长度上限内，并且错误通过 <code>std::expected</code> 以正确的 <code>ErrorCode::bad_request</code> 报告，而非被吞掉或转化为异常。</p>
+<p>示例项目中有这几种模式的具体实践。在 <code>examples/web-api/tests/test_http.cpp</code> 中，<code>test_parse_request_malformed()</code> 向解析器喂入字符串 <code>"not a valid request"</code>，断言 <code>parse_request()</code> 返回 <code>std::nullopt</code> 而非崩溃或产出半初始化的 <code>Request</code>。这就是能抓住“默认假设输入格式正确“的解析器 bug 的畸形输入边界测试。同一文件还测试了 header 缺失的情况（<code>test_header_missing()</code>），确认返回 <code>std::optional</code> 的 <code>header()</code> 方法在 header 不存在时能正确处理缺失，而非返回悬空 view 或默认构造的字符串。</p>
+<p>在 <code>examples/web-api/tests/test_task.cpp</code> 中，<code>test_task_validation_rejects_empty_title()</code> 和 <code>test_task_validation_rejects_long_title()</code>（后者构造了一个 257 字符的字符串）验证了领域不变量在极端值处依然成立。这些测试断言的是业务规则：task 标题必须非空且在长度上限内，错误通过 <code>std::expected</code> 以正确的 <code>ErrorCode::bad_request</code> 报告，而非被吞掉或转化为异常。</p>
 <h2 id="失败注入比更多-mock-更有价值"><a class="header" href="#失败注入比更多-mock-更有价值">失败注入比更多 mock 更有价值</a></h2>
-<p>C++ 的错误路径，恰恰是所有权错误演变为生产事故的温床。只测成功路径，就等于默认错误处理代码无需审查。</p>
-<p>务实的做法是确定性故障注入。在组件跨越资源边界或调度边界的地方引入故障：文件打开、rename、有界组件内部的内存分配、任务提交、定时器到期、下游 RPC 调用、持久化提交。然后验证操作结束后系统仍处于有效状态。</p>
+<p>C++ 的错误路径是所有权错误演变为生产事故的温床。只测成功路径，等于默认错误处理代码无需审查。</p>
+<p>务实的做法是确定性故障注入。在组件跨越资源边界或调度边界的地方引入故障：文件打开、rename、有界组件内部的内存分配、任务提交、定时器到期、下游 RPC 调用、持久化提交。然后验证操作结束后系统仍然有效。</p>
 <p>关键词是”确定性”。随机让 syscall 失败在混沌测试环境里或许有用，但作为回归测试太弱了。回归测试应当能精确说明：是哪个操作失败了，以及失败之后系统必须保持什么状态。</p>
 <p>据此来设计 seam：</p>
 <ul>
@@ -383,10 +383,10 @@ TEST(config_survives_input_destruction)
 <li>关闭和取消应当暴露一个完成点，供测试等待。</li>
 </ul>
 <p>这种设计压力是良性的。如果一个组件非得靠全局 monkey-patching 才能走进各种失败模式，说明它和运行环境耦合得太紧了。</p>
-<p>有一种常见的过度做法要避免：到处模拟 allocator 失败。分配失败测试对硬实时系统或具备强恢复保证的基础设施组件或许有意义，但在大多数代码库里只会制造噪声和不切实际的控制流。只在契约确实依赖于低内存存活能力时才做这件事。对大多数服务代码而言，I/O 失败、超时、取消和部分提交行为才是更值得投入的目标。</p>
+<p>有一种常见的过度做法要避免：到处模拟 allocator 失败。分配失败测试对硬实时系统或有强恢复保证的基础设施组件或许有意义，但在大多数代码库里只会制造噪声和不切实际的控制流。只在契约确实依赖于低内存存活能力时才做。对大多数服务代码，I/O 失败、超时、取消和部分提交行为才是更值得投入的目标。</p>
 <h2 id="属性测试与-fuzzing-适用于输入丰富的边界"><a class="header" href="#属性测试与-fuzzing-适用于输入丰富的边界">属性测试与 fuzzing 适用于输入丰富的边界</a></h2>
-<p>有些边界的输入空间太大，光靠精选示例远远不够。解析器、解码器、压缩器、类 SQL 查询片段、二进制消息读取器、路径规范化器、命令行解释器——它们接受的输入空间都极为庞大。在这些场景下，属性测试和 fuzzing 物有所值。</p>
-<p>关键不在于追求新颖，而在于把那些应该在海量输入下始终成立的不变量明确编码出来。</p>
+<p>有些边界的输入空间太大，光靠精选示例远远不够。解析器、解码器、压缩器、类 SQL 查询片段、二进制消息读取器、路径规范化器、命令行解释器，它们的输入空间都极为庞大。在这些场景下，属性测试和 fuzzing 物有所值。</p>
+<p>关键是把那些在海量输入下应当始终成立的不变量明确编码出来。</p>
 <p>好的属性示例：</p>
 <ul>
 <li>合法配置经过“解析 -&gt; 序列化 -&gt; 再解析“后，语义保持一致。</li>
@@ -394,11 +394,11 @@ TEST(config_survives_input_destruction)
 <li>消息解码器要么返回一个完全构造好的值，要么返回结构化错误；绝不允许部分初始化的输出被外部观察到。</li>
 <li>对已规范化且位于接受域内的相对路径，路径规范化是幂等的。</li>
 </ul>
-<p>Fuzzing 对 native code 尤其有效，因为畸形输入经常把控制流引入那些极少被测试到的分支——生命周期错误和未定义行为往往就藏在那里。不过要注意章节分工：fuzzing 仍然属于测试策略的范畴，它的价值在于对契约和不变量施加压力。下一章会介绍 sanitizer 如何把悄无声息的内存损坏变成可定位的失败，从而让 fuzzing 的效果大幅提升。</p>
+<p>Fuzzing 对 native code 尤其有效，因为畸形输入经常把控制流引入极少被测试到的分支，生命周期错误和未定义行为往往就藏在那里。Fuzzing 仍然属于测试策略的范畴，它的价值在于对契约和不变量施加压力。下一章会介绍 sanitizer 如何把悄无声息的内存损坏变成可定位的失败，从而让 fuzzing 的效果大幅提升。</p>
 <p>Seed corpus 要尽量贴近生产流量，而不是随机字节。否则 fuzzer 会把大量时间浪费在探索那些真实系统在外层就会拒掉的输入上。对协议读取器，种子应包括截断消息、重复字段、错误长度、不支持的版本号，以及压缩边界情况。对文本格式，应包括超长 token、非法转义序列和混合换行符。</p>
 <h2 id="并发与取消测试需要可控时间"><a class="header" href="#并发与取消测试需要可控时间">并发与取消测试需要可控时间</a></h2>
-<p>许多 C++ 团队明知基于 sleep 的测试不稳定，却还是照写不误，原因无非是生产代码把真实时钟和线程池写死了。结果是一种虚假的节约：测试在本地能过，CI 上就挂，而真正的关闭 bug 照样漏过去。</p>
-<p>如果组件依赖 deadline、重试、stop request 或后台排空（drain），就应该在设计上让测试能控制时间和调度。<code>std::stop_token</code> 和 <code>std::jthread</code> 有助于表达取消意图，但并不能取代确定性编排。运行在可注入 executor 上的任务队列，远比那种一来就 spawn detached 工作的队列容易验证；接受时钟和 sleep 策略注入的重试循环，也远比直接调用 <code>std::this_thread::sleep_for</code> 的好测。</p>
+<p>许多 C++ 团队明知基于 sleep 的测试不稳定，却还是照写不误，原因是生产代码把真实时钟和线程池写死了。结果是一种虚假的节约：测试在本地能过，CI 上就挂，真正的关闭 bug 照样漏过去。</p>
+<p>如果组件依赖 deadline、重试、stop request 或后台排空（drain），就应该在设计上让测试能控制时间和调度。<code>std::stop_token</code> 和 <code>std::jthread</code> 有助于表达取消意图，但不能取代确定性编排。运行在可注入 executor 上的任务队列，远比一来就 spawn detached 工作的队列容易验证；接受时钟和 sleep 策略注入的重试循环，也远比直接调用 <code>std::this_thread::sleep_for</code> 的好测。</p>
 <p>好的并发测试通常断言以下某类行为：</p>
 <ul>
 <li>发出 stop request 后，新工作不再启动。</li>
@@ -408,25 +408,25 @@ TEST(config_survives_input_destruction)
 <li>超时路径返回一致的错误类别，并释放所持有的资源。</li>
 </ul>
 <p>注意，以上没有一条是”在 callback Y 之前调用了 callback X”。它们都是生命周期保证。并发 bug 代价高昂，正是因为出问题的地方在这里。</p>
-<p>示例项目中 <code>examples/web-api/tests/test_repository.cpp</code> 的 <code>test_concurrent_access()</code> 提供了一个简洁的例子。它启动 8 个 <code>std::jthread</code>，每个线程并发创建 100 个 task，最后断言 repository 的最终大小等于 800。这测试的是一个不变量：受 <code>shared_mutex</code> 保护的 <code>TaskRepository</code> 在并发写入下既不丢数据也不产生重复。同一文件中的 <code>test_update_validates()</code> 也值得注意：它在 <code>update()</code> 回调内把 task 标题改为空字符串，断言 repository 以 <code>ErrorCode::bad_request</code> 拒绝了这次修改。这是一个边界与并发交叉的测试——它验证了写锁保护下的 <code>update()</code> 路径中，即使 updater callable 由调用方提供，重新验证步骤仍能捕获不变量违反。</p>
-<p>项目的 CMake 配置（<code>examples/web-api/CMakeLists.txt</code>）还通过 <code>ENABLE_ASAN</code> 和 <code>ENABLE_TSAN</code> 选项支持在 sanitizer 下运行这些测试。在 ThreadSanitizer 下跑并发测试，能提供锁协议正确性的机械化证据，而不是依赖”在某种特定调度交错下恰好通过”的运气。</p>
+<p>示例项目中 <code>examples/web-api/tests/test_repository.cpp</code> 的 <code>test_concurrent_access()</code> 是一个简洁的例子。它启动 8 个 <code>std::jthread</code>，每个线程并发创建 100 个 task，最后断言 repository 的最终大小等于 800。测试的是一个不变量：受 <code>shared_mutex</code> 保护的 <code>TaskRepository</code> 在并发写入下既不丢数据也不产生重复。同一文件中的 <code>test_update_validates()</code> 也值得注意：它在 <code>update()</code> 回调内把 task 标题改为空字符串，断言 repository 以 <code>ErrorCode::bad_request</code> 拒绝了这次修改。这是一个边界与并发交叉的测试，验证了写锁保护下的 <code>update()</code> 路径中，即使 updater callable 由调用方提供，重新验证步骤仍能捕获不变量违反。</p>
+<p>项目的 CMake 配置（<code>examples/web-api/CMakeLists.txt</code>）通过 <code>ENABLE_ASAN</code> 和 <code>ENABLE_TSAN</code> 选项支持在 sanitizer 下运行这些测试。在 ThreadSanitizer（线程竞争检测工具，简称 TSan）下跑并发测试，能提供锁协议正确性的机械化证据，而非依赖”在某种特定调度交错下恰好通过”的运气。</p>
 <h2 id="集成测试应验证完整的清理故事"><a class="header" href="#集成测试应验证完整的清理故事">集成测试应验证完整的清理故事</a></h2>
-<p>并非每种资源 bug 都能靠隔离测试来证明。有些故障只有在真实文件系统、进程模型、socket 或线程调度参与时才会浮现。聚焦的单元测试和属性测试仍然需要，但同时也需要一小组集成测试来验证端到端的清理行为。</p>
-<p>对服务而言，可能意味着：用临时数据目录启动进程，发送真实请求，在存储层强制注入故障，然后验证重启行为和磁盘状态。对库而言，可能意味着：写一个小型宿主程序调用公共 API，加载配置、启动后台工作、取消它、干净卸载。对命令行工具而言，可能意味着：用 fixture 目录树调用真实可执行文件，检查退出码、stderr 和文件系统后置条件。</p>
-<p>这类测试要以场景为核心，数量上保持克制。它们比单元测试慢，也更难排查问题。它们的职责是验证完整的清理流程：部分写入不会变成已提交状态，重复启动不会继承上次失败关闭留下的垃圾，外部契约在故障下依然稳定。</p>
+<p>并非每种资源 bug 都能靠隔离测试来证明。有些故障只有在真实文件系统、进程模型、socket 或线程调度参与时才会浮现。聚焦的单元测试和属性测试仍然需要，但也需要一小组集成测试来验证端到端的清理行为。</p>
+<p>对服务而言，可能意味着用临时数据目录启动进程，发送真实请求，在存储层强制注入故障，然后验证重启行为和磁盘状态。对库而言，可能意味着写一个小型宿主程序调用公共 API，加载配置、启动后台工作、取消它、干净卸载。对命令行工具，可能意味着用 fixture 目录树调用真实可执行文件，检查退出码、stderr 和文件系统后置条件。</p>
+<p>这类测试要以场景为核心，数量上保持克制。它们比单元测试慢，也更难排查问题。职责是验证完整的清理流程：部分写入不会变成已提交状态，重复启动不会继承上次失败关闭留下的垃圾，外部契约在故障下依然稳定。</p>
 <h2 id="什么测试该停掉"><a class="header" href="#什么测试该停掉">什么测试该停掉</a></h2>
 <p>弱测试消耗评审时间，却不能提升信心。</p>
-<p>不要再写那些只是在重述当前实现结构的测试了：</p>
+<p>不要再写只是重述当前实现结构的测试：</p>
 <ul>
-<li>逐个验证 helper 是否被调用，却从不检查任何对外有意义的后置条件。</li>
+<li>逐个验证 helper 是否被调用，却从不检查对外有意义的后置条件。</li>
 <li>mock 太重，合并两个内部函数就会挂，哪怕契约完全没变。</li>
 <li>基于 sleep 的异步测试，真正断言的不过是”今天机器恰好够空闲”。</li>
-<li>对日志或错误字符串做 snapshot 的测试——实际契约是错误类别和结构化字段，不是措辞本身。</li>
+<li>对日志或错误字符串做 snapshot 的测试。实际契约是错误类别和结构化字段，不是措辞本身。</li>
 <li>用大而全的集成测试替代精确的失败路径测试。</li>
 </ul>
 <p>核心原则是：把测试预算花在 bug 高发区。在 C++ 中，这些高发区集中在所有权、边界、取消和畸形输入上。要为它们做有针对性的设计。</p>
 <h2 id="要点总结"><a class="header" href="#要点总结">要点总结</a></h2>
-<p>现代 C++ 的测试策略应当跟着失败的经济学走，而不是跟着泛泛的分层口号走。持有资源的代码需要确定性的失败路径测试；边界密集的代码需要基于真实工件的契约测试；输入丰富的代码需要属性测试和 fuzzing；并发代码需要可控的时间与调度。集成测试应验证完整的清理流程，而不是替代聚焦测试。</p>
+<p>现代 C++ 的测试策略应当跟着失败的经济学走，不是跟着泛泛的分层口号走。持有资源的代码需要确定性的失败路径测试；边界密集的代码需要基于真实工件的契约测试；输入丰富的代码需要属性测试和 fuzzing；并发代码需要可控的时间与调度。集成测试应验证完整的清理流程，不是替代聚焦测试。</p>
 <p>用本章来确定：上线前哪些行为必须得到验证。用下一章来确定：在这些测试运行时，应当让哪些编译器、sanitizer、分析器和构建诊断自动帮你找 bug。</p>
 <p>评审问题：</p>
 <ul>

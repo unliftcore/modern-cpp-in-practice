@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -181,11 +181,11 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="ranges-views-and-generators"><a class="header" href="#ranges-views-and-generators">Ranges, Views, and Generators</a></h1>
+                        <h1 id="ranges-views-and-generators"><a class="header" href="#ranges-views-and-generators">Ranges, views, and generators</a></h1>
 <p>Ranges and generators are attractive because they compress iteration into something that reads like data flow. Sometimes that is exactly what a production codebase needs. Sometimes it is how lifetime bugs, hidden work, and impossible-to-debug lazy behavior enter otherwise plain code.</p>
 <p>The useful question is not whether range pipelines are elegant. The useful question is when lazy composition makes the structure of the work clearer than an ordinary loop, and when it obscures ownership, error handling, or cost. C++23 gives you powerful range machinery and <code>std::generator</code> for pull-based sequences. Neither should become the default shape for all iteration.</p>
 <p>The sample domains here are realistic ones: filtering logs before export, transforming rows in a batch job, and exposing paged or coroutine-backed sources as pull-based sequences. The design pressure is the same in each case. Work arrives over time. The code wants to express a sequence of transformations. The risks are delayed execution, borrowed state, and confusion about where the data actually lives.</p>
-<h2 id="pipelines-earn-their-place-when-the-dataflow-is-the-main-story"><a class="header" href="#pipelines-earn-their-place-when-the-dataflow-is-the-main-story">Pipelines Earn Their Place When the Dataflow Is the Main Story</a></h2>
+<h2 id="pipelines-earn-their-place-when-the-dataflow-is-the-main-story"><a class="header" href="#pipelines-earn-their-place-when-the-dataflow-is-the-main-story">Pipelines earn their place when the dataflow is the main story</a></h2>
 <p>An ordinary loop is still the right tool for many jobs. It keeps sequencing obvious, makes side effects explicit, and is easy to step through. A range pipeline earns its place when the essential structure of the work is “take a sequence, discard some elements, transform the survivors, then materialize or consume.”</p>
 <p>Suppose a log-export worker receives a batch of parsed records and needs to ship only security-relevant entries after projecting them into an export schema. First, consider the pre-ranges approach using manual iterators:</p>
 <pre><code class="language-cpp">// Pre-C++20: manual iterator loop with filter + transform
@@ -240,7 +240,7 @@ records.erase(
 </code></pre>
 <p>The pipeline is the business logic — filter by a predicate, then materialize into an owning result before it crosses the API boundary. There is no lifetime ambiguity because the lock keeps the source alive for the duration and the result is an independent <code>vector</code>.</p>
 <p>The rule is straightforward. Use range pipelines for linear dataflow over a sequence. Use loops when control flow, mutation, or operational steps are the story.</p>
-<h2 id="views-borrow-and-laziness-moves-bugs-later-in-time"><a class="header" href="#views-borrow-and-laziness-moves-bugs-later-in-time">Views Borrow, and Laziness Moves Bugs Later in Time</a></h2>
+<h2 id="views-borrow-and-laziness-moves-bugs-later-in-time"><a class="header" href="#views-borrow-and-laziness-moves-bugs-later-in-time">Views borrow, and laziness moves bugs later in time</a></h2>
 <p>The hardest production bug class with ranges is not algorithmic. It is lifetime. Views are often non-owning, and lazy pipelines delay work until iteration. That means the place where a view is constructed and the place where its bug becomes visible may be far apart.</p>
 <p>Consider an anti-pattern that shows up in request processing code:</p>
 <pre><code class="language-cpp">auto tenant_ids() {
@@ -260,7 +260,7 @@ records.erase(
 <li>Use <code>std::generator</code> or another owning abstraction when the sequence is produced over time rather than borrowed from existing storage.</li>
 </ul>
 <p>Borrowing is not a defect. Hidden borrowing is.</p>
-<h2 id="do-not-export-deep-lazy-pipelines-as-casual-apis"><a class="header" href="#do-not-export-deep-lazy-pipelines-as-casual-apis">Do Not Export Deep Lazy Pipelines as Casual APIs</a></h2>
+<h2 id="do-not-export-deep-lazy-pipelines-as-casual-apis"><a class="header" href="#do-not-export-deep-lazy-pipelines-as-casual-apis">Do not export deep lazy pipelines as casual APIs</a></h2>
 <p>Internally, ranges are often excellent glue. At subsystem boundaries, they deserve more caution. Returning a deep view stack from a public API exports not just a sequence but a bundle of lifetime assumptions, iterator category behavior, evaluation timing, and sometimes surprising invalidation rules.</p>
 <p>That is a lot of semantic surface for a caller who may only want “the filtered records.”</p>
 <p>In a library or large service boundary, ask what the caller really needs.</p>
@@ -304,7 +304,7 @@ chain(R&amp;&amp; middlewares, http::Handler base) {
 </code></pre>
 <p>This is a good use of range utilities inside a local algorithm: the reverse iteration intent is expressed through <code>rbegin</code>/<code>rend</code> rather than index arithmetic, and the function produces an owned result.</p>
 <p>The same caution applies to <code>string_view</code> and <code>span</code> inside pipelines. A transform that produces borrowed slices is fine if the source lifetime stays local and obvious. It is risky if those slices are smuggled across threads, queued for later work, or cached.</p>
-<h2 id="stdgenerator-is-for-pull-based-sources-not-for-replacing-every-loop"><a class="header" href="#stdgenerator-is-for-pull-based-sources-not-for-replacing-every-loop"><code>std::generator</code> Is for Pull-Based Sources, Not for Replacing Every Loop</a></h2>
+<h2 id="stdgenerator-is-for-pull-based-sources-not-for-replacing-every-loop"><a class="header" href="#stdgenerator-is-for-pull-based-sources-not-for-replacing-every-loop"><code>std::generator</code> is for pull-based sources, not for replacing every loop</a></h2>
 <p>C++23’s <code>std::generator</code> is useful because some sequences are not naturally “stored then traversed.” They are produced incrementally: paged database scans, directory walks, chunked file reads, retry-aware polling, or protocol decoders that yield complete messages as bytes arrive.</p>
 <p>This is where generators change design. They let the producer keep state between elements without forcing the caller into callback inversion or hand-written iterator machinery.</p>
 <p>A batch job that reads pages from a remote API is a good example. Before generators, expressing an incremental page-fetching sequence required either callback inversion or a hand-written iterator class:</p>
@@ -360,15 +360,15 @@ private:
 <p>That said, generators are coroutine machinery. They come with suspension points, frame lifetime, and sometimes allocation cost depending on implementation and optimization. They are not free. They are also harder to debug than a local vector and a loop. Use them when incremental production is the real structure of the problem, not as a fashionable replacement for ordinary containers.</p>
 <p>Another boundary question matters here. Does the generator yield owned values or borrowed references into internal buffers? Yielding borrowed references can be correct, but only when the lifetime across suspension points is explicit and easy to reason about. In many cases, yielding small owning values is the safer trade.</p>
 <p>If your standard library support for <code>std::generator</code> is incomplete on a target toolchain, the same design guidance still applies to an equivalent coroutine-backed generator type. The question is structural, not vendor-specific.</p>
-<h2 id="laziness-helps-until-observability-and-error-handling-matter-more"><a class="header" href="#laziness-helps-until-observability-and-error-handling-matter-more">Laziness Helps Until Observability and Error Handling Matter More</a></h2>
+<h2 id="laziness-helps-until-observability-and-error-handling-matter-more"><a class="header" href="#laziness-helps-until-observability-and-error-handling-matter-more">Laziness helps until observability and error handling matter more</a></h2>
 <p>Lazy pipelines are appealing because they delay work until needed. That is often useful. It also means instrumentation, exceptions or <code>expected</code> propagation, and failure attribution may happen later than readers expect.</p>
 <p>In a log processing path, a pipeline that filters, parses, enriches, and serializes on demand may look elegant, but operationally it can smear a failure across the eventual consumer. When parsing fails, where does the error belong? When metrics should count discarded records, where is the increment performed? When tracing needs stage-level timing, what exactly is a stage in a fused lazy pipeline?</p>
-<p>This is where materialization points earn their keep. Breaking a long pipeline into named phases with owned intermediate results can make the system easier to observe and reason about, even if it costs a little memory. Not every temporary allocation is waste. Some are what let you attach metrics, isolate faults, and put the debugger in the right place.</p>
+<p>This is where materialization points matter. Breaking a long pipeline into named phases with owned intermediate results can make the system easier to observe and reason about, even if it costs a little memory. Not every temporary allocation is waste. Some are what let you attach metrics, isolate faults, and put the debugger in the right place.</p>
 <p>Do not confuse laziness with efficiency. Sometimes fusing operations reduces work. Sometimes it blocks parallelization, complicates branch prediction, or simply makes the expensive part harder to see. Benchmark the whole path rather than assuming the pipeline form is faster.</p>
-<h2 id="where-ranges-and-generators-stop-being-the-right-tool"><a class="header" href="#where-ranges-and-generators-stop-being-the-right-tool">Where Ranges and Generators Stop Being the Right Tool</a></h2>
+<h2 id="where-ranges-and-generators-stop-being-the-right-tool"><a class="header" href="#where-ranges-and-generators-stop-being-the-right-tool">Where ranges and generators stop being the right tool</a></h2>
 <p>Ranges are a poor fit when mutation is central, when control flow is irregular, when early exits carry important side effects, or when the algorithm is already dominated by external I/O or locking. Generators are a poor fit when a plain container result is cheaper and simpler, when the sequence must be revisited multiple times, or when coroutine lifetime across subsystems would be harder to reason about than a local buffer.</p>
 <p>Another common failure is turning pipelines into performance theater. A chain of five adaptors over unstable borrowed state is not better engineering than a loop with three well-named variables. The winning design is the one whose ownership, cost, and failure behavior remain easy to explain.</p>
-<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and Review</a></h2>
+<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and review</a></h2>
 <p>Ranges and generators deserve specific review questions.</p>
 <ul>
 <li>What owns the data a view is traversing, and is that owner visibly alive for the full iteration?</li>

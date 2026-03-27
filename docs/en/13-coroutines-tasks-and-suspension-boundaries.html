@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -181,9 +181,9 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="coroutines-tasks-and-suspension-boundaries"><a class="header" href="#coroutines-tasks-and-suspension-boundaries">Coroutines, Tasks, and Suspension Boundaries</a></h1>
+                        <h1 id="coroutines-tasks-and-suspension-boundaries"><a class="header" href="#coroutines-tasks-and-suspension-boundaries">Coroutines, tasks, and suspension boundaries</a></h1>
 <p>This chapter assumes you already understand failure transport and concurrent shared-state design. The focus here is narrower: what a coroutine owns, what survives suspension, and what goes wrong when asynchronous control flow hides lifetime.</p>
-<h2 id="the-production-problem"><a class="header" href="#the-production-problem">The Production Problem</a></h2>
+<h2 id="the-production-problem"><a class="header" href="#the-production-problem">The production problem</a></h2>
 <p>Coroutines make asynchronous code easier to read and easier to lie about.</p>
 <p>A request handler that previously nested callbacks can become straight-line code. A streaming parser can yield values naturally. A background refresh job can <code>co_await</code> timers and I/O instead of hand-writing a state machine. Those are real gains. But the machinery did not disappear. The state machine still exists. It now lives in a coroutine frame whose lifetime, ownership, and resumption context must be designed on purpose.</p>
 <p>Production failures with coroutines usually have one of four shapes:</p>
@@ -194,7 +194,7 @@
 <li>Execution hops across threads or executors in ways the code does not make obvious.</li>
 </ol>
 <p>This chapter keeps the scope local. The question is not yet how a whole task tree should be managed under cancellation pressure. That is Chapter 14. The question here is what each coroutine actually is: a resource-owning object with suspension points that define lifetime boundaries.</p>
-<h2 id="what-coroutines-replace-callback-hell-and-manual-state-machines"><a class="header" href="#what-coroutines-replace-callback-hell-and-manual-state-machines">What Coroutines Replace: Callback Hell and Manual State Machines</a></h2>
+<h2 id="what-coroutines-replace-callback-hell-and-manual-state-machines"><a class="header" href="#what-coroutines-replace-callback-hell-and-manual-state-machines">What coroutines replace: callback hell and manual state machines</a></h2>
 <p>To appreciate coroutine design tradeoffs, see what they displace. Pre-coroutine asynchronous code relies on continuation-passing style, where each step chains a callback into the next. A simple “fetch, validate, store” sequence looks like this:</p>
 <pre><code class="language-cpp">// Continuation-passing style — correct but unreadable at scale.
 void handle_request(request req, std::function&lt;void(response)&gt; done) {
@@ -229,12 +229,12 @@ void handle_request(request req, std::function&lt;void(response)&gt; done) {
 </code></pre>
 <p>Sequential reading, single error path per step, no nesting. The improvement is real. But the state machine did not vanish — it moved into the coroutine frame. The rest of this chapter is about what that means for ownership and lifetime.</p>
 <p>The example project’s handler layer (<code>examples/web-api/src/modules/handlers.cppm</code>) shows a synchronous version of this same structural benefit. Each handler is a function that accepts <code>const http::Request&amp;</code> (borrowed) and returns <code>http::Response</code> (owned). The control flow is straight-line: parse the path parameter, validate input, call the repository, translate the result to HTTP. Error handling is local to each step, not nested inside callbacks. While these handlers are not coroutines, they demonstrate the same principle — when each step is sequential and error paths are flat, business logic stays readable and reviewable.</p>
-<h2 id="a-coroutine-is-a-state-machine-with-storage"><a class="header" href="#a-coroutine-is-a-state-machine-with-storage">A Coroutine Is a State Machine With Storage</a></h2>
+<h2 id="a-coroutine-is-a-state-machine-with-storage"><a class="header" href="#a-coroutine-is-a-state-machine-with-storage">A coroutine is a state machine with storage</a></h2>
 <p>Treating coroutines as syntax sugar is the fastest way to ship lifetime bugs.</p>
 <p>When a function becomes a coroutine, some state moves into a frame. Parameters may be copied or moved there. Locals that live across suspension reside there. Awaiter state may influence when and where execution resumes. Destruction may happen on success, on failure, on cancellation, or when the owning task object is destroyed. None of that is cosmetic.</p>
 <p>This matters because ordinary stack intuition stops being reliable. In a non-coroutine function, a local dies when control exits the scope. In a coroutine, a local that spans suspension may live much longer than the caller expects, while a borrowed view into caller-owned storage may become invalid long before resumption.</p>
 <p>The core review question is simple: what data must remain valid from one suspension point to the next?</p>
-<h2 id="suspension-points-are-lifetime-boundaries"><a class="header" href="#suspension-points-are-lifetime-boundaries">Suspension Points Are Lifetime Boundaries</a></h2>
+<h2 id="suspension-points-are-lifetime-boundaries"><a class="header" href="#suspension-points-are-lifetime-boundaries">Suspension points are lifetime boundaries</a></h2>
 <p>Every <code>co_await</code> is a boundary where ordinary assumptions should be re-checked.</p>
 <p>Before suspension, ask:</p>
 <ol>
@@ -246,7 +246,7 @@ void handle_request(request req, std::function&lt;void(response)&gt; done) {
 <p>This is the local equivalent of API lifetime review. If the coroutine keeps borrowed data across suspension, you must prove that the owner outlives the coroutine or change the coroutine to take ownership.</p>
 <p>That is why coroutine APIs often need stricter parameter choices than synchronous ones. A synchronous helper might safely accept <code>std::string_view</code> because it finishes immediately. An asynchronous task that suspends usually should not keep that view unless the ownership contract is extremely tight and documented.</p>
 <p>The example project’s <code>Request::path_param_after()</code> (<code>examples/web-api/src/modules/http.cppm</code>) illustrates the safe side of this boundary. It returns <code>std::optional&lt;std::string_view&gt;</code> pointing into the request’s <code>path</code> member. That is safe here because the handler executes synchronously — the <code>Request</code> object outlives the entire handler call. If these handlers were coroutines that suspended mid-execution, the same <code>string_view</code> would become a dangling reference the moment the request buffer was recycled. The design works precisely because the lifetime contract is simple: the request lives for the duration of the handler, and handlers do not suspend.</p>
-<h2 id="anti-pattern-borrowed-request-state-survives-suspension"><a class="header" href="#anti-pattern-borrowed-request-state-survives-suspension">Anti-pattern: Borrowed Request State Survives Suspension</a></h2>
+<h2 id="anti-pattern-borrowed-request-state-survives-suspension"><a class="header" href="#anti-pattern-borrowed-request-state-survives-suspension">Anti-pattern: borrowed request state survives suspension</a></h2>
 <pre><code class="language-cpp">// Anti-pattern: borrowed data may dangle after suspension.
 task&lt;parsed_request&gt; parse_and_authorize(
     std::string_view body,
@@ -267,7 +267,7 @@ task&lt;parsed_request&gt; parse_and_authorize(
 }
 </code></pre>
 <p>The copy or move is visible and reviewable. The coroutine frame now owns what it needs. If that allocation cost matters, measure it and redesign around message boundaries or storage reuse. Do not silently borrow across time.</p>
-<h2 id="more-lifetime-traps-locals-temporaries-and-lambda-captures"><a class="header" href="#more-lifetime-traps-locals-temporaries-and-lambda-captures">More Lifetime Traps: Locals, Temporaries, and Lambda Captures</a></h2>
+<h2 id="more-lifetime-traps-locals-temporaries-and-lambda-captures"><a class="header" href="#more-lifetime-traps-locals-temporaries-and-lambda-captures">More lifetime traps: locals, temporaries, and lambda captures</a></h2>
 <p>The borrowed-parameter anti-pattern above is the most common case, but coroutine lifetime bugs take other forms that deserve explicit attention.</p>
 <h3 id="dangling-reference-to-a-callers-local"><a class="header" href="#dangling-reference-to-a-callers-local">Dangling reference to a caller’s local</a></h3>
 <pre><code class="language-cpp">// BUG: coroutine captures a reference to a local that dies when the caller returns.
@@ -301,9 +301,9 @@ public:
 };
 </code></pre>
 <p>If a <code>connection</code> object is moved into another container, or destroyed while <code>run()</code> is suspended, <code>this</code> becomes invalid at resumption. Member coroutines are safe only when the object’s lifetime is guaranteed to exceed the coroutine’s. In practice, this often means the coroutine should take a <code>shared_ptr&lt;connection&gt;</code> or the owning scope must be structured to prevent destruction during suspension.</p>
-<p>These are not exotic edge cases. They are the normal failure modes of coroutine lifetime in production code. Every suspension point is a moment where the caller’s world may have changed.</p>
-<h2 id="task-types-are-ownership-contracts"><a class="header" href="#task-types-are-ownership-contracts">Task Types Are Ownership Contracts</a></h2>
-<p>The return type of a coroutine is not decoration. It defines ownership, result transport, and destruction semantics.</p>
+<p>These are not exotic edge cases. They are the normal failure modes of coroutine lifetime in production code.</p>
+<h2 id="task-types-are-ownership-contracts"><a class="header" href="#task-types-are-ownership-contracts">Task types are ownership contracts</a></h2>
+<p>The return type of a coroutine is not decoration. It defines ownership, result transport, and destruction behavior.</p>
 <p>A useful task type answers at least these questions:</p>
 <ol>
 <li>Does destroying the task cancel work, detach it, block, or leak it?</li>
@@ -314,12 +314,12 @@ public:
 </ol>
 <p>Many coroutine bugs are really task-type bugs. A detached “fire-and-forget” coroutine is not an asynchronous style choice. It is an ownership claim that no later code needs to know when the work finishes, whether it failed, or whether it should be canceled during shutdown. That claim is rarely true in production services.</p>
 <p>The conservative default is simple: every started task should have a clear owner and a visible completion path. If you cannot name the owner, you are building orphaned work.</p>
-<h2 id="eager-versus-lazy-start-changes-failure-timing"><a class="header" href="#eager-versus-lazy-start-changes-failure-timing">Eager Versus Lazy Start Changes Failure Timing</a></h2>
+<h2 id="eager-versus-lazy-start-changes-failure-timing"><a class="header" href="#eager-versus-lazy-start-changes-failure-timing">Eager versus lazy start changes failure timing</a></h2>
 <p>Whether a coroutine begins running immediately or only when awaited affects correctness, not just performance.</p>
 <p>An eager task may start side effects before the caller stores the handle. A lazy task may delay work until orchestration code decides where and when it should run. Both are valid. What matters is that the behavior is consistent and documented.</p>
 <p>This influences failure boundaries. If task construction can start work, exceptions and cancellation may become observable before any parent scope thinks the task is “live.” If work starts only on first await or explicit scheduling, ownership is usually easier to reason about.</p>
 <p>The recommendation for production code is not one universal policy. It is that the task abstraction must make the policy obvious enough that reviewers do not need to inspect promise-type internals to know when side effects begin.</p>
-<h2 id="resumption-context-is-part-of-correctness"><a class="header" href="#resumption-context-is-part-of-correctness">Resumption Context Is Part of Correctness</a></h2>
+<h2 id="resumption-context-is-part-of-correctness"><a class="header" href="#resumption-context-is-part-of-correctness">Resumption context is part of correctness</a></h2>
 <p>Coroutine code often reads like it stays on one thread. That is an illusion.</p>
 <p>An awaited operation may resume on an I/O thread, a scheduler pool, a UI-affine thread, or an executor chosen by the awaiter. If the code touches thread-confined state after resumption, or if it expects continuation on a specific executor, that requirement must be explicit in the abstraction.</p>
 <p>This is where teams recreate callback-era bugs with prettier syntax. The control flow looks sequential, so reviewers stop asking where the continuation runs. Then a coroutine resumes on a pool thread and touches request-local state that was only safe on the initiating executor.</p>
@@ -330,7 +330,7 @@ public:
 <li>The component is designed so post-await code is executor-agnostic.</li>
 </ol>
 <p>If none is true, the coroutine is relying on ambient behavior. Ambient behavior breaks under refactoring.</p>
-<h2 id="coroutines-do-not-remove-error-boundary-design"><a class="header" href="#coroutines-do-not-remove-error-boundary-design">Coroutines Do Not Remove Error-Boundary Design</a></h2>
+<h2 id="coroutines-do-not-remove-error-boundary-design"><a class="header" href="#coroutines-do-not-remove-error-boundary-design">Coroutines do not remove error-boundary design</a></h2>
 <p>A <code>co_await</code> does not answer whether failure should throw, return <code>std::expected</code>, request cancellation, or terminate a larger operation. It merely changes the control-flow shape.</p>
 <p>That means the error-boundary decisions from Chapter 3 still apply. Keep them consistent inside task APIs:</p>
 <ol>
@@ -340,17 +340,17 @@ public:
 <li>Make timeout handling explicit rather than burying it in an awaiter with surprising policy.</li>
 </ol>
 <p>The failure model should be readable at the call site. “This coroutine may suspend” is not enough information. The caller also needs to know what completion means and what failed completion looks like.</p>
-<h2 id="generators-and-tasks-solve-different-problems"><a class="header" href="#generators-and-tasks-solve-different-problems">Generators and Tasks Solve Different Problems</a></h2>
+<h2 id="generators-and-tasks-solve-different-problems"><a class="header" href="#generators-and-tasks-solve-different-problems">Generators and tasks solve different problems</a></h2>
 <p>C++23 coroutine support enables both pull-style generators and asynchronous tasks. Do not blur them.</p>
 <p>Generators are about staged production of values with a local consumer. They often work well for streaming parse pipelines, tokenization, batched traversal, or incremental transformation. Their main concerns are iterator validity, producer lifetime, and whether yielded references remain valid.</p>
 <p>Tasks are about eventual completion of asynchronous work. Their concerns are ownership, scheduling, cancellation, and result transport.</p>
 <p>They share machinery and deserve different review questions. A generator bug is often “what does this yielded reference point to?” A task bug is often “who owns this work after suspension?” Keeping those categories separate makes code review sharper.</p>
-<h2 id="destruction-and-cancellation-must-compose"><a class="header" href="#destruction-and-cancellation-must-compose">Destruction and Cancellation Must Compose</a></h2>
+<h2 id="destruction-and-cancellation-must-compose"><a class="header" href="#destruction-and-cancellation-must-compose">Destruction and cancellation must compose</a></h2>
 <p>Coroutine cleanup paths are easy to ignore because the happy path looks linear.</p>
 <p>Ask what happens if the owning scope exits while the coroutine is suspended. Does destruction request cancellation? Does it wait for child operations? Can it race with completion? Are outstanding registrations, file descriptors, timers, or buffers released exactly once?</p>
 <p>These are not implementation details. They are the semantic contract of the task abstraction.</p>
 <p>If coroutine destruction merely drops the handle while the underlying operation continues somewhere else, that is detach-by-destruction. Sometimes that is intentional. More often it is a shutdown bug waiting to happen.</p>
-<h2 id="verification-for-coroutine-code"><a class="header" href="#verification-for-coroutine-code">Verification for Coroutine Code</a></h2>
+<h2 id="verification-for-coroutine-code"><a class="header" href="#verification-for-coroutine-code">Verification for coroutine code</a></h2>
 <p>Testing coroutine logic with only success-path unit tests is not enough. Verification should target boundary behavior:</p>
 <ol>
 <li>Lifetime tests that force the caller-owned data to disappear before resumption.</li>
@@ -360,7 +360,7 @@ public:
 <li>Sanitizer runs for use-after-free and race detection when coroutine state interacts with shared objects.</li>
 </ol>
 <p>For high-value components, it is often worth writing deterministic test awaiters or fake schedulers so resumption order can be controlled instead of guessed.</p>
-<h2 id="review-questions-for-coroutines"><a class="header" href="#review-questions-for-coroutines">Review Questions for Coroutines</a></h2>
+<h2 id="review-questions-for-coroutines"><a class="header" href="#review-questions-for-coroutines">Review questions for coroutines</a></h2>
 <p>Before approving coroutine code, ask:</p>
 <ol>
 <li>What lives in the coroutine frame, and who owns it?</li>

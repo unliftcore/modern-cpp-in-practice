@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -188,7 +188,7 @@
 <p>The manuscript moves in seven parts. Parts I and II establish the mental models and everyday vocabulary that keep ordinary code reviewable. Part III moves outward into interfaces, polymorphism, libraries, modules, and ABI reality. Parts IV and V address concurrency, data layout, allocation, and measurement. Part VI covers the verification and diagnostic stack that keeps native systems honest. Part VII closes with complete production shapes: a service, a reusable library, and a reviewer workflow.</p>
 <p>That structure exists because the expensive failures in C++ are rarely local. A service keeps request state alive through <code>shared_ptr</code>, fans work out into background tasks, logs failure by side effect, and hangs during shutdown. A library accepts borrowed views at the boundary, then stores them past the caller’s lifetime. A performance refactor removes one copy and quietly adds contention and allocator pressure elsewhere. Each local choice can look reasonable. The failure shows up when ownership, time, error transport, and cost models interact.</p>
 <p>Undefined behavior is a related pressure that runs through the entire book rather than living in one quarantine chapter. A dangling reference, a data race, an invalidated iterator, or a view pipeline that quietly outlives its source can turn a plausible design into a system that fails only under optimization, load, or a different toolchain. The ownership, concurrency, performance, and tooling chapters each address the UB risks most relevant to their domain. Treat UB awareness as a thread that connects the manuscript, not as a one-time warning label.</p>
-<h2 id="how-to-read-this-book"><a class="header" href="#how-to-read-this-book">How to Read This Book</a></h2>
+<h2 id="how-to-read-this-book"><a class="header" href="#how-to-read-this-book">How to read this book</a></h2>
 <p>You can read straight through. The sequence is meant to build judgment in layers: first ownership and invariants, then everyday library and language tools, then architecture, concurrency, performance, verification, and full production patterns. But the chapter set also supports targeted entry if you already know the class of problem you are solving:</p>
 <div class="table-wrapper">
 <table>

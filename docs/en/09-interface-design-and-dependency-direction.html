@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "light";
-            window.path_to_searchindex_js = "searchindex-810527eb.js";
+            window.path_to_searchindex_js = "searchindex-58bfaae8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6430f798.js"></script>
@@ -190,7 +190,7 @@
 <h2 id="why-this-gets-expensive"><a class="header" href="#why-this-gets-expensive">Why This Gets Expensive</a></h2>
 <p>Bad dependency direction multiplies cost in ways that code review often misses.</p>
 <p>If domain logic depends directly on SQL row types, protobuf-generated classes, HTTP request wrappers, or filesystem traversal state, then every test, benchmark, and refactor must drag those details with it. The dependency graph becomes wider than the design requires. Build times increase because transitive includes and templates spread implementation detail everywhere. Review quality drops because boundary violations become normal. Most importantly, design choices that should have been local stop being local.</p>
-<p>The cost is not only compile time. It is also conceptual stability. A good interface can survive a database change, a queue replacement, or a logging rewrite. A bad one requires the rest of the codebase to relearn internal facts that were never their concern.</p>
+<p>The cost goes beyond compile time. It is also conceptual stability. A good interface can survive a database change, a queue replacement, or a logging rewrite. A bad one requires the rest of the codebase to relearn internal facts that were never their concern.</p>
 <h2 id="start-from-the-boundary-question"><a class="header" href="#start-from-the-boundary-question">Start From the Boundary Question</a></h2>
 <p>Before writing an interface, force the production question into one sentence.</p>
 <p>In a native service, the question is usually not “how do I expose the repository?” It is “how does the order workflow ask for customer credit state?” In a shared library, it is not “how do I surface the parser internals?” It is “what contract does the caller need in order to validate and transform incoming records?”</p>
@@ -410,7 +410,7 @@ result_to_response(const Result&lt;T&gt;&amp; result, int success_status = 200) 
 <li>Does the dependency arrow point toward the more stable policy vocabulary?</li>
 <li>Is any abstraction here justified by a real axis of change, or only by a desire to mock?</li>
 </ol>
-<p>Verification is not only code review. Integration tests should exercise adapters at the actual boundary where translation happens. Build profiling is also useful: if a supposedly clean interface still drags large transitive dependencies everywhere, the design may be source-level coupling in disguise.</p>
+<p>Verification goes beyond code review. Integration tests should exercise adapters at the actual boundary where translation happens. Build profiling is also useful: if a supposedly clean interface still drags large transitive dependencies everywhere, the design may be source-level coupling in disguise.</p>
 <h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
 <p>Interface design is mostly about deciding what must not leak.</p>
 <p>Keep dependency direction aligned with stable policy, not convenient implementation. Accept cheap borrowed inputs when retention is unnecessary, but return owned meaning when crossing a boundary. Split interfaces by responsibility instead of building bags of operations. Translate failures where volatile dependencies enter the system. Abstract only where there is a real design seam.</p>
