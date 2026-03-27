@@ -1,0 +1,496 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>针对资源管理与边界问题的测试策略 - 现代 C++ 实战</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="面向有经验程序员的现代 C++ 生产实践指南：所有权、接口、失败边界、并发、性能与验证。">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-8b875a01.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">现代 C++ 实战</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice/edit/main/translations/zh-CN/chapters/chapters/18-testing-strategy-for-resource-and-boundary-bugs.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="面向资源与边界缺陷的测试策略"><a class="header" href="#面向资源与边界缺陷的测试策略">面向资源与边界缺陷的测试策略</a></h1>
+<p>C++ 中代价最高的 bug，大多不是”算法算错了数”这种。真正昂贵的是资源与边界缺陷：错误路径上忘关的文件描述符、提交失败后残留的临时文件、取消时泄漏了后台工作、解析器在某个特定字节模式下平时没事而一到高负载就炸，又或者某个库边界悄悄把业务错误变成了进程崩溃。</p>
+<p>只测 happy path 的单元测试，对这些设计施加不了多少压力。它们往往只验证了正常行为，却把生命周期转换、清理保证和边界契约晾在一边。在现代 C++ 中，这笔账很不划算。所有权和错误处理已经足够显式，完全可以围绕它们来设计测试——而且理应如此。一个组件如果持有稀缺资源、跨越进程或 API 边界、又或者在超时、取消、畸形输入、部分失败等场景下有不同行为，那它的测试策略就应该围绕这些事实来构建。</p>
+<p>本章谈的是测试设计，不是工具选型。目标是在代码上线之前，想清楚需要哪些证据。Sanitizer、静态分析和构建诊断是下一章的内容；运行时日志、metrics、trace 和崩溃证据是再下一章的内容。这里要回答的问题更简单：哪些测试能证明，在系统承压时所有权、清理和边界行为依然正确？</p>
+<h2 id="从失败形状开始而不是从测试金字塔口号开始"><a class="header" href="#从失败形状开始而不是从测试金字塔口号开始">从失败形状开始，而不是从“测试金字塔”口号开始</a></h2>
+<p>泛泛的测试建议到了 C++ 这里很快就不够用了，因为高代价的故障分布极不均匀。如果一个服务的风险主要集中在关闭、取消、临时文件替换、buffer 生命周期和外部协议转换上，测试套件就应该在这些地方投入最多精力。</p>
+<p>所以要从失败形状入手。</p>
+<p>针对每个组件，问四个问题：</p>
+<ol>
+<li>哪些资源必须被恰好一次地释放、回滚或提交？</li>
+<li>哪些边界会在子系统之间转换错误、所有权或表示？</li>
+<li>哪些输入或调度情况大到无法枚举，但生成起来很便宜？</li>
+<li>哪些行为依赖时间、并发或取消，而不是简单的调用顺序？</li>
+</ol>
+<p>这些问题会自然引出不同的测试形式。资源清理通常需要确定性的故障注入加后置条件检查；边界转换通常需要基于真实 payload 和错误类别的契约测试；输入空间巨大的场景通常需要属性测试（property testing）和 fuzzing；时间敏感的并发通常需要可控的时钟、executor 和关闭编排，而非基于 sleep 的测试。</p>
+<p>覆盖率数字回答不了这些问题。一行代码跑到了，并不能证明回滚确实发生了、所有权依然有效、或者关闭路径在排空后台工作时没有 use-after-free 风险。应该把覆盖率视为一个滞后的完整性信号，而不是组织测试套件的核心原则。</p>
+<h2 id="在业务关心的层级上测试资源生命周期"><a class="header" href="#在业务关心的层级上测试资源生命周期">在业务关心的层级上测试资源生命周期</a></h2>
+<p>针对资源 bug 的正确测试，几乎不会去断言某个 helper 被调用了。它断言的是获取、提交、回滚和释放这些环节的可观测契约。</p>
+<p>假设有一个服务需要原子地重写磁盘快照。真正的生产规则不是”先调 <code>write</code>，再调 <code>rename</code>，失败了再 <code>remove</code>”，而是”要么新快照变得可见，要么旧快照保持不变且临时文件被清理掉”。有用的测试应该直接验证这条规则。</p>
+<h3 id="有意保留为-partial一个让回滚可测试的接缝"><a class="header" href="#有意保留为-partial一个让回滚可测试的接缝">有意保留为 partial：一个让回滚可测试的接缝</a></h3>
+<pre><code class="language-cpp">struct file_system {
+    virtual ~file_system() = default;
+
+    virtual auto write(std::filesystem::path const&amp; path,
+                       std::span&lt;char const&gt; bytes)
+        -&gt; std::expected&lt;void, std::error_code&gt; = 0;
+
+    virtual auto rename(std::filesystem::path const&amp; from,
+                        std::filesystem::path const&amp; to)
+        -&gt; std::expected&lt;void, std::error_code&gt; = 0;
+
+    virtual void remove(std::filesystem::path const&amp; path) noexcept = 0;
+};
+
+enum class snapshot_error {
+    staging_write_failed,
+    commit_failed,
+};
+
+auto write_snapshot_atomically(file_system&amp; fs,
+                               std::filesystem::path const&amp; target,
+                               std::span&lt;char const&gt; bytes)
+    -&gt; std::expected&lt;void, snapshot_error&gt;
+{
+    auto staging = target;
+    staging += ".tmp";
+
+    if (auto r = fs.write(staging, bytes); !r) {
+        return std::unexpected(snapshot_error::staging_write_failed);
+    }
+
+    if (auto r = fs.rename(staging, target); !r) {
+        fs.remove(staging);
+        return std::unexpected(snapshot_error::commit_failed);
+    }
+
+    return {};
+}
+</code></pre>
+<pre><code class="language-cpp">TEST(write_snapshot_atomically_cleans_up_staging_file_on_commit_failure)
+{
+    fake_file_system fs;
+    fs.fail_rename_with(make_error_code(std::errc::device_or_resource_busy));
+
+    auto result = write_snapshot_atomically(
+        fs,
+        "cache/index.bin",
+        std::as_bytes(std::span{"new snapshot"sv.data(), "new snapshot"sv.size()}));
+
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), snapshot_error::commit_failed);
+    EXPECT_FALSE(fs.exists("cache/index.bin.tmp"));
+    EXPECT_EQ(fs.read("cache/index.bin"), "old snapshot");
+}
+</code></pre>
+<p>这个 seam 选得恰到好处，因为它正好落在业务边界上。测试没有把半个标准库都 mock 掉，而是只在外部副作用周围建了一个可替换接口，然后检查调用方真正关心的后置条件。</p>
+<p>这个权衡很重要。过度 mock 基础设施只会产出脆弱的测试——它们验证的是 syscall 的调用顺序，而非操作的安全属性。但如果设计中完全不留 seam，失败路径就只能靠大型集成测试来覆盖。折中之道是：在资源边界做一次隔离，然后围绕提交与回滚行为来写测试。</p>
+<h3 id="过度-mock-何时会掩盖真实-bug"><a class="header" href="#过度-mock-何时会掩盖真实-bug">过度 mock 何时会掩盖真实 bug</a></h3>
+<p>想想“检查实现细节的测试“和“检查安全属性的测试“之间的差别。团队常常会写出这样的测试：</p>
+<pre><code class="language-cpp">// BAD: This test passes, but proves nothing about cleanup.
+TEST(write_snapshot_calls_remove_on_rename_failure)
+{
+    strict_mock_file_system fs;
+    EXPECT_CALL(fs, write(_, _)).WillOnce(Return(std::expected&lt;void, std::error_code&gt;{}));
+    EXPECT_CALL(fs, rename(_, _)).WillOnce(Return(
+        std::unexpected(make_error_code(std::errc::device_or_resource_busy))));
+    EXPECT_CALL(fs, remove("cache/index.bin.tmp")).Times(1);
+
+    write_snapshot_atomically(fs, "cache/index.bin", as_bytes("data"sv));
+}
+</code></pre>
+<p>这个测试验证了 <code>remove</code> 被调用了，但并没有验证临时文件真的消失了，也没有验证原文件保持完好。一旦有人把清理逻辑重构成 <code>std::filesystem::remove_all</code>，或者改了 staging 路径约定，这个测试就会挂掉——然而 <code>remove</code> 静默失败、临时文件残留这种真实 bug 反而能通过。前面基于 <code>fake_file_system</code> 的测试更强，因为它断言的是可观测的后置条件，而非调用序列。</p>
+<h3 id="资源泄漏测试验证清理而不只是-happy-path-所有权"><a class="header" href="#资源泄漏测试验证清理而不只是-happy-path-所有权">资源泄漏测试：验证清理，而不只是 happy-path 所有权</a></h3>
+<p>当错误路径跳过了构造，或者所有权被错误地 move 走，单靠 RAII 的作用域管理是不够的。有一种出乎意料地常见的模式：资源只在某条特定的失败路径上才会泄漏：</p>
+<pre><code class="language-cpp">class connection_pool {
+public:
+    auto acquire() -&gt; std::expected&lt;pooled_connection, pool_error&gt;;
+    void release(pooled_connection conn) noexcept;
+};
+
+// This function has a leak on the second acquire failure.
+auto transfer(connection_pool&amp; pool, transfer_request const&amp; req)
+    -&gt; std::expected&lt;receipt, transfer_error&gt;
+{
+    auto src = pool.acquire();
+    if (!src) return std::unexpected(transfer_error::no_connection);
+
+    auto dst = pool.acquire();
+    if (!dst) {
+        // BUG: forgot to release src back to the pool.
+        return std::unexpected(transfer_error::no_connection);
+    }
+
+    // ... perform transfer, release both on success ...
+    pool.release(std::move(*src));
+    pool.release(std::move(*dst));
+    return receipt{};
+}
+</code></pre>
+<p>只走成功路径的测试看不到这个泄漏；只在失败时检查返回值的测试同样会漏掉。真正能抓住它的测试，断言的是连接池的状态：</p>
+<pre><code class="language-cpp">TEST(transfer_releases_source_connection_when_dest_acquire_fails)
+{
+    counting_connection_pool pool{.max_connections = 1};
+
+    auto result = transfer(pool, make_request());
+
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(pool.available(), 1);  // Source connection must be returned.
+}
+</code></pre>
+<p>规律就是：如果你持有稀缺资源，失败路径的测试就该断言资源已被归还，而不只是断言返回了一个错误。</p>
+<h3 id="异常安全从能编译到正确之间的差距"><a class="header" href="#异常安全从能编译到正确之间的差距">异常安全：从“能编译”到“正确”之间的差距</a></h3>
+<p>即便代码路径没有标 <code>noexcept</code>，只要异常安全性很重要，就值得为它写测试。提供强异常保证的容器或缓存尤其如此：</p>
+<pre><code class="language-cpp">TEST(cache_insert_preserves_existing_entries_on_allocation_failure)
+{
+    lru_cache&lt;std::string, std::string&gt; cache(/*capacity=*/4);
+    cache.insert("key1", "value1");
+    cache.insert("key2", "value2");
+
+    failing_allocator::arm_failure_after(1);  // Fail during insert internals.
+
+    auto result = cache.insert("key3", "value3");
+    EXPECT_FALSE(result.has_value());
+
+    // Strong guarantee: pre-existing entries are intact.
+    EXPECT_EQ(cache.get("key1"), "value1");
+    EXPECT_EQ(cache.get("key2"), "value2");
+    EXPECT_EQ(cache.size(), 2);
+}
+</code></pre>
+<p>如果缓存只提供基本保证，测试仍然应当验证没有资源泄漏，且缓存处于有效状态（哪怕内容已变）。最坏的情况是压根没有测试——缓存在抛异常时悄悄破坏了内部结构，直到生产环境的内存分配压力下才被发现。</p>
+<p>同样的思路也适用于 socket、事务、受锁保护的 registry、临时目录、子进程 handle，以及持有线程的服务。问自己：在成功、部分失败、重试和关闭各种场景下，稳定的契约分别是什么？把这些契约测出来。</p>
+<h2 id="边界测试应证明转换而不只是解析"><a class="header" href="#边界测试应证明转换而不只是解析">边界测试应证明转换，而不只是解析</a></h2>
+<p>现代 C++ 代码的复杂度往往集中在边界上：网络协议、文件格式、进程边界、插件 API、数据库客户端，以及 C 接口。边界上的 bug 代价高昂，因为它们会同时破坏两侧的假设。一个边界测试应当验证三件事。</p>
+<p>第一，合法输入能正确映射到内部表示，不依赖生命周期上的取巧。如果解析器把 <code>std::string_view</code> 存进了生命周期更长的状态里，边界测试就要证明这个 view 指向的数据有稳定的所有权，或者在必要时做了拷贝。第二，非法或不完整的输入要以正确的错误类别失败。解析失败、传输失败、业务规则拒绝——除非 API 明确就是这么约定的，否则不应混为一谈、走同一条笼统的错误路径。第三，从组件内部格式化输出或转换回外部表示时，排序、转义、单位、版本等不变量要得到保持。</p>
+<p>这里要用真实的测试工件。配置加载器——把真实的示例文件放在测试旁边。HTTP 或 RPC 边界——保留有代表性的 payload，包括畸形 header、超大 body、重复字段、错误编码和不支持的版本号。带 C API 的库——在 ABI 层面写测试，而不只是测内部的 C++ wrapper。如果边界承诺不抛异常，就要在 allocator 压力和非法输入下验证这个承诺。</p>
+<p>这些测试不必很大，但必须足够具体。”能 round-trip 一个 JSON 对象”——太弱。”遇到重复主键字段时以 schema error 拒绝，并保持旧配置继续生效”——这才有力。</p>
+<h3 id="手工精选示例容易遗漏的边界情况"><a class="header" href="#手工精选示例容易遗漏的边界情况">手工精选示例容易遗漏的边界情况</a></h3>
+<p>要留意那些单独看上去无害、组合起来却会出问题的边界条件：</p>
+<pre><code class="language-cpp">// A parser that stores string_view into a longer-lived config object.
+// This test passes because the input string outlives the config.
+TEST(config_parser_reads_server_name)
+{
+    std::string input = R"({"server": "prod-01"})";
+    auto cfg = parse_config(input);
+    EXPECT_EQ(cfg.server_name(), "prod-01");  // PASSES -- but fragile.
+}
+
+// This test exposes the dangling view.
+TEST(config_survives_input_destruction)
+{
+    auto cfg = []{
+        std::string input = R"({"server": "prod-01"})";
+        return parse_config(input);
+    }();
+    // input is destroyed. If server_name() holds a string_view into it,
+    // this is use-after-free. It may still "pass" without sanitizers.
+    EXPECT_EQ(cfg.server_name(), "prod-01");
+}
+</code></pre>
+<p>大多数团队只会写第一个测试，但真正能暴露 bug 的是第二个。再配合 AddressSanitizer（下一章介绍），就能把悄无声息的内存损坏变成确定性的测试失败。</p>
+<p>其他常被遗漏、值得专门写测试的边界极端情况还包括：</p>
+<ul>
+<li>空输入、单字节输入，以及恰好落在 buffer 边界上的输入。</li>
+<li>字符串字段中包含嵌入式 null 的 payload——<code>std::string_view::size()</code> 和 C 的 <code>strlen()</code> 对此会给出不同结果。</li>
+<li>依赖方返回的错误响应：协议帧本身是合法的，但状态码出人意料，不只是简单的连接失败。</li>
+<li>在某个 schema 版本里合法、在另一个版本里非法的输入，尤其是涉及版本协商的场景。</li>
+</ul>
+<p>示例项目中有这几种模式的具体实践。在 <code>examples/web-api/tests/test_http.cpp</code> 中，<code>test_parse_request_malformed()</code> 向解析器喂入字符串 <code>"not a valid request"</code>，断言 <code>parse_request()</code> 返回 <code>std::nullopt</code> 而非崩溃或产出半初始化的 <code>Request</code>。这正是那种能抓住“默认假设输入格式正确“的解析器 bug 的畸形输入边界测试。同一文件还测试了 header 缺失的情况（<code>test_header_missing()</code>），确认返回 <code>std::optional</code> 的 <code>header()</code> 方法在 header 不存在时能正确处理缺失，而非返回悬空 view 或默认构造的字符串。</p>
+<p>在 <code>examples/web-api/tests/test_task.cpp</code> 中，边界验证测试同样值得关注。<code>test_task_validation_rejects_empty_title()</code> 和 <code>test_task_validation_rejects_long_title()</code>（后者构造了一个 257 字符的字符串）验证了领域不变量在极端值处依然成立。这些不是验证调用顺序的测试——它们断言的是业务规则：task 标题必须非空且在长度上限内，并且错误通过 <code>std::expected</code> 以正确的 <code>ErrorCode::bad_request</code> 报告，而非被吞掉或转化为异常。</p>
+<h2 id="失败注入比更多-mock-更有价值"><a class="header" href="#失败注入比更多-mock-更有价值">失败注入比更多 mock 更有价值</a></h2>
+<p>C++ 的错误路径，恰恰是所有权错误演变为生产事故的温床。只测成功路径，就等于默认错误处理代码无需审查。</p>
+<p>务实的做法是确定性故障注入。在组件跨越资源边界或调度边界的地方引入故障：文件打开、rename、有界组件内部的内存分配、任务提交、定时器到期、下游 RPC 调用、持久化提交。然后验证操作结束后系统仍处于有效状态。</p>
+<p>关键词是”确定性”。随机让 syscall 失败在混沌测试环境里或许有用，但作为回归测试太弱了。回归测试应当能精确说明：是哪个操作失败了，以及失败之后系统必须保持什么状态。</p>
+<p>据此来设计 seam：</p>
+<ul>
+<li>文件和网络适配器应当在操作边界上可替换。</li>
+<li>时钟和定时器源应当可注入，让 timeout 测试无需 sleep。</li>
+<li>任务调度应当允许测试用 executor 按步推进工作。</li>
+<li>关闭和取消应当暴露一个完成点，供测试等待。</li>
+</ul>
+<p>这种设计压力是良性的。如果一个组件非得靠全局 monkey-patching 才能走进各种失败模式，说明它和运行环境耦合得太紧了。</p>
+<p>有一种常见的过度做法要避免：到处模拟 allocator 失败。分配失败测试对硬实时系统或具备强恢复保证的基础设施组件或许有意义，但在大多数代码库里只会制造噪声和不切实际的控制流。只在契约确实依赖于低内存存活能力时才做这件事。对大多数服务代码而言，I/O 失败、超时、取消和部分提交行为才是更值得投入的目标。</p>
+<h2 id="属性测试与-fuzzing-适用于输入丰富的边界"><a class="header" href="#属性测试与-fuzzing-适用于输入丰富的边界">属性测试与 fuzzing 适用于输入丰富的边界</a></h2>
+<p>有些边界的输入空间太大，光靠精选示例远远不够。解析器、解码器、压缩器、类 SQL 查询片段、二进制消息读取器、路径规范化器、命令行解释器——它们接受的输入空间都极为庞大。在这些场景下，属性测试和 fuzzing 物有所值。</p>
+<p>关键不在于追求新颖，而在于把那些应该在海量输入下始终成立的不变量明确编码出来。</p>
+<p>好的属性示例：</p>
+<ul>
+<li>合法配置经过“解析 -&gt; 序列化 -&gt; 再解析“后，语义保持一致。</li>
+<li>非法 UTF-8 永远不会产出一个成功归一化的标识符。</li>
+<li>消息解码器要么返回一个完全构造好的值，要么返回结构化错误；绝不允许部分初始化的输出被外部观察到。</li>
+<li>对已规范化且位于接受域内的相对路径，路径规范化是幂等的。</li>
+</ul>
+<p>Fuzzing 对 native code 尤其有效，因为畸形输入经常把控制流引入那些极少被测试到的分支——生命周期错误和未定义行为往往就藏在那里。不过要注意章节分工：fuzzing 仍然属于测试策略的范畴，它的价值在于对契约和不变量施加压力。下一章会介绍 sanitizer 如何把悄无声息的内存损坏变成可定位的失败，从而让 fuzzing 的效果大幅提升。</p>
+<p>Seed corpus 要尽量贴近生产流量，而不是随机字节。否则 fuzzer 会把大量时间浪费在探索那些真实系统在外层就会拒掉的输入上。对协议读取器，种子应包括截断消息、重复字段、错误长度、不支持的版本号，以及压缩边界情况。对文本格式，应包括超长 token、非法转义序列和混合换行符。</p>
+<h2 id="并发与取消测试需要可控时间"><a class="header" href="#并发与取消测试需要可控时间">并发与取消测试需要可控时间</a></h2>
+<p>许多 C++ 团队明知基于 sleep 的测试不稳定，却还是照写不误，原因无非是生产代码把真实时钟和线程池写死了。结果是一种虚假的节约：测试在本地能过，CI 上就挂，而真正的关闭 bug 照样漏过去。</p>
+<p>如果组件依赖 deadline、重试、stop request 或后台排空（drain），就应该在设计上让测试能控制时间和调度。<code>std::stop_token</code> 和 <code>std::jthread</code> 有助于表达取消意图，但并不能取代确定性编排。运行在可注入 executor 上的任务队列，远比那种一来就 spawn detached 工作的队列容易验证；接受时钟和 sleep 策略注入的重试循环，也远比直接调用 <code>std::this_thread::sleep_for</code> 的好测。</p>
+<p>好的并发测试通常断言以下某类行为：</p>
+<ul>
+<li>发出 stop request 后，新工作不再启动。</li>
+<li>正在执行的工作能在预定义的挂起点感知到取消。</li>
+<li>关闭流程会等待自身持有的工作完成，完成后不再访问已释放的状态。</li>
+<li>背压机制能限制队列增长，而非把过载变成无上限的内存膨胀。</li>
+<li>超时路径返回一致的错误类别，并释放所持有的资源。</li>
+</ul>
+<p>注意，以上没有一条是”在 callback Y 之前调用了 callback X”。它们都是生命周期保证。并发 bug 代价高昂，正是因为出问题的地方在这里。</p>
+<p>示例项目中 <code>examples/web-api/tests/test_repository.cpp</code> 的 <code>test_concurrent_access()</code> 提供了一个简洁的例子。它启动 8 个 <code>std::jthread</code>，每个线程并发创建 100 个 task，最后断言 repository 的最终大小等于 800。这测试的是一个不变量：受 <code>shared_mutex</code> 保护的 <code>TaskRepository</code> 在并发写入下既不丢数据也不产生重复。同一文件中的 <code>test_update_validates()</code> 也值得注意：它在 <code>update()</code> 回调内把 task 标题改为空字符串，断言 repository 以 <code>ErrorCode::bad_request</code> 拒绝了这次修改。这是一个边界与并发交叉的测试——它验证了写锁保护下的 <code>update()</code> 路径中，即使 updater callable 由调用方提供，重新验证步骤仍能捕获不变量违反。</p>
+<p>项目的 CMake 配置（<code>examples/web-api/CMakeLists.txt</code>）还通过 <code>ENABLE_ASAN</code> 和 <code>ENABLE_TSAN</code> 选项支持在 sanitizer 下运行这些测试。在 ThreadSanitizer 下跑并发测试，能提供锁协议正确性的机械化证据，而不是依赖”在某种特定调度交错下恰好通过”的运气。</p>
+<h2 id="集成测试应验证完整的清理故事"><a class="header" href="#集成测试应验证完整的清理故事">集成测试应验证完整的清理故事</a></h2>
+<p>并非每种资源 bug 都能靠隔离测试来证明。有些故障只有在真实文件系统、进程模型、socket 或线程调度参与时才会浮现。聚焦的单元测试和属性测试仍然需要，但同时也需要一小组集成测试来验证端到端的清理行为。</p>
+<p>对服务而言，可能意味着：用临时数据目录启动进程，发送真实请求，在存储层强制注入故障，然后验证重启行为和磁盘状态。对库而言，可能意味着：写一个小型宿主程序调用公共 API，加载配置、启动后台工作、取消它、干净卸载。对命令行工具而言，可能意味着：用 fixture 目录树调用真实可执行文件，检查退出码、stderr 和文件系统后置条件。</p>
+<p>这类测试要以场景为核心，数量上保持克制。它们比单元测试慢，也更难排查问题。它们的职责是验证完整的清理流程：部分写入不会变成已提交状态，重复启动不会继承上次失败关闭留下的垃圾，外部契约在故障下依然稳定。</p>
+<h2 id="什么测试该停掉"><a class="header" href="#什么测试该停掉">什么测试该停掉</a></h2>
+<p>弱测试消耗评审时间，却不能提升信心。</p>
+<p>不要再写那些只是在重述当前实现结构的测试了：</p>
+<ul>
+<li>逐个验证 helper 是否被调用，却从不检查任何对外有意义的后置条件。</li>
+<li>mock 太重，合并两个内部函数就会挂，哪怕契约完全没变。</li>
+<li>基于 sleep 的异步测试，真正断言的不过是”今天机器恰好够空闲”。</li>
+<li>对日志或错误字符串做 snapshot 的测试——实际契约是错误类别和结构化字段，不是措辞本身。</li>
+<li>用大而全的集成测试替代精确的失败路径测试。</li>
+</ul>
+<p>核心原则是：把测试预算花在 bug 高发区。在 C++ 中，这些高发区集中在所有权、边界、取消和畸形输入上。要为它们做有针对性的设计。</p>
+<h2 id="要点总结"><a class="header" href="#要点总结">要点总结</a></h2>
+<p>现代 C++ 的测试策略应当跟着失败的经济学走，而不是跟着泛泛的分层口号走。持有资源的代码需要确定性的失败路径测试；边界密集的代码需要基于真实工件的契约测试；输入丰富的代码需要属性测试和 fuzzing；并发代码需要可控的时间与调度。集成测试应验证完整的清理流程，而不是替代聚焦测试。</p>
+<p>用本章来确定：上线前哪些行为必须得到验证。用下一章来确定：在这些测试运行时，应当让哪些编译器、sanitizer、分析器和构建诊断自动帮你找 bug。</p>
+<p>评审问题：</p>
+<ul>
+<li>这个组件对资源的提交、回滚和释放保证是什么？</li>
+<li>哪些边界转换需要配合真实 fixture 的具体契约测试？</li>
+<li>目前有哪些故障点可以做确定性注入，哪些需要重构之后才可测？</li>
+<li>哪些输入面更适合属性测试或 fuzzing，而非仅靠手写示例？</li>
+<li>目前有哪些涉及时间、取消或关闭的行为，还在靠 sleep 而非受控调度来测试？</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="17-benchmarking-and-profiling-without-lying-to-yourself.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="19-sanitizers-static-analysis-and-build-diagnostics.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="17-benchmarking-and-profiling-without-lying-to-yourself.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="19-sanitizers-static-analysis-and-build-diagnostics.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

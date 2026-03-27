@@ -1,0 +1,490 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Modules, Libraries, Packaging, and ABI Reality - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-810527eb.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/11-modules-libraries-packaging-and-abi-reality.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="modules-libraries-packaging-and-abi-reality"><a class="header" href="#modules-libraries-packaging-and-abi-reality">Modules, Libraries, Packaging, and ABI Reality</a></h1>
+<p>This chapter assumes the source-level interface is already well designed. The question now is how that interface behaves when code is built, shipped, versioned, and consumed across real toolchains.</p>
+<h2 id="the-production-problem"><a class="header" href="#the-production-problem">The Production Problem</a></h2>
+<p>Teams often talk about modules, libraries, and ABI as if they were one topic. They are related and not interchangeable.</p>
+<p>Modules are mostly about source organization, dependency hygiene, and build scalability. Library packaging is about how code is distributed and linked: static library, shared library, header-only package, source distribution, internal monorepo component, or plugin SDK. ABI is about whether separately built binaries can agree on layout, calling convention, exception behavior, allocation ownership, symbol naming, and object lifetime.</p>
+<p>Treating these as one problem causes expensive mistakes. A team adopts C++20 modules and assumes this somehow stabilizes a public binary boundary. Another ships a shared library whose public headers expose <code>std::string</code>, <code>std::vector</code>, exceptions, and inline-heavy templates across compilers, then discovers that “works on our build agent” is not a compatibility strategy. A plugin host exports C++ class hierarchies and learns too late that compiler version changes are now deployment events.</p>
+<p>This chapter keeps the distinctions sharp. Source hygiene is valuable. Distribution choices are architectural. ABI stability is a contract you either design intentionally or do not offer.</p>
+<h2 id="modules-solve-source-problems-not-binary-problems"><a class="header" href="#modules-solve-source-problems-not-binary-problems">Modules Solve Source Problems, Not Binary Problems</a></h2>
+<p>C++ modules help with parse cost, macro isolation, and dependency control. Those are real wins, especially in large codebases with header-heavy libraries. A well-factored module interface can reduce accidental exposure of implementation detail and make the intended import surface clearer.</p>
+<p>But modules do not create a portable binary contract. They do not erase compiler ABI differences. They do not guarantee the same layout rules, exception interoperability, or standard library binary compatibility across vendors. They are not a substitute for packaging strategy.</p>
+<h3 id="what-modules-replace-the-header-inclusion-model-and-its-hazards"><a class="header" href="#what-modules-replace-the-header-inclusion-model-and-its-hazards">What modules replace: the header inclusion model and its hazards</a></h3>
+<p>Without modules, C++ compilation is textual inclusion. Every <code>#include</code> pastes a header’s full text into the translation unit. This creates three classes of real problems.</p>
+<p><strong>Include order dependencies.</strong> If header A defines a macro or type that header B consumes, swapping <code>#include</code> order can silently change behavior or break compilation. This is not hypothetical. Large codebases accumulate implicit ordering contracts that no one documents.</p>
+<pre><code class="language-cpp">// order_matters.cpp
+#include &lt;windows.h&gt;    // defines min/max as macros
+#include &lt;algorithm&gt;     // std::min/std::max are now broken
+
+auto x = std::min(1, 2); // compilation error or wrong overload
+</code></pre>
+<p><strong>Macro pollution.</strong> Every macro defined in every transitively included header is visible everywhere below. A library that <code>#define</code>s <code>ERROR</code>, <code>OK</code>, <code>TRUE</code>, <code>CHECK</code>, or <code>Status</code> can silently collide with unrelated code. The classic defense (include guards, <code>#undef</code>, <code>NOMINMAX</code>) is fragile and must be remembered at every inclusion site.</p>
+<pre><code class="language-cpp">// some_vendor_lib.h
+#define STATUS int
+#define ERROR -1
+
+// your_code.cpp
+#include "some_vendor_lib.h"
+#include "your_domain.h"  // any enum named ERROR or type named STATUS is now broken
+
+enum class Status { ok, error };  // fails to compile: STATUS expands to int
+</code></pre>
+<p><strong>Transitive dependency explosion.</strong> Including one header can pull in hundreds of others. A seemingly small change to an internal header triggers recompilation of thousands of translation units. Build times scale with total transitive include depth, not with the actual dependency graph of the program.</p>
+<p>Modules address all three problems: they do not leak macros, they have well-defined import semantics independent of order, and they export only what is explicitly declared. This is a meaningful improvement for source hygiene, even though it does not touch binary compatibility.</p>
+<h3 id="module-syntax-in-practice"><a class="header" href="#module-syntax-in-practice">Module syntax in practice</a></h3>
+<p>The example project in <code>examples/web-api/</code> is structured as seven C++20 module interface units. Each <code>.cppm</code> file declares a named module, explicitly imports its dependencies, and exports only the public surface. Here is the structure of a typical module:</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/error.cppm
+module;
+
+// Global module fragment: standard headers that predate modules
+#include &lt;cstdint&gt;
+#include &lt;expected&gt;
+#include &lt;format&gt;
+#include &lt;string&gt;
+#include &lt;string_view&gt;
+
+export module webapi.error;   // module declaration — names this module
+
+export namespace webapi {
+    enum class ErrorCode : std::uint8_t { not_found, bad_request, conflict, internal_error };
+    struct Error { /* ... */ };
+
+    template &lt;typename T&gt;
+    using Result = std::expected&lt;T, Error&gt;;
+}  // only what is inside 'export' is visible to importers
+</code></pre>
+<p>Modules that depend on other modules use <code>import</code> declarations rather than <code>#include</code>:</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/handlers.cppm
+module;
+#include &lt;format&gt;
+#include &lt;string&gt;
+// ...
+
+export module webapi.handlers;
+
+import webapi.error;        // typed error model
+import webapi.http;         // Request, Response, Handler
+import webapi.json;         // JsonSerializable concept
+import webapi.repository;   // TaskRepository
+import webapi.task;         // Task, TaskId
+</code></pre>
+<p>Several things are worth noting. First, the global module fragment (between <code>module;</code> and <code>export module ...;</code>) is where standard library headers live. These headers predate the module system and must be included textually. Second, each <code>import</code> names a specific module – there is no transitive inclusion. <code>handlers.cppm</code> imports <code>webapi.error</code> but does not accidentally pull in everything that <code>error.cppm</code> itself includes. Third, the <code>export</code> keyword controls visibility precisely: only exported names are reachable by importers. Private helpers, internal implementation details, and non-exported types stay invisible.</p>
+<p>The consuming side is equally clean. In <code>main.cpp</code>, six import declarations replace what would have been a chain of <code>#include</code> directives and all their transitive dependencies:</p>
+<pre><code class="language-cpp">// examples/web-api/src/main.cpp
+import webapi.handlers;
+import webapi.http;
+import webapi.middleware;
+import webapi.repository;
+import webapi.router;
+import webapi.task;
+</code></pre>
+<p>No include guards, no macro collisions, no order sensitivity. The build system sees the module dependency graph directly and compiles modules in the right order. This is the source-level improvement that modules deliver.</p>
+<p>That means the first decision is not “should we use modules?” It is “what are we promising consumers?”</p>
+<p>If the answer is internal source reuse inside one repository with one toolchain baseline, modules may be excellent. If the answer is “we ship a public SDK consumed by unknown build systems and compiler versions,” modules may still help your own build, but they do not remove the need for strict binary-boundary discipline.</p>
+<h2 id="packaging-choices-express-operational-intent"><a class="header" href="#packaging-choices-express-operational-intent">Packaging Choices Express Operational Intent</a></h2>
+<p>Packaging is where architecture meets deployment.</p>
+<h3 id="header-only-or-source-distributed-libraries"><a class="header" href="#header-only-or-source-distributed-libraries">Header-only or source-distributed libraries</a></h3>
+<p>These avoid many ABI promises because consumers compile the code into their own program. The cost is compile time, larger dependency surfaces, and more exposure of implementation detail. Templates, concepts, and inline functions fit naturally here. This is often a good choice for internal generic utilities or narrow public libraries where performance and optimizer visibility matter more than distribution simplicity.</p>
+<h3 id="static-libraries"><a class="header" href="#static-libraries">Static libraries</a></h3>
+<p>Static linkage simplifies deployment and avoids some runtime compatibility issues. It can still create ODR and allocator-boundary problems if the public interface is careless, but it usually reduces cross-version operational complexity. Static libraries fit well for internal components deployed as one unit or for consumers who prefer self-contained binaries.</p>
+<h3 id="shared-libraries-and-sdks"><a class="header" href="#shared-libraries-and-sdks">Shared libraries and SDKs</a></h3>
+<p>These offer deployment and patching advantages, but now you own a real binary boundary. That means symbol visibility, versioning policy, exception rules, allocator ownership, and data layout are no longer private engineering choices. They are part of your product behavior.</p>
+<h3 id="plugin-boundaries"><a class="header" href="#plugin-boundaries">Plugin boundaries</a></h3>
+<p>These are the harshest case because host and plugin may be built separately, loaded dynamically, upgraded independently, and sometimes compiled with different flags or compilers. Here, the safest public boundary is often C ABI plus opaque handles and explicit function tables, even if the internal implementation is modern C++ throughout.</p>
+<p>The packaging decision should be made from operational constraints, not from what looks elegant in local code.</p>
+<h2 id="internal-library-versus-public-binary-contract"><a class="header" href="#internal-library-versus-public-binary-contract">Internal Library Versus Public Binary Contract</a></h2>
+<p>Many libraries never need stable ABI. That is normal.</p>
+<p>If producer and consumer are rebuilt together from the same commit and toolchain, source compatibility matters much more than ABI stability. In that environment, modern C++ APIs can be expressive. Returning vocabulary types, using templates, adopting modules, and relying on inlining may all be good tradeoffs.</p>
+<p>The moment you need independently upgradeable binaries, the constraints change. Now even innocent-looking public types become liability. A changed private member order, different standard library implementation, different compiler, or different exception model can break consumers without any source-level signature change.</p>
+<p>Do not accidentally promise stable ABI just because you shipped a DLL once.</p>
+<h2 id="abi-stability-requires-deliberate-narrowing"><a class="header" href="#abi-stability-requires-deliberate-narrowing">ABI Stability Requires Deliberate Narrowing</a></h2>
+<p>Stable ABI is expensive because it forbids many convenient language habits at the boundary.</p>
+<p>These are common sources of ABI fragility:</p>
+<ol>
+<li>Exposing standard library types in public binary interfaces.</li>
+<li>Exposing class layouts whose size or members may change.</li>
+<li>Throwing exceptions across compiler or runtime boundaries.</li>
+<li>Allocating on one side and freeing on the other without a shared allocator contract.</li>
+<li>Exporting inline-heavy templates or virtual hierarchies as the binary extension mechanism.</li>
+</ol>
+<p>That does not mean standard C++ library types are bad. It means they are often the wrong public binary boundary.</p>
+<h3 id="concrete-abi-breakage-scenarios"><a class="header" href="#concrete-abi-breakage-scenarios">Concrete ABI breakage scenarios</a></h3>
+<p>These are real scenarios, not theoretical risks.</p>
+<p><strong>Adding a private member changes class size.</strong> A consumer compiled against v1 of a library allocates objects based on <code>sizeof(Widget)</code> at their compile time. If v2 adds a private member, the library’s methods now write past what the consumer allocated. The result is silent memory corruption, not a linker error.</p>
+<pre><code class="language-cpp">// v1: shipped in libwidget.so
+class EXPORT Widget {
+    int x_;
+    int y_;
+public:
+    void move(int dx, int dy);  // accesses x_, y_
+};
+// sizeof(Widget) == 8 for the consumer
+
+// v2: added a z-index member
+class EXPORT Widget {
+    int x_;
+    int y_;
+    int z_;  // sizeof(Widget) is now 12
+public:
+    void move(int dx, int dy);  // same signature, same symbol
+};
+// Consumer still allocates 8 bytes. Library writes 12. Corruption.
+</code></pre>
+<p><strong>Different standard library implementations.</strong> A shared library built with libstdc++ exposes <code>std::string</code> in its API. A consumer built with libc++ links against it. The two implementations have different internal layouts (SSO buffer sizes, pointer arrangements). Calling across this boundary corrupts string state. There is no compile-time or link-time diagnostic.</p>
+<p><strong>Compiler flag mismatch.</strong> Building the library with <code>-fno-exceptions</code> and the consumer with exceptions enabled can produce incompatible stack unwinding behavior. Building with different <code>-std=</code> flags can change the layout of standard types. Building with different struct packing or alignment flags changes ABI silently.</p>
+<h3 id="odr-violations-from-header-only-libraries"><a class="header" href="#odr-violations-from-header-only-libraries">ODR violations from header-only libraries</a></h3>
+<p>Header-only libraries are popular because they avoid binary distribution complexity. They introduce a different class of problems: One Definition Rule violations.</p>
+<p>If two translation units include the same header-only library but compile with different flags, preprocessor definitions, or template arguments that affect inline function behavior, the linker may silently pick one definition and discard the other. The program contains code compiled against two different assumptions linked into one binary.</p>
+<pre><code class="language-cpp">// translation_unit_a.cpp
+#define LIBRARY_USE_SSE 1
+#include "header_only_math.hpp"  // vector ops use SSE intrinsics
+
+// translation_unit_b.cpp
+// LIBRARY_USE_SSE not defined
+#include "header_only_math.hpp"  // vector ops use scalar fallback
+
+// Both define the same inline functions with different bodies.
+// Linker picks one. Half the program uses the wrong implementation.
+// No diagnostic. Possible wrong results or crashes.
+</code></pre>
+<p>This is not a contrived scenario. Libraries that use <code>#ifdef</code> to select code paths, or that behave differently based on <code>NDEBUG</code>, <code>_DEBUG</code>, or platform macros, can produce ODR violations in any project that mixes compilation settings. Sanitizers (specifically <code>-fsanitize=undefined</code> with ODR violation detection) and link-time tools like <code>ld</code>’s <code>--detect-odr-violations</code> can catch some of these, but not all.</p>
+<p>For a stable shared-library or plugin contract, prefer opaque handles, narrow C-style value types, explicit ownership functions, versioned structs, and clear lifetime rules. Internally, use modern C++ aggressively. At the boundary, be conservative because consumers pay for your binary ambiguity.</p>
+<h2 id="anti-pattern-public-binary-surface-mirrors-internal-c-types"><a class="header" href="#anti-pattern-public-binary-surface-mirrors-internal-c-types">Anti-pattern: Public Binary Surface Mirrors Internal C++ Types</a></h2>
+<pre><code class="language-cpp">// Anti-pattern: fragile ABI surface for a shared library.
+class EXPORT Session {
+public:
+    virtual std::string send(const std::string&amp; request) = 0;
+    virtual ~Session() = default;
+};
+
+std::unique_ptr&lt;Session&gt; create_session();
+</code></pre>
+<p>This interface is attractive inside one build. As a public SDK boundary it is risky.</p>
+<p><code>std::string</code> representation and allocator behavior are implementation details. <code>std::unique_ptr</code> bakes in deleter and runtime assumptions. Virtual dispatch across the boundary ties host and consumer to compatible object model details. Exceptions may also leak unless documented and controlled. The interface has effectively made your compiler, standard library, and build flags part of the contract.</p>
+<p>For a true cross-binary boundary, a versioned C ABI is often safer.</p>
+<pre><code class="language-cpp">struct session_v1;
+
+struct request_buffer {
+    const std::byte* data;
+    std::size_t size;
+};
+
+struct response_buffer {
+    const std::byte* data;
+    std::size_t size;
+};
+
+struct session_api_v1 {
+    std::uint32_t struct_size;
+    session_v1* (*create)() noexcept;
+    void (*destroy)(session_v1*) noexcept;
+    status_code (*send)(session_v1*, request_buffer, response_buffer*) noexcept;
+    void (*release_response)(response_buffer*) noexcept;
+};
+</code></pre>
+<p>This is less pretty and much more honest. The boundary names allocation ownership, versioning surface, and error transport explicitly. Internally, the implementation can still use <code>std::expected</code>, <code>std::pmr</code>, coroutines, modules, and any C++23 technique that stays behind the wall.</p>
+<h2 id="the-pimpl-tradeoff-still-exists"><a class="header" href="#the-pimpl-tradeoff-still-exists">The Pimpl Tradeoff Still Exists</a></h2>
+<p>For C++ consumers within one toolchain family, the pimpl pattern still has a place. It can reduce rebuild fanout, hide private members, and preserve class size across some implementation changes. It also adds indirection, allocation, and complexity. Pimpl is not a free modernization badge.</p>
+<p>Use it when all of the following are true:</p>
+<ol>
+<li>You need to hide representation or reduce compile-time exposure.</li>
+<li>The object is not so hot that another pointer chase is a measurable problem.</li>
+<li>The library truly benefits from keeping class layout stable.</li>
+</ol>
+<p>Do not reach for pimpl just because headers are messy. Modules may solve that source problem better for internal builds. Pimpl is primarily a representation and compatibility tool, not a style requirement.</p>
+<h2 id="modules-in-real-build-systems"><a class="header" href="#modules-in-real-build-systems">Modules in Real Build Systems</a></h2>
+<p>C++23-first advice has to stay realistic. Modules are valuable and still operationally uneven across toolchains, package managers, and mixed-language build systems.</p>
+<p>Inside a controlled build environment with GCC 14+, Clang 18+, or MSVC 17.10+, modules can reduce parse overhead and make dependency intent clearer. In heterogeneous environments, the module artifact model, build graph integration, and package-manager support may still impose friction. That friction is not an argument against modules. It is a reminder that adoption belongs to build architecture, not only to language enthusiasm.</p>
+<p>A good default is pragmatic:</p>
+<ol>
+<li>Use modules first for internal components built together.</li>
+<li>Avoid making public package consumption depend on module support unless your consumer ecosystem is controlled.</li>
+<li>Keep the binary contract decision separate from the module decision.</li>
+</ol>
+<p>The <code>examples/web-api/</code> project demonstrates this pragmatic approach. Its seven <code>.cppm</code> files (<code>error</code>, <code>task</code>, <code>json</code>, <code>http</code>, <code>repository</code>, <code>handlers</code>, <code>middleware</code>, <code>router</code>) form a clear module dependency graph built together from one CMakeLists. Standard library headers remain in the global module fragment because they are not yet modularized on all toolchains. The project does not attempt to export its modules as a public package – it uses modules to organize its own source. That is the right starting point.</p>
+<h2 id="versioning-policy-is-part-of-the-interface"><a class="header" href="#versioning-policy-is-part-of-the-interface">Versioning Policy Is Part of the Interface</a></h2>
+<p>Packaging without versioning policy is wishful thinking. Consumers need to know what kind of change is allowed between releases: source-compatible only, ABI-compatible within a major version, or no promises beyond exact build matching.</p>
+<p>This policy affects technical design. If ABI compatibility within a major version matters, your public types must be narrowed aggressively and your rollout process must include ABI review. If consumers rebuild from source, the policy can be looser and the interfaces more idiomatic.</p>
+<p>Versioning is not only about semantic version numbers. It is also about symbol versioning where available, inline namespace strategy for source-level APIs, feature detection, deprecation windows, and package metadata that correctly describes compiler and runtime requirements.</p>
+<h2 id="memory-exceptions-and-ownership-across-the-boundary"><a class="header" href="#memory-exceptions-and-ownership-across-the-boundary">Memory, Exceptions, and Ownership Across the Boundary</a></h2>
+<p>Most cross-library failures are not glamorous. They come from ownership mismatches.</p>
+<p>If one side allocates memory and the other deallocates it, the allocator contract must be explicit. If exceptions are allowed to cross the boundary, runtime and compiler assumptions must align. If the boundary uses callbacks, retention and thread-affinity rules must be documented. If background work continues during unload, the packaging design is already unsafe.</p>
+<pre><code class="language-cpp">// Anti-pattern: cross-boundary allocation mismatch.
+// Library (built with MSVC debug runtime, uses debug heap):
+EXPORT char* get_name() {
+    char* buf = new char[64];
+    std::strcpy(buf, "session-001");
+    return buf;
+}
+
+// Consumer (built with MSVC release runtime, uses release heap):
+void use_library() {
+    char* name = get_name();
+    // ...
+    delete[] name;  // CRASH: freeing debug-heap memory on release heap
+}
+</code></pre>
+<p>The fix is to never let allocation and deallocation cross the boundary. The library that allocates must also provide the deallocation function, or the boundary must use caller-provided buffers.</p>
+<pre><code class="language-cpp">// Safe: library owns both allocation and deallocation.
+EXPORT char* get_name();
+EXPORT void free_name(char* name);
+
+// Also safe: caller provides the buffer.
+EXPORT status_code get_name(char* buffer, std::size_t buffer_size);
+</code></pre>
+<p>These are the details that turn a locally clean interface into an operable library.</p>
+<h2 id="verification-and-review-questions"><a class="header" href="#verification-and-review-questions">Verification and Review Questions</a></h2>
+<p>Review packaging and ABI separately from source-level API quality.</p>
+<ol>
+<li>Is this library intended for same-build consumption, source consumption, or independently upgradeable binary consumption?</li>
+<li>Are we using modules to improve source hygiene while mistakenly assuming they solve ABI?</li>
+<li>Does the public boundary expose types whose layout or runtime behavior we do not actually control?</li>
+<li>Is allocation ownership explicit across the boundary?</li>
+<li>Are versioning and compatibility promises documented and testable?</li>
+<li>Would a C ABI plus opaque handles be safer for this plugin or SDK than exported C++ classes?</li>
+</ol>
+<p>Verification should include build-matrix testing across supported compilers and standard libraries, symbol visibility inspection, ABI comparison tooling where relevant, and packaging tests that simulate real consumer integration. A unit test suite inside the producer repository is not enough evidence for a public binary contract.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<p>Modules, packaging, and ABI are three different design axes.</p>
+<p>Use modules to improve source boundaries and build scalability. Choose packaging based on deployment and consumer constraints. Promise stable ABI only when you are willing to narrow the public boundary and verify it continuously. Inside the implementation, use modern C++23 freely. At true binary boundaries, prefer explicit ownership, explicit versioning, and conservative surface area.</p>
+<p>The sharpest mistake in library design is exporting internal elegance as public binary policy. Source-level beauty does not make ABI risk disappear. Only deliberate boundary design does.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="10-runtime-polymorphism-type-erasure-and-callbacks.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="12-shared-state-synchronization-and-contention.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="10-runtime-polymorphism-type-erasure-and-callbacks.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="12-shared-state-synchronization-and-contention.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

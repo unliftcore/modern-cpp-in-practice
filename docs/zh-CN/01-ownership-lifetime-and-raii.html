@@ -1,0 +1,597 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>所有权、生命周期与 RAII - 现代 C++ 实战</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="面向有经验程序员的现代 C++ 生产实践指南：所有权、接口、失败边界、并发、性能与验证。">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-8b875a01.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">现代 C++ 实战</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice/edit/main/translations/zh-CN/chapters/chapters/01-ownership-lifetime-and-raii.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="所有权生命周期与-raii"><a class="header" href="#所有权生命周期与-raii">所有权、生命周期与 RAII</a></h1>
+<p>写现代 C++ 时，首先要面对的生产问题不是”这该不该做成一个类”，也不是”这里能不能零拷贝”。问题更简单，也更危险：谁拥有这个资源？它能保持有效多久？当正常流程走不通了，谁来保证清理？</p>
+<p>这个问题首先针对内存，但内存只是冰山一角。真实系统需要管理的资源远不止于此：socket、文件描述符、互斥量、线程 join、临时目录、遥测注册、进程句柄、映射文件、事务作用域、关闭钩子……C++ 给了你充分的自由，也给了你充分的机会把这些全都搞砸。之所以把所有权放在第一章，不是因为它在学术上很基础，而是因为所有权一旦不清晰，后面的设计就根本无法放心地做评审。</p>
+<p>在生产环境中，代价高昂的故障往往不会在调用点上表现得很显眼。一个服务启动了后台 flush，捕获了指向请求状态的裸指针，部署时偶尔崩一下。连接池在错误的线程上被关闭，因为最后一个 <code>shared_ptr</code> 恰好在一个没人当成关闭流程的回调里被释放。初始化路径构建了三个资源才建了一半，第四个抛异常时第二个就泄漏了。这些都不是语法问题——它们是所有权问题，最终演变成了运维事故。</p>
+<p>RAII 至今仍是现代 C++ 能把这些情况处理干净的核心原因。它不是靠惯性留下来的老古董，而是一种让资源生命周期能与作用域、异常、提前返回和部分构造自然组合的机制。用好了，RAII 会让清理变得毫无存在感——这正是你想要的效果。</p>
+<h2 id="所有权必须一目了然"><a class="header" href="#所有权必须一目了然">所有权必须一目了然</a></h2>
+<p>所有权是一种契约，不是实现细节。评审者应该能指着任意一个类型或成员，迅速回答三个问题：</p>
+<ol>
+<li>这个对象拥有哪些东西？</li>
+<li>它暂时借用了什么？</li>
+<li>什么事件标志着所拥有资源的生命周期结束？</li>
+</ol>
+<p>如果回答这些问题需要翻好几个辅助函数，说明设计已经过于隐式了。</p>
+<p>正因如此，现代 C++ 偏爱那些所有权语义一目了然的类型。<code>std::unique_ptr&lt;T&gt;</code> 意味着独占所有权；<code>std::shared_ptr&lt;T&gt;</code> 意味着引用计数的共享所有权；普通对象成员意味着外层对象直接拥有这个子对象；<code>std::span&lt;T&gt;</code> 或 <code>std::string_view</code> 意味着借用而非持有。这些不是风格偏好，而是程序表达生命周期的手段。</p>
+<p>反面的风格大家都见过，代价也不低：一个裸指针成员，可能代表拥有、可能代表观察，有时候还会因为正在关闭而变成 null。这种设计写起来省事，理解起来要命。</p>
+<h2 id="raii-关心的是资源而不是-new"><a class="header" href="#raii-关心的是资源而不是-new">RAII 关心的是资源，而不是 <code>new</code></a></h2>
+<p>很多程序员第一次接触 RAII，是通过”用智能指针代替手写 <code>delete</code>”这句话。方向大致没错，但格局太小了。</p>
+<p>RAII 的本质是：把资源绑定到一个对象的生命周期上，由该对象的析构函数负责释放。资源可以是内存，但也完全可以是文件描述符、内核事件、事务锁，或者必须在关闭完成前注销的指标注册。</p>
+<h3 id="没有-raii-会发生什么"><a class="header" href="#没有-raii-会发生什么">没有 RAII 会发生什么</a></h3>
+<p>在展示 RAII 模式之前，有必要先完整看一遍更接近真实情况的手工方式。下面这个反面示例是故意写得有缺陷的，因为生产代码库里至今仍有长得一模一样的代码。</p>
+<pre><code class="language-cpp">socket_t create_server_socket(std::uint16_t port) {
+    socket_t server = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (server == invalid_socket) {
+        throw NetworkError{"socket failed"};
+    }
+
+    int opt = 1;
+    if (::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"setsockopt failed"};
+    }
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port);
+
+    if (::bind(server, reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"bind failed"};
+    }
+
+    if (::listen(server, 16) &lt; 0) {
+        ::close_socket(server);
+        throw NetworkError{"listen failed"};
+    }
+
+    return server; // RISK: caller now owns the raw descriptor by convention
+}
+
+void serve_once(std::uint16_t port) {
+    socket_t server = create_server_socket(port);
+    socket_t client = invalid_socket;
+
+    try {
+        sockaddr_in client_addr{};
+        socket_length addr_len = sizeof(client_addr);
+        client = ::accept(server,
+                          reinterpret_cast&lt;sockaddr*&gt;(&amp;client_addr),
+                          &amp;addr_len);
+        if (client == invalid_socket) {
+            ::close_socket(server); // BUG: server will be closed twice (here + in catch)
+            throw NetworkError{"accept failed"};
+        }
+
+        std::array&lt;char, 8192&gt; buffer{};
+        auto n = read_from_socket(client, buffer.data(), buffer.size());
+        if (n &lt;= 0) {
+            ::close_socket(client);
+            ::close_socket(server);
+            return;
+        }
+
+        process_request(client, std::string_view{buffer.data(), static_cast&lt;std::size_t&gt;(n)}); // RISK: any throw must preserve cleanup correctness
+
+        ::close_socket(client);
+        ::close_socket(server);
+    } catch (...) {
+        if (client != invalid_socket) {
+            ::close_socket(client);
+        }
+        ::close_socket(server);
+        throw;
+    }
+}
+</code></pre>
+<p>问题会迅速叠加起来：</p>
+<ol>
+<li>
+<p><strong>清理逻辑会重复。</strong> <code>::close_socket(server)</code> 同时出现在设置 helper、正常路径、提前返回路径和异常路径里。退出点越多，重复就越多。</p>
+</li>
+<li>
+<p><strong>重复最终会变成 bug。</strong> <code>accept</code> 失败路径在抛异常前已经关闭了 <code>server</code>，而 <code>catch</code> 块又会再关一次。手工所有权逻辑在维护过程中很容易就会漂移成这样。</p>
+</li>
+<li>
+<p><strong>异常安全依赖纪律。</strong> <code>process_request</code> 可能抛异常。以后只要有人在“获取资源”和“手工清理”之间多插一段代码，就必须重新想一遍当时哪些描述符还活着。</p>
+</li>
+<li>
+<p><strong>转移是隐式的。</strong> <code>create_server_socket()</code> 返回的是裸 <code>socket_t</code>，所以所有权只能靠调用方和被调方之间的约定维持，而不是由类型系统表达。</p>
+</li>
+<li>
+<p><strong>评审变成全局推理。</strong> 想确认代码正确，评审者就得检查整段函数，确认每一条退出路径都把每个描述符恰好关闭一次。</p>
+</li>
+</ol>
+<p>RAII 方案从结构上消除了这些问题：每个资源都由一个拥有它的对象持有，析构函数负责释放，剩下的交给栈展开。</p>
+<p>本书配套的 web-api 示例项目里已经有我们真正想讲的例子。<code>examples/web-api/src/modules/http.cppm</code> 中的 <code>Socket</code> 类包装了一个文件描述符，并把所有权规则直接写进了类型里：</p>
+<pre><code class="language-cpp">// From examples/web-api/src/modules/http.cppm
+class Socket {
+public:
+    Socket() = default;
+    explicit Socket(socket_handle fd) noexcept : fd_{fd} {}
+
+    Socket(const Socket&amp;) = delete;
+    Socket&amp; operator=(const Socket&amp;) = delete;
+
+    Socket(Socket&amp;&amp; other) noexcept
+        : fd_{std::exchange(other.fd_, invalid_socket_handle)} {}
+
+    Socket&amp; operator=(Socket&amp;&amp; other) noexcept {
+        if (this != &amp;other) {
+            close(); // release what this object currently owns
+            fd_ = std::exchange(other.fd_, invalid_socket_handle);
+        }
+        return *this;
+    }
+
+    ~Socket() { close(); } // automatic release on every exit path
+
+    [[nodiscard]] socket_handle fd() const noexcept { return fd_; }
+    [[nodiscard]] bool valid() const noexcept { return fd_ != invalid_socket_handle; }
+    explicit operator bool() const noexcept { return valid(); }
+
+    void close() noexcept {
+        if (fd_ != invalid_socket_handle) {
+            close_socket(fd_);
+            fd_ = invalid_socket_handle;
+        }
+    }
+
+private:
+    socket_handle fd_{invalid_socket_handle};
+};
+</code></pre>
+<p>光这个类就足够把 RAII 的核心讲清楚：</p>
+<ul>
+<li><strong>获取</strong> 发生在构造时：<code>Socket sock{::socket(...)};</code></li>
+<li><strong>所有权是独占的</strong>，因为复制被禁用了。</li>
+<li><strong>转移是显式的</strong>，因为移动通过 <code>std::exchange</code> 把源对象清空。</li>
+<li><strong>释放是自动的</strong>，因为析构函数总会调用 <code>close()</code>。</li>
+</ul>
+<p>同一个模块中的周边代码还展示了它在真实使用中是如何工作的。下面是一段局部摘录：只保留了与所有权相关的代码，辅助声明和无关的错误处理细节为了便于阅读被省略了。</p>
+<pre><code class="language-cpp">[[nodiscard]] Socket create_server_socket() const {
+    Socket sock{::socket(AF_INET, SOCK_STREAM, 0)}; // ownership starts here
+    if (!sock) return {};
+
+    int opt = 1;
+    if (::setsockopt(sock.fd(), SOL_SOCKET, SO_REUSEADDR, &amp;opt, sizeof(opt)) &lt; 0) {
+        return {}; // sock is destroyed here, so the descriptor closes automatically
+    }
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port_);
+    if (::bind(sock.fd(), reinterpret_cast&lt;sockaddr*&gt;(&amp;addr), sizeof(addr)) &lt; 0) {
+        return {}; // same: failure path still releases the descriptor
+    }
+
+    if (::listen(sock.fd(), 16) &lt; 0) {
+        return {};
+    }
+
+    return sock; // move or copy elision transfers ownership to the caller
+}
+
+Socket client{::accept(server_sock.fd(), ...)}; // 为简洁起见，省略了客户端地址相关参数
+handle_connection(std::move(client));           // explicit ownership transfer
+
+void handle_connection(Socket client) const {
+    std::array&lt;char, 8192&gt; buf{};
+    auto n = read_from_socket(client.fd(), buf.data(), buf.size());
+    if (n &lt;= 0) return;
+
+    Response resp = handler_(req); // request parsing omitted here
+    auto data = resp.serialize();
+    (void)write_to_socket(client.fd(), data.data(), static_cast&lt;int&gt;(data.size()));
+} // client goes out of scope here and closes automatically
+</code></pre>
+<p>在 <code>handle_connection(std::move(client))</code> 之后，调用方那边的 <code>client</code> 就不再拥有这个描述符了。移动构造函数已经把它的文件描述符交换成 <code>invalid_socket_handle</code>，所以之后这个被移动过的对象析构时也不会出事。任意时刻，所有权都只存在于一个对象里。</p>
+<p>注意那些消失掉的东西：没有清理阶梯，没有主要职责是收尾的 <code>try</code>/<code>catch</code>，也没有“这个描述符现在到底归谁管”的口头约定。类型本身就携带了策略。这才是 RAII 的现实价值。</p>
+<p>同样的模式适用于各种非内存资源。作用域注册令牌在析构时注销；事务对象不显式提交就回滚；joined-thread 包装器在析构时 join，或者拒绝在仍可 join 的状态下被销毁。一旦代码库建立起这种思维方式，清理路径就重新回归局部，不再散落于各处错误处理中。</p>
+<h2 id="反模式靠约定清理"><a class="header" href="#反模式靠约定清理">反模式：靠约定清理</a></h2>
+<p>RAII 的替代方案通常不是”手工清理但做到完美无缺”，而是靠约定来清理——这就意味着一有压力，清理就会被跳过。</p>
+<pre><code class="language-cpp">// Anti-pattern: ownership and cleanup are split across control flow.
+void publish_snapshot(Publisher&amp; publisher, std::string_view path) {
+auto* file = ::open_config(path.data());
+if (file == nullptr) {
+throw ConfigError{"open failed"};
+}
+
+auto payload = read_payload(file);
+if (!payload) {
+::close_config(file); // BUG: one exit path remembered cleanup
+throw ConfigError{"parse failed"};
+}
+
+publisher.send(*payload); // BUG: if this throws, file leaks
+::close_config(file);
+}
+</code></pre>
+<p>问题不在于手工清理难看，而在于它根本就是错的——清理策略被拆散到了每条退出路径里。函数一旦要管第二个、第三个资源，控制流就会变得比函数实际要做的工作更难审计。</p>
+<p>RAII 版本消除了每一次手工释放和每一条条件清理路径：</p>
+<pre><code class="language-cpp">void publish_snapshot(Publisher&amp; publisher, std::string_view path) {
+auto file = ConfigFile::open(path); // RAII: destructor calls ::close_config
+if (!file) {
+throw ConfigError{"open failed"};
+}
+
+auto payload = read_payload(*file);
+if (!payload) {
+throw ConfigError{"parse failed"};
+// file releases automatically -- no manual cleanup needed
+}
+
+publisher.send(*payload);
+// file releases automatically at scope exit, whether normal or exceptional
+}
+</code></pre>
+<p>现在函数只需关心一件事：业务逻辑本身。清理不可见，因为它已经被保证了。哪怕再加第三、第四、甚至第十条退出路径，资源安全性也不受影响。这种可组合性才是 RAII 的真正价值所在——不是代码更好看，而是在持续维护的压力下依然正确。</p>
+<p>RAII 把释放策略移入了拥有资源的对象，从根源上消除了”靠约定清理”的隐患。错误路径于是可以回归本职：描述失败本身，而不是操心拆除过程。</p>
+<h2 id="独占所有权应当是默认选择"><a class="header" href="#独占所有权应当是默认选择">独占所有权应当是默认选择</a></h2>
+<p>在设计良好的系统中，大多数资源在任意时刻都只有一个显而易见的所有者。请求对象拥有解析后的载荷，连接对象拥有它的 socket，批处理拥有它的 buffer。独占所有权理应成为默认的思维方式。</p>
+<p>落实到代码中，就是优先使用普通对象成员，无法直接内嵌时再用 <code>std::unique_ptr</code>。<code>unique_ptr</code> 并不意味着设计有多复杂，它只是说明所有权的转移和销毁都是显式的。它与容器、工厂和错误路径的组合也很自然，因为 moved-from 状态是良定义的，单一所有权自始至终保持单一。</p>
+<p>共享所有权应该是有意为之的例外。确实有合理的场景：异步扇出中多个组件需要让同一份不可变状态保持存活；图状结构中确实存在共享生命周期；缓存条目在多个使用者持有期间必须有效。但 <code>shared_ptr</code> 不是万能的安全毯。它会改变销毁时机，在许多实现中带来原子引用计数的开销，还经常掩盖真正的问题：为什么没有任何一个组件能明确充当所有者？</p>
+<p>评审中如果在边界处发现了 <code>shared_ptr</code>，应该追问一个具体的问题：究竟是什么样的生命周期关系，让独占所有权行不通？如果答案含糊不清，那这个共享所有权多半只是在给一个从未想清楚资源归属的设计打补丁。</p>
+<p>一个常见的症状是关闭时机的不确定性。当最后一个持有资源的 <code>shared_ptr</code> 从某个不可预期的回调或线程中被释放，析构函数就会在不可预期的时间和位置执行：</p>
+<pre><code class="language-cpp">// Risky: destruction timing depends on which callback finishes last.
+void start_fanout(std::shared_ptr&lt;Connection&gt; conn) {
+for (auto&amp; shard : shards_) {
+shard.post([conn] {           // each lambda extends lifetime
+conn-&gt;send(shard_ping()); // last lambda to finish destroys conn
+});
+}
+// conn may already be destroyed here, or may live much longer --
+// depends on thread scheduling. Destructor side effects (logging,
+// metric flush, socket close) now happen at an uncontrolled point.
+}
+</code></pre>
+<p>当销毁顺序很重要时——在生产环境中几乎总是如此——应优先使用 <code>unique_ptr</code> 配合显式的生命周期作用域，把非拥有的裸指针或引用传给那些确保在所有者存活期内完成的工作。</p>
+<h2 id="借用比拥有需要更严格的纪律"><a class="header" href="#借用比拥有需要更严格的纪律">借用比拥有需要更严格的纪律</a></h2>
+<p>所有权关系再清晰的系统，也少不了非拥有式的访问。算法需要检查调用方拥有的 buffer，验证逻辑需要读取请求元数据，迭代器和视图需要在不拷贝的前提下遍历存储。借用是正常的，错误在于让借用的状态活过了所有者，或者让借用关系变得不可见。</p>
+<p>现代 C++ 提供了表达借用的类型工具：引用、明确用作观察者的指针、<code>std::span</code> 和 <code>std::string_view</code>。它们很有帮助，但光靠类型本身不能保证设计正确。一个长生命周期对象里的 view 成员，如果真正的所有者在别处，仍然是生命周期隐患。回调捕获了栈上状态的引用，延后执行时照样出问题。</p>
+<p>并发场景下风险更大。被捕获进后台工作的裸指针或 <code>string_view</code> 绝非无害的小优化——它是跨越时间的借用，有效性取决于调度时序和关闭顺序。</p>
+<p>由此得出一条简明的所有权准则：拥有类型可以自由跨越时间边界；借用类型只有在所有者明显比使用方更强壮、更长命时，才可以跨越时间边界。如果你无法迅速证明这一点，就应该选择拷贝或转移所有权。</p>
+<h2 id="移动语义定义的是转移而非单纯的优化"><a class="header" href="#移动语义定义的是转移而非单纯的优化">移动语义定义的是转移，而非单纯的优化</a></h2>
+<p>移动语义通常被当作性能话题来讲，但在实践中，它首先是一个所有权话题。</p>
+<p>对一个对象执行移动，就是宣告资源换了主人：源对象依然有效，但不再对原来的资源负责。正因如此，工厂、容器和流水线各阶段才能在不为每个类型另造一套转移 API 的前提下组合起来。</p>
+<p>对于资源拥有类型，良好的移动行为是其正确性保障的一部分：</p>
+<ul>
+<li>移动目标成为新的所有者。</li>
+<li>移动源仍然可以析构和赋值。</li>
+<li>不会发生重复释放。</li>
+</ul>
+<p>这也是为什么专门写一层薄薄的资源包装器是值得的。所有权转移规则一旦内化到类型中，调用方就不用再手工转移裸句柄、然后祈祷约定能对上号了。</p>
+<p>并非所有类型都该可移动，也并非每次移动都很便宜。互斥量通常既不可复制也不可移动，因为移动会让不变量和平台语义变得复杂。一个直接持有大 buffer 的聚合类型可能是可移动的，但在热路径上开销仍然不小。设计时该问的不是”能不能给移动操作加 <code>= default</code>”，而是”这个类型应该允许怎样的所有权语义”。</p>
+<h2 id="生命周期-bug-往往藏在关闭和部分构造中"><a class="header" href="#生命周期-bug-往往藏在关闭和部分构造中">生命周期 Bug 往往藏在关闭和部分构造中</a></h2>
+<p>程序员习惯在正常工作路径上思考生命周期，但生产中的 Bug 却往往出现在启动失败和关闭阶段。</p>
+<p>部分构造就是典型的例子。如果一个对象需要获取三个资源，第二个获取时抛了异常，第一个资源仍然必须正确释放。只要把所有权分层到各个成员中，而不是在构造函数体内靠清理标志手动处理，RAII 就能自动搞定这件事。</p>
+<p>手工方式的脆弱性一目了然：</p>
+<pre><code class="language-cpp">// Anti-pattern: manual multi-resource construction with cleanup flags.
+class Pipeline {
+public:
+Pipeline(const Config&amp; cfg) {
+db_ = ::open_db(cfg.db_path().c_str());
+if (!db_) throw InitError{"db open failed"};
+
+cache_ = ::create_cache(cfg.cache_size());
+if (!cache_) {
+::close_db(db_); // must remember to clean up db_
+throw InitError{"cache alloc failed"};
+}
+
+listener_ = ::bind_listener(cfg.port());
+if (listener_ == invalid_socket) {
+::destroy_cache(cache_); // must remember both prior resources
+::close_db(db_);
+throw InitError{"bind failed"};
+}
+}
+
+~Pipeline() {
+::close_listener(listener_);
+::destroy_cache(cache_);
+::close_db(db_);
+}
+
+private:
+db_handle_t db_ = nullptr;
+cache_handle_t cache_ = nullptr;
+socket_t listener_ = invalid_socket;
+};
+</code></pre>
+<p>每往构造函数里多加一个资源，前面所有失败分支都得跟着改。一旦有人调整了获取顺序，清理逻辑就会悄悄坏掉。</p>
+<p>RAII 版本用成员包装器解决问题，依赖的是一条语言规则：构造函数抛出异常时，已经构造好的成员会被自动销毁：</p>
+<pre><code class="language-cpp">class Pipeline {
+public:
+Pipeline(const Config&amp; cfg)
+: db_(DbHandle::open(cfg.db_path()))       // destroyed automatically if
+, cache_(Cache::create(cfg.cache_size()))   // a later member throws
+, listener_(Listener::bind(cfg.port())) {}
+
+private:
+DbHandle db_;
+Cache cache_;
+Listener listener_;
+};
+</code></pre>
+<p>没有清理标志，没有级联 <code>if</code>，没有依赖顺序的手工拆除。语言替你完成了这一切。</p>
+<p>本书配套的 web-api 示例项目中，<code>main.cpp</code> 展示了这一原则在完整服务启动中的应用。每一层都作为 <code>main()</code> 中的局部变量构造，栈的自然析构顺序负责拆除：</p>
+<pre><code class="language-cpp">// 摘自 examples/web-api/src/main.cpp（简化）
+int main() {
+    webapi::TaskRepository repo;                       // 1. 领域对象
+    webapi::Router router;                             // 2. 路由表
+    router.get("/tasks", webapi::handlers::list_tasks(repo));
+
+    auto handler = webapi::middleware::chain(           // 3. 中间件
+        pipeline, router.to_handler());
+
+    webapi::http::Server server{port, std::move(handler)}; // 4. 服务器
+    server.run_until(shutdown_requested);
+    // 析构按反序展开：server, handler, router, repo
+}
+</code></pre>
+<p>整段代码中没有任何显式的拆除逻辑。如果任何一步构造抛出异常，之前已构造的对象都会按反序自动销毁——这正是 RAII <code>Pipeline</code> 模式所依赖的保证。</p>
+<p>关闭阶段是另一个主要压力点。析构函数运行时，系统往往已经处于状态切换之中——后台工作可能还持有引用，日志基础设施可能已经部分拆除。如果一个析构函数会无限阻塞、回调到不稳定的子系统、或者依赖某种从未写进文档的线程亲和性，就可能把原本整洁的所有权模型变成部署期故障。</p>
+<p>教训不是要害怕析构函数，而是要让析构函数的职责尽可能窄、尽可能明确。释放你拥有的资源，不要搞出意外的跨子系统操作。如果拆除工作需要比单纯析构更复杂的协议，就提供显式的 <code>stop</code> 或 <code>close</code> 方法，把析构函数作为最后的安全兜底，而不是唯一的清理手段。</p>
+<h2 id="验证与评审"><a class="header" href="#验证与评审">验证与评审</a></h2>
+<p>所有权设计需要有意识地纳入评审流程，因为很多生命周期 Bug 在跑任何工具之前，就已经能从结构上看出端倪。</p>
+<p>评审时值得关注的问题：</p>
+<ol>
+<li>每个资源是否都有一个单一、明确的所有者？</li>
+<li>借用的引用和视图，生命周期是否明显短于所有者？</li>
+<li><code>shared_ptr</code> 是在解决真实的共享生命周期需求，还是在回避所有权决策？</li>
+<li>移动操作是否保持了单一所有权和安全销毁？</li>
+<li>关闭流程是否依赖了超出资源释放范围的析构副作用？</li>
+</ol>
+<p>动态工具仍然不可或缺。AddressSanitizer 能捕获大量 use-after-free 问题；Leak Sanitizer 和平台诊断工具能发现遗漏的释放路径；ThreadSanitizer 在生命周期错误因关闭期间的竞态条件而暴露时尤其有用。不过，只有当类型系统本身已经把所有权表达清楚时，这些工具才最有效。</p>
+<h2 id="要点"><a class="header" href="#要点">要点</a></h2>
+<ul>
+<li>把所有权当作契约来对待——它必须在类型和对象结构中清晰可见。</li>
+<li>对每一种有意义的资源都使用 RAII，而不仅仅是堆内存。</li>
+<li>默认优先独占所有权；选择共享所有权时，要给出明确的理由。</li>
+<li>先把移动语义理解为所有权转移规则，再把它当作性能优化手段。</li>
+<li>对关闭路径和部分构造路径的审查力度，应该和对稳态运行路径一样。</li>
+</ul>
+<p>如果一个资源可能泄漏、重复释放、销毁后仍被访问，或在错误的线程上销毁，那问题往往早在崩溃发生之前就埋下了——埋在所有权被留为隐式的那一刻。</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="map.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="02-values-identity-and-invariants.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="map.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="02-values-identity-and-invariants.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

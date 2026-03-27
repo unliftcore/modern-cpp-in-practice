@@ -1,0 +1,501 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Values, Identity, and Invariants - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-810527eb.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/02-values-identity-and-invariants.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="values-identity-and-invariants"><a class="header" href="#values-identity-and-invariants">Values, Identity, and Invariants</a></h1>
+<p>Once ownership is clear, the next production question is semantic rather than mechanical: what kind of thing is this object supposed to be?</p>
+<p>Modern C++ code gets harder than it needs to be when every type is treated as mutable state with methods attached. Some objects are values. They represent a self-contained piece of meaning, can often be copied or replaced wholesale, and should be easy to compare and test. Some objects carry identity. They represent a specific session, account, worker, or connection whose continuity matters across time even as its fields change. Mixing those roles inside one vague type creates bugs that look unrelated: broken equality, unstable cache keys, accidental aliasing, poor concurrency behavior, and APIs that cannot say whether mutation changes “the same thing” or creates a new one.</p>
+<p>This chapter is about keeping those categories sharp and enforcing invariants so the types remain trustworthy under pressure. It is not a chapter about parameter passing or ownership transfer mechanics. Those belong elsewhere. The focus here is modeling: deciding when a type should behave like a value, when identity must remain explicit, and how invariants stop the object graph from becoming a bag of fields.</p>
+<h2 id="values-and-entities-solve-different-problems"><a class="header" href="#values-and-entities-solve-different-problems">Values and Entities Solve Different Problems</a></h2>
+<p>A value is defined by what it contains, not by where it came from. Two values that represent the same configuration, time window, or money amount should usually be interchangeable. You can copy them, compare them, and move them between threads without inventing a story about which one is the “real” instance.</p>
+<p>An entity or identity-bearing object is different. A live client session is not interchangeable with another session that happens to have the same fields at one moment. A connection object may reconnect, accumulate statistics, and hold synchronization state while still remaining the same connection from the system’s point of view. Identity exists so the program can talk about continuity over time.</p>
+<p>This sounds obvious. The design damage appears when teams fail to decide which category a type belongs to.</p>
+<p>If an <code>Order</code> type is mutable, shared, equality-comparable by every field, and also used as a cache key, the program now has several incompatible stories about what that object means. If a configuration snapshot is wrapped in a reference-counted mutable object even though callers only need an immutable set of values, the code has paid for aliasing and lifetime complexity without gaining semantic power.</p>
+<p>The useful default is stronger than many codebases realize: if a type does not need continuity across time, design it as a value first.</p>
+<h2 id="value-types-reduce-accidental-coupling"><a class="header" href="#value-types-reduce-accidental-coupling">Value Types Reduce Accidental Coupling</a></h2>
+<p>Value semantics are powerful because they reduce invisible sharing. A caller gets its own copy or moved instance. Mutation is local. Equality can often be structural. Tests can build small examples without allocating object graphs or mocking infrastructure.</p>
+<p>Configuration is a good example. Many systems model configuration as a globally shared mutable object because updates exist somewhere in the product. That choice infects code that only needs a stable snapshot.</p>
+<p>Usually the better design is this:</p>
+<ul>
+<li>Parse raw configuration into a validated value object.</li>
+<li>Publish a new snapshot when configuration changes.</li>
+<li>Let consumers hold the snapshot they were given.</li>
+</ul>
+<p>That design makes each reader’s world explicit. Code processing one request can reason against one configuration value. There is no half-updated object graph, no lock required merely to read a timeout value, and no mystery about whether two callers are looking at the same mutable instance.</p>
+<h3 id="what-goes-wrong-without-value-semantics"><a class="header" href="#what-goes-wrong-without-value-semantics">What Goes Wrong Without Value Semantics</a></h3>
+<p>When configuration is modeled as a shared mutable object rather than a value snapshot, aliasing bugs appear:</p>
+<pre><code class="language-cpp">// Anti-pattern: shared mutable configuration.
+struct AppConfig {
+    std::string db_host;
+    int db_port;
+    std::chrono::seconds timeout;
+};
+
+// A single global mutable instance, shared by reference.
+AppConfig g_config;
+
+void handle_request(RequestContext&amp; ctx) {
+    auto conn = connect(g_config.db_host, g_config.db_port);
+    // ... long operation ...
+    // BUG: another thread calls reload_config(), mutating g_config
+    // mid-request. conn was opened with the old host, but now
+    // ctx uses the new timeout. The request operates against
+    // an incoherent mix of old and new configuration.
+    conn.set_timeout(g_config.timeout);
+}
+</code></pre>
+<p>With value semantics, each request captures its own immutable snapshot. No lock is needed to read fields, and no mid-flight mutation can create incoherent state:</p>
+<pre><code class="language-cpp">void handle_request(RequestContext&amp; ctx, const ServiceConfig&amp; config) {
+    // config is a value -- it cannot change during this call.
+    auto conn = connect(config.db_host(), config.db_port());
+    conn.set_timeout(config.timeout());
+    // Entire request sees a single consistent configuration.
+}
+</code></pre>
+<p>The deeper point is that values compose well. They can sit inside containers, cross threads, participate in deterministic tests, and form stable inputs to hashing or comparison. Identity-bearing objects can do those things too, but they require more rules and more caution. Use that complexity only when the model truly needs it.</p>
+<h2 id="invariants-are-the-reason-to-have-types-at-all"><a class="header" href="#invariants-are-the-reason-to-have-types-at-all">Invariants Are the Reason to Have Types at All</a></h2>
+<p>A type that permits invalid combinations of state is often just a struct-shaped bug carrier.</p>
+<p>An invariant is a condition that should hold whenever an object is observable by the rest of the program. A time window may require <code>start &lt;= end</code>. A money amount may require a currency and a bounded integer representation. A batching policy may require <code>max_items &gt; 0</code> and <code>flush_interval &gt; 0ms</code>. A connection state object may forbid “authenticated but not connected.”</p>
+<p>The point of an invariant is not to make the constructor fancier. It is to shrink the number of invalid states that later code must defend against.</p>
+<p>Consider a scheduling subsystem.</p>
+<pre><code class="language-cpp">class RetryPolicy {
+public:
+    static auto create(std::chrono::milliseconds base_delay,
+                       std::chrono::milliseconds max_delay,
+                       std::uint32_t max_attempts)
+        -&gt; std::expected&lt;RetryPolicy, ConfigError&gt;;
+
+    auto base_delay() const noexcept -&gt; std::chrono::milliseconds {
+        return base_delay_;
+    }
+
+    auto max_delay() const noexcept -&gt; std::chrono::milliseconds {
+        return max_delay_;
+    }
+
+    auto max_attempts() const noexcept -&gt; std::uint32_t {
+        return max_attempts_;
+    }
+
+private:
+    RetryPolicy(std::chrono::milliseconds base_delay,
+                std::chrono::milliseconds max_delay,
+                std::uint32_t max_attempts) noexcept
+        : base_delay_(base_delay),
+          max_delay_(max_delay),
+          max_attempts_(max_attempts) {}
+
+    std::chrono::milliseconds base_delay_;
+    std::chrono::milliseconds max_delay_;
+    std::uint32_t max_attempts_;
+};
+</code></pre>
+<p>The details of error transport belong more fully in the next chapter, but the modeling point is already clear: a <code>RetryPolicy</code> should not exist in a nonsense state. Once created, code using it should not have to ask whether the delays are inverted or the attempt count is zero unless those are valid meanings the domain actually wants.</p>
+<p>If a type does not enforce its invariants, the burden moves outward into every caller and every code review.</p>
+<h3 id="what-happens-when-invariants-are-not-enforced"><a class="header" href="#what-happens-when-invariants-are-not-enforced">What Happens When Invariants Are Not Enforced</a></h3>
+<p>Compare the factory-validated <code>RetryPolicy</code> above with a plain aggregate that leaves validation to callers:</p>
+<pre><code class="language-cpp">// Anti-pattern: invariants left to the caller.
+struct RetryPolicy {
+    std::chrono::milliseconds base_delay;
+    std::chrono::milliseconds max_delay;
+    std::uint32_t max_attempts;
+};
+
+void schedule_retries(const RetryPolicy&amp; policy) {
+    // Caller forgot to validate. base_delay is negative, max_attempts is 0.
+    // This loop does nothing, silently dropping work.
+    for (std::uint32_t i = 0; i &lt; policy.max_attempts; ++i) {
+        auto delay = std::min(policy.base_delay * (1 &lt;&lt; i), policy.max_delay);
+        enqueue_after(delay); // never executes when max_attempts == 0
+    }
+}
+</code></pre>
+<p>Every function that receives <code>RetryPolicy</code> must now independently check for nonsense values, or assume some earlier layer already did. In practice, some callers check and some do not, producing inconsistent behavior depending on the call path. The factory approach shown earlier makes this class of bug structurally impossible: if you have a <code>RetryPolicy</code>, it is valid.</p>
+<p>The companion web-api project applies the same pattern to its domain model. <code>Task::validate()</code> is a static factory that returns <code>Result&lt;Task&gt;</code>, rejecting empty or oversized titles at the boundary:</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/task.cppm
+[[nodiscard]] static Result&lt;Task&gt; validate(Task t) {
+    if (t.title.empty()) {
+        return make_error(ErrorCode::bad_request, "title must not be empty");
+    }
+    if (t.title.size() &gt; 256) {
+        return make_error(ErrorCode::bad_request, "title exceeds 256 characters");
+    }
+    return t;
+}
+</code></pre>
+<p>Every path that stores a <code>Task</code> goes through <code>validate()</code> first, including updates — the repository re-validates after mutation. The invariant is owned by the type, not by individual callers.</p>
+<h2 id="anti-pattern-entity-semantics-smuggled-into-a-value-type"><a class="header" href="#anti-pattern-entity-semantics-smuggled-into-a-value-type">Anti-pattern: Entity Semantics Smuggled Into a Value Type</a></h2>
+<p>One recurring failure is a type that looks like a value because it is copied and compared, but actually carries identity-bearing mutation.</p>
+<pre><code class="language-cpp">// Anti-pattern: one type tries to be both a value and a live entity.
+struct Job {
+    std::string id;
+    std::string owner;
+    std::vector&lt;Task&gt; tasks;
+    std::mutex mutex; // RISK: identity-bearing synchronization hidden inside data model
+    bool cancelled = false;
+};
+</code></pre>
+<p>This object cannot honestly behave like a value because copying a mutex and a live cancellation flag has no sensible meaning. It also cannot honestly behave like a narrow entity model because the entire mutable representation is public. The type will infect the rest of the codebase with ambiguity.</p>
+<p>The cleaner split is usually:</p>
+<ul>
+<li>a value type such as <code>JobSpec</code> or <code>JobSnapshot</code> for the stable domain data,</li>
+<li>and an identity-bearing runtime object such as <code>JobExecution</code> that owns synchronization, progress, and cancellation state.</li>
+</ul>
+<p>That split clarifies which parts are serializable, comparable, cacheable, and safe to move across threads, and which parts model a live process in the system.</p>
+<p>The companion web-api project demonstrates this separation cleanly. <code>Task</code> is a pure value type — copyable, comparable, serializable — while <code>TaskRepository</code> is the identity-bearing entity that owns a <code>shared_mutex</code>, an ID generator, and the mutable collection. The value carries domain data; the entity manages lifecycle and synchronization. Neither tries to do the other’s job.</p>
+<h2 id="equality-should-match-meaning"><a class="header" href="#equality-should-match-meaning">Equality Should Match Meaning</a></h2>
+<p>One of the best tests for whether a type has a coherent semantic role is whether equality is obvious.</p>
+<p>For many value types, equality should be structural. Two validated endpoint configurations with the same host, port, and TLS mode are the same value. Two money amounts with the same currency and minor units are the same value. Two time ranges with the same endpoints are the same value.</p>
+<p>For identity-bearing objects, structural equality is often actively misleading. Two live sessions with the same user id and remote address are not the same session. Two connections pointed at the same shard are not interchangeable if each carries different lifecycle state and pending work.</p>
+<p>If a team cannot answer what equality should mean for a type, the type is probably mixing value data with identity-bearing runtime concerns.</p>
+<p>The companion web-api project keeps this straightforward. <code>Task</code> declares a defaulted three-way comparison, making equality purely structural:</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/task.cppm
+[[nodiscard]] auto operator&lt;=&gt;(const Task&amp;) const = default;
+</code></pre>
+<p>Because <code>Task</code> is a value, structural equality is the right answer. The identity-bearing <code>TaskRepository</code> has no equality operator at all — comparing two repositories would be meaningless.</p>
+<p>This matters operationally. Equality influences cache keys, deduplication logic, diff generation, test assertions, and change detection. A semantically vague type tends to produce semantically vague equality, which then breaks several systems at once.</p>
+<h3 id="shallow-copies-and-aliasing-a-concrete-trap"><a class="header" href="#shallow-copies-and-aliasing-a-concrete-trap">Shallow Copies and Aliasing: A Concrete Trap</a></h3>
+<p>When a type looks like a value but shares internal state through pointers or references, copies become aliases rather than independent values:</p>
+<pre><code class="language-cpp">// Anti-pattern: shallow copy creates aliasing bugs.
+struct Route {
+    std::string name;
+    std::shared_ptr&lt;std::vector&lt;Endpoint&gt;&gt; endpoints; // shared, not owned
+};
+
+void reconfigure(Route primary) {
+    Route backup = primary; // looks like a copy, but endpoints are shared
+
+    backup.name = "backup-" + primary.name;
+    backup.endpoints-&gt;push_back(fallback_endpoint()); // BUG: mutates primary too
+
+    // primary.endpoints and backup.endpoints point to the same vector.
+    // The caller who passed primary now sees an endpoint they never added.
+}
+</code></pre>
+<p>The fix is to give the type genuine value semantics. Either store the vector directly as a member (so copies are deep), or use a copy-on-write strategy, or make the type immutable so sharing is safe:</p>
+<pre><code class="language-cpp">struct Route {
+    std::string name;
+    std::vector&lt;Endpoint&gt; endpoints; // owned, copied on assignment
+
+    auto with_endpoint(Endpoint ep) const -&gt; Route {
+        Route copy = *this;
+        copy.endpoints.push_back(std::move(ep));
+        return copy;
+    }
+};
+</code></pre>
+<p>Now <code>Route</code> behaves as a value. Copies are independent. Mutation through <code>with_endpoint</code> produces a new value without disturbing the original. No aliasing surprise is possible.</p>
+<h2 id="mutation-should-respect-the-modeling-choice"><a class="header" href="#mutation-should-respect-the-modeling-choice">Mutation Should Respect the Modeling Choice</a></h2>
+<p>Values and entities tolerate mutation differently.</p>
+<p>For value types, the cleanest design is often immutability after validation or at least mutation through narrow operations that preserve invariants. Replacing a configuration snapshot or producing a new routing table is frequently easier to reason about than mutating one shared instance in place.</p>
+<p>For entities, mutation is natural because the object models continuity over time. But that does not justify public writable fields or unconstrained setters. An entity still needs a controlled state machine. A <code>Connection</code> may transition from <code>connecting</code> to <code>ready</code> to <code>draining</code> to <code>closed</code>; it should not permit arbitrary combinations just because the fields are individually legal.</p>
+<p>The real design question is not whether mutation is allowed. It is where mutation is allowed and what guarantees survive it.</p>
+<p>If mutation can break invariants between two field assignments, the type likely needs a stronger operation boundary. If callers must lock, update three fields, and remember to recompute a derived flag, the invariant was never really owned by the type.</p>
+<pre><code class="language-cpp">// Anti-pattern: public fields allow invariant-breaking mutation.
+struct TimeWindow {
+    std::chrono::system_clock::time_point start;
+    std::chrono::system_clock::time_point end;
+};
+
+void extend_deadline(TimeWindow&amp; window, std::chrono::hours extra) {
+    window.end += extra; // fine
+}
+
+void shift_start(TimeWindow&amp; window, std::chrono::hours shift) {
+    window.start += shift;
+    // BUG: if shift is large enough, start &gt; end.
+    // Every consumer of TimeWindow must now defend against this.
+}
+</code></pre>
+<p>An encapsulated type eliminates this class of bug by making the invariant un-breakable from outside:</p>
+<pre><code class="language-cpp">class TimeWindow {
+public:
+    static auto create(system_clock::time_point start,
+                       system_clock::time_point end)
+        -&gt; std::optional&lt;TimeWindow&gt;
+    {
+        if (start &gt; end) return std::nullopt;
+        return TimeWindow{start, end};
+    }
+
+    auto start() const noexcept { return start_; }
+    auto end() const noexcept { return end_; }
+
+    auto with_extended_end(std::chrono::hours extra) const -&gt; TimeWindow {
+        return TimeWindow{start_, end_ + extra}; // always valid: end moves forward
+    }
+
+private:
+    TimeWindow(system_clock::time_point s, system_clock::time_point e)
+        : start_(s), end_(e) {}
+
+    system_clock::time_point start_;
+    system_clock::time_point end_;
+};
+</code></pre>
+<p>Callers cannot produce an invalid <code>TimeWindow</code>. The invariant <code>start &lt;= end</code> is enforced once, in the type, rather than diffusely across every mutation site.</p>
+<h2 id="small-domain-types-are-worth-the-ceremony"><a class="header" href="#small-domain-types-are-worth-the-ceremony">Small Domain Types Are Worth the Ceremony</a></h2>
+<p>Experienced programmers sometimes resist tiny wrapper types because they look like ceremony compared with plain integers or strings. In production C++, these types often pay for themselves quickly.</p>
+<p>An <code>AccountId</code>, <code>ShardId</code>, <code>TenantName</code>, <code>BytesPerSecond</code>, or <code>Deadline</code> type can eliminate argument swaps, clarify logs, and make invalid combinations harder to express. Just as importantly, these types can carry invariants and conversions locally instead of distributing them across parsing, storage, and formatting code.</p>
+<p>The warning is that a wrapper type is only useful if it actually sharpens meaning. A thin shell around <code>std::string</code> that preserves all invalid states and adds no semantic operations is mostly noise. The right question is whether the type enforces or communicates a real distinction the system cares about.</p>
+<h2 id="concurrency-gets-easier-when-values-stay-values"><a class="header" href="#concurrency-gets-easier-when-values-stay-values">Concurrency Gets Easier When Values Stay Values</a></h2>
+<p>Many concurrency problems are secretly modeling problems. Shared mutable state is hard largely because the program uses identity-bearing objects where immutable values would have been enough.</p>
+<p>Threading a validated snapshot through a pipeline is easy to reason about. Sharing a mutable configuration service object with interior locking across the same pipeline is much harder. Passing a value-oriented request descriptor into work queues is easier than passing a live session object with hidden aliasing and synchronization.</p>
+<p>This does not mean every concurrent system can eliminate entities. It means value semantics are one of the most effective ways to reduce the amount of state that must be shared and synchronized. When the code can replace mutation with snapshot publication or message passing of values, both correctness and reviewability improve.</p>
+<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and Review</a></h2>
+<p>Types that claim semantic roles should be reviewed against those roles directly.</p>
+<p>Useful review questions:</p>
+<ol>
+<li>Is this type primarily a value or primarily an identity-bearing object?</li>
+<li>Do its equality, copying, and mutation rules match that choice?</li>
+<li>Which invariants does the type enforce itself?</li>
+<li>Would splitting stable domain data from live runtime state simplify the design?</li>
+<li>Is shared mutable state present because the model truly requires identity, or because value semantics were never attempted?</li>
+</ol>
+<p>Testing follows the same logic. Value types deserve property-style tests for invariant preservation, equality, and serialization stability where relevant. Identity-bearing types deserve lifecycle and state-machine tests that verify legal transitions and reject illegal ones.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<ul>
+<li>Default to value semantics when continuity across time is not part of the domain meaning.</li>
+<li>Make identity explicit when the object represents a specific live thing rather than interchangeable data.</li>
+<li>Enforce invariants inside types so callers do not have to rediscover them defensively.</li>
+<li>Let equality, copying, and mutation rules follow the semantic role of the type.</li>
+<li>Split stable domain values from runtime control state when one object is trying to do both jobs.</li>
+</ul>
+<p>When a type has a clear answer to “what kind of thing is this,” the rest of the design gets easier: ownership is more obvious, APIs get narrower, tests become simpler, and concurrency stops fighting hidden aliasing. That is why semantic clarity belongs this early in the book.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="01-ownership-lifetime-and-raii.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="03-errors-results-and-failure-boundaries.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="01-ownership-lifetime-and-raii.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="03-errors-results-and-failure-boundaries.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

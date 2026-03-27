@@ -1,0 +1,478 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>用现代 C++ 构建可复用库 - 现代 C++ 实战</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="面向有经验程序员的现代 C++ 生产实践指南：所有权、接口、失败边界、并发、性能与验证。">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-340dc4ea.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-0fc7cccf.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-8b875a01.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">现代 C++ 实战</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/nodew/modern-cpp-in-practice/edit/main/translations/zh-CN/chapters/chapters/22-building-a-reusable-library-in-modern-cpp.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="在现代-c-中构建可复用库"><a class="header" href="#在现代-c-中构建可复用库">在现代 C++ 中构建可复用库</a></h1>
+<p>应用代码靠着局部便利，往往能撑很久。库代码不行。API 一旦流出最初的调用者圈子，每一条含糊的所有权契约、每一个滥用的错误通道、每一次不经意的分配、每一处不稳定的类型依赖，都会变成别人的麻烦。库或许还能编译通过，但别人已经不敢信任它了。</p>
+<p>所以本章要回答的实际问题不是”怎么写出漂亮的 API”，而是”一个可复用的现代 C++23 库，到底要把哪些东西讲明白，其他团队才能放心接入，不至于连带继承那些隐藏耦合、不稳定行为和无从验证的承诺？”答案要从范围说起。好的可复用库只做一个精确的承诺，用经得起真实使用的类型和契约来表达它，并且坚决不让自身的实现成本渗透到整张依赖图中。</p>
+<p>本章选用的示例是一个供多个服务和命令行工具共同使用的解析与转换库。之所以选这个领域，是因为它几乎涵盖了所有棘手的现实压力：输入边界、分配行为、诊断信息、性能预期、可扩展性，以及打包分发。</p>
+<h2 id="从一个精确的承诺开始"><a class="header" href="#从一个精确的承诺开始">从一个精确的承诺开始</a></h2>
+<p>很多糟糕的库，还没写出第一行公开 API 就已经注定失败了——它们的定位是”凡是跟 X 相关的东西都放这里”。后果不难预见：职责不断堆积，为各种不相干的需求长出扩展点，任何改动都牵一发动全身，版本演进举步维艰。</p>
+<p>可复用库应该只做一个精确的承诺：解析并验证某种格式；归一化一批记录；暴露一层存储抽象；计算一组派生值。承诺本身可以很有分量，但必须有一个清晰的核心。</p>
+<p>这道理听起来显而易见，却会立刻改变接口设计的走向。精确的承诺意味着更少的公开类型、更少的失败类别、更少需要调用者自行定制的地方。而含糊的承诺只会把复杂度往外推——推成泛滥的模板、回调丛林、配置映射表，以及读起来像谈判停火协议的文档。</p>
+<p>因此，库设计中最重要的决定不是该不该用模块、concept 还是 <code>std::expected</code>，而是公开契约到哪里为止。</p>
+<h2 id="公开类型应直接编码所有权与不变量"><a class="header" href="#公开类型应直接编码所有权与不变量">公开类型应直接编码所有权与不变量</a></h2>
+<p>调用者不应该非得翻代码仓库，才能搞清楚所有权、生命周期、可变性或有效性这些基本问题。库返回一个视图，调用者就该知道底层数据归谁所有。库接收一个回调，回调的生命周期和线程要求就该一目了然。一个配置对象可能处于无效状态，那这个无效状态只应在验证完成前短暂存在。</p>
+<p>值类型通常是库 API 的最佳重心，因为它们在跨团队和跨测试场景中传递起来最可靠。值类型让复制成本一目了然，让 move 语义成为有意识的选择，也让不变量可以绑定在构造或验证的边界上。<code>std::string_view</code> 和 <code>std::span</code> 这类借用型输入在调用边界上仍然好用，但前提是库能在借用的生命周期内完成工作，或者及时复制需要保留的数据。</p>
+<h3 id="有意保留为局部片段面向调用者契约显式的-api"><a class="header" href="#有意保留为局部片段面向调用者契约显式的-api">有意保留为局部片段：面向调用者、契约显式的 API</a></h3>
+<pre><code class="language-cpp">enum class parse_error {
+invalid_syntax,
+unsupported_version,
+duplicate_key,
+resource_limit_exceeded,
+};
+
+struct parse_options {
+std::size_t max_document_bytes = 1 &lt;&lt; 20;
+bool allow_comments = false;
+};
+
+struct document {
+std::pmr::vector&lt;entry&gt; entries;
+};
+
+[[nodiscard]] auto parse_document(std::string_view input,
+  parse_options const&amp; options,
+  std::pmr::memory_resource&amp; memory)
+-&gt; std::expected&lt;document, parse_error&gt;;
+</code></pre>
+<p>这段代码做了几件值得注意的事：把调用者可控的策略与输入字节分开；让分配策略对外可见，但不强制统一使用某个全局分配器；返回领域层面的错误类型，而非传输层或解析器内部的类型；通过 <code>[[nodiscard]]</code> 和 <code>std::expected</code>，让调用者更难忽略返回值。</p>
+<p>代价是函数签名不再像 <code>document parse(std::string_view)</code> 那样简洁。这完全没问题。可复用库靠的不是在幻灯片上看起来紧凑，而是让成本和契约清晰可读。</p>
+<h2 id="让失败形态保持稳定"><a class="header" href="#让失败形态保持稳定">让失败形态保持稳定</a></h2>
+<p>应用代码有时还能容忍异常和内部错误类别到处漂移——毕竟两头都是同一个团队在管。库就不能这样了。调用者必须分得清：哪些失败属于契约的一部分、哪些属于编程错误、哪些只是实现层面的意外。</p>
+<p>这通常会引向三种设计之一。</p>
+<ol>
+<li>对调用者本就需要处理的常规领域失败，使用 <code>std::expected</code> 或类似的结果类型。</li>
+<li>把异常留给不变量被破坏、环境出现异常故障，或者所在生态本来就以异常为主的 API。</li>
+<li>在边界处把底层错误翻译成稳定的公开错误词汇。</li>
+</ol>
+<p>具体怎么选取决于领域。解析、验证、可恢复的业务规则失败，一般都很适合 <code>std::expected</code>。嵌入异常式应用框架的底层基础设施库，用异常也合情合理。但最关键的是保持一致。如果一个库对部分可恢复失败返回 <code>std::expected</code>，对另一些却抛异常，某个后端泄漏出 <code>std::system_error</code> 而另一个后端不会——那它就是在逼调用者从实现细节里反推策略。</p>
+<p>公开错误不要切得太细。调用者需要的是能指导自己下一步行动的区分，二十种只有库内部才看得懂的解析器状态对他们毫无用处。稳定的错误类别应保持精简，更丰富的诊断信息可以通过独立通道按需提供。</p>
+<h2 id="分离机制与策略但不要把一切都抽象掉"><a class="header" href="#分离机制与策略但不要把一切都抽象掉">分离机制与策略，但不要把一切都抽象掉</a></h2>
+<p>可复用库往往确实需要一些定制能力：分配、日志钩子、宿主侧的诊断、时钟源、I/O 适配器、用户自定义的处理器。问题就出在这里——团队要么把整个接口层过度模板化，要么把库包裹在运行时多态接口里，搞得到处都是分配和虚分派。</p>
+<p>更好的做法是只开放少量显式的策略接缝，核心机制保持具体实现。需要零开销且编译期可检查的定制点时，concept 很有用；二进制边界、插件模型或运维解耦比模板透明性更重要时，类型擦除或回调接口更合适。</p>
+<p>举个例子，一个内部解析引擎通常没必要做成同时参数化日志、分配、诊断和错误格式化的庞大策略模板。它完全可以用具体代码做解析、接收一个 <code>std::pmr::memory_resource&amp;</code>、再通过一个窄接口按需输出诊断信息就够了。这样大多数调用点保持简洁，宿主仍然能控制那些代价高昂或与环境强相关的部分。</p>
+<p>库作者还必须在依赖管理上保持自律。如果公开头文件为了支持几个可选功能就引入了网络栈、格式化库、指标 SDK 和文件系统抽象，那可移植性和构建整洁度就已经丢了。可选的运维功能应当藏在窄接缝后面或放进配套的适配器里，不要塞进 API 核心。</p>
+<h3 id="错误在公开头文件中暴露内部类型"><a class="header" href="#错误在公开头文件中暴露内部类型">错误：在公开头文件中暴露内部类型</a></h3>
+<p>最常见的库设计失误之一，就是让实现类型泄漏到公开 API 中。由此产生的隐藏耦合后患无穷：调用者被迫传递性地依赖自己从未主动引入的头文件，构建时间随之膨胀，库内部的重构也会变成对外的破坏性变更。</p>
+<pre><code class="language-cpp">// BAD: public header pulls in implementation details
+#pragma once
+#include &lt;boost/asio/io_context.hpp&gt;      // transport detail
+#include &lt;spdlog/spdlog.h&gt;                // logging detail
+#include "internal/parser_state_machine.h" // implementation detail
+
+class document_parser {
+public:
+    document_parser(boost::asio::io_context&amp; io,
+                    std::shared_ptr&lt;spdlog::logger&gt; log);
+
+    auto parse(std::string_view input) -&gt; document;
+
+private:
+    boost::asio::io_context&amp; io_;          // caller now depends on Boost.Asio
+    std::shared_ptr&lt;spdlog::logger&gt; log_;  // caller now depends on spdlog
+    internal::parser_state_machine fsm_;   // caller now depends on internal layout
+};
+// Every caller's translation unit now includes Boost.Asio and spdlog headers.
+// Changing the logging library is a breaking change for all consumers.
+</code></pre>
+<p>修正方式是让公开头文件保持最小化，把实现类型推到前向声明、PIMPL 或狭窄回调接口之后。</p>
+<pre><code class="language-cpp">// BETTER: public header exposes only the library's own vocabulary
+#pragma once
+#include &lt;string_view&gt;
+#include &lt;expected&gt;
+#include &lt;memory&gt;
+
+namespace mylib {
+
+enum class parse_error { invalid_syntax, resource_limit_exceeded };
+
+struct diagnostic_event {
+    std::string_view message;
+    std::size_t line;
+};
+
+using diagnostic_sink = std::function&lt;void(diagnostic_event const&amp;)&gt;;
+
+class document_parser {
+public:
+    struct options {
+        std::size_t max_bytes = 1 &lt;&lt; 20;
+        diagnostic_sink on_diagnostic = {};  // optional, no spdlog dependency
+    };
+
+    explicit document_parser(options opts = {});
+    ~document_parser();
+    document_parser(document_parser&amp;&amp;) noexcept;
+    document_parser&amp; operator=(document_parser&amp;&amp;) noexcept;
+
+    [[nodiscard]] auto parse(std::string_view input)
+        -&gt; std::expected&lt;document, parse_error&gt;;
+
+private:
+    struct impl;
+    std::unique_ptr&lt;impl&gt; impl_;  // Boost, spdlog, FSM all hidden here
+};
+
+} // namespace mylib
+// Callers include only standard headers. Internal deps are invisible.
+// Changing from spdlog to another logger requires zero caller changes.
+</code></pre>
+<h3 id="错误糟糕的错误报告"><a class="header" href="#错误糟糕的错误报告">错误：糟糕的错误报告</a></h3>
+<p>如果库用裸整数、裸 <code>std::string</code> 消息或平台特有的异常类型来报告错误，调用者就只能从实现细节里反推失败语义。最终结果是脆弱的错误处理——库内部一改，调用者的处理逻辑就跟着崩。</p>
+<pre><code class="language-cpp">// BAD: error reporting through mixed, unstable channels
+auto parse(std::string_view input) -&gt; document {
+    if (input.empty())
+        throw std::runtime_error("empty input");  // string-based
+    if (input.size() &gt; max_size)
+        return {};  // default-constructed "null" document — is this an error?
+    if (!validate_header(input))
+        throw parser_exception(ERR_INVALID_HEADER);  // internal enum leaked
+    // caller must catch two exception types AND check for empty documents
+}
+</code></pre>
+<pre><code class="language-cpp">// BETTER: single, stable error channel with actionable categories
+[[nodiscard]] auto parse(std::string_view input)
+    -&gt; std::expected&lt;document, parse_error&gt;
+{
+    if (input.empty())
+        return std::unexpected(parse_error::invalid_syntax);
+    if (input.size() &gt; max_size)
+        return std::unexpected(parse_error::resource_limit_exceeded);
+    if (!validate_header(input))
+        return std::unexpected(parse_error::invalid_syntax);
+    // one return type, one error vocabulary, no exceptions for routine failures
+}
+</code></pre>
+<p>如果需要比错误类别更丰富的诊断信息，应通过独立通道提供（诊断 sink、错误详情访问器或结构化日志），而不是把调用者无法程序化处理的实现细节硬塞进主错误类型。</p>
+<h2 id="版本与-abi-需要策略不能靠乐观"><a class="header" href="#版本与-abi-需要策略不能靠乐观">版本与 ABI 需要策略，不能靠乐观</a></h2>
+<p>哪怕只是内部共享库，把版本管理当作设计的一部分也远比当作发布流程的一道手续有价值。真正要回答的问题是：库向调用者承诺了哪些变更是可以安全承受的。源码兼容、ABI 兼容、线协议稳定、序列化数据稳定、语义兼容——这些概念彼此相关，但并不等价。</p>
+<p>对大多数 C++ 库而言，最诚实也最可行的策略是：在一个主版本内保证源码兼容，不对跨任意工具链的 ABI 做笼统承诺。这种姿态看似保守，实际上比口头宣称 ABI 稳定、公开表面却到处是标准库类型、内联密集模板和平台相关布局要靠谱得多。</p>
+<p>如果 ABI 稳定性确实重要，整个设计就得跟着变。这通常意味着更窄的导出面、opaque 类型、PIMPL 式的边界、更严格的异常策略、更少的模板暴露，以及对编译器和标准库版本的明确约束。这些绝不是收尾修饰，而是影响整个 API 形态的基础性决策。</p>
+<h3 id="错误通过内联变更破坏-abi"><a class="header" href="#错误通过内联变更破坏-abi">错误：通过内联变更破坏 ABI</a></h3>
+<p>源码层面看起来完全安全的改动，可能悄无声息地破坏二进制兼容性。给类加一个成员、改一个内联函数的默认参数值、调整字段顺序——这些都会改变 ABI，编译器却不会发出任何警告。</p>
+<pre><code class="language-cpp">// v1.0 — shipped as shared library
+struct document {
+    std::pmr::vector&lt;entry&gt; entries;
+    // sizeof(document) == N, known to callers at compile time
+};
+
+// v1.1 — "just added a field"
+struct document {
+    std::pmr::vector&lt;entry&gt; entries;
+    std::optional&lt;metadata&gt; meta;  // sizeof(document) changed
+    // callers compiled against v1.0 still assume size N
+    // stack allocations, memcpy, placement new — all wrong
+};
+</code></pre>
+<p>对 ABI 稳定库来说，修正方式是把布局藏在 PIMPL 边界之后，让调用者永远不要依赖 <code>sizeof</code> 或字段偏移。</p>
+<pre><code class="language-cpp">// ABI-stable public header
+class document {
+public:
+    document();
+    ~document();
+    document(document&amp;&amp;) noexcept;
+    document&amp; operator=(document&amp;&amp;) noexcept;
+
+    [[nodiscard]] auto entries() const -&gt; std::span&lt;entry const&gt;;
+    [[nodiscard]] auto metadata() const -&gt; std::optional&lt;metadata_view&gt;;
+
+private:
+    struct impl;
+    std::unique_ptr&lt;impl&gt; impl_;
+};
+
+// In the .cpp file (not visible to callers):
+struct document::impl {
+    std::pmr::vector&lt;entry&gt; entries;
+    std::optional&lt;metadata&gt; meta;
+    // add fields freely — callers see only the pointer
+};
+</code></pre>
+<p>PIMPL 会给每个对象多带来一次堆分配和一层间接访问。对于创建不频繁的类型（文档、连接、会话），这几乎总是可以接受的代价。但对于热路径上每秒创建数百万次的类型就不行了——这时候该重新考虑的是这类类型是否真的需要 ABI 稳定。</p>
+<h3 id="版本化模式用-inline-namespace-做源码版本化"><a class="header" href="#版本化模式用-inline-namespace-做源码版本化">版本化模式：用 inline namespace 做源码版本化</a></h3>
+<p>当库必须同时支持多个 API 版本（例如迁移期间）时，inline namespace 可以在不强迫调用者改代码的前提下，对符号进行版本化。</p>
+<pre><code class="language-cpp">namespace mylib {
+inline namespace v2 {
+    struct document { /* v2 layout */ };
+    auto parse_document(std::string_view input) -&gt; std::expected&lt;document, parse_error&gt;;
+}
+
+namespace v1 {
+    struct document { /* v1 layout, kept for compatibility */ };
+    auto parse_document(std::string_view input) -&gt; std::expected&lt;document, parse_error&gt;;
+}
+}
+
+// Callers using `mylib::document` get v2 by default.
+// Callers that need v1 use `mylib::v1::document` explicitly.
+// Linker symbols are distinct, so v1 and v2 can coexist in one binary.
+</code></pre>
+<p>模块能改善构建结构和分发流程，但抹不掉 ABI 层面的现实。concept 能改善诊断和约束表达，但不会自动让一个模板密集的库变得易于版本管理。这些工具应被视为局部改进手段，而非策略层面的替代方案。</p>
+<h2 id="文档应回答集成问题"><a class="header" href="#文档应回答集成问题">文档应回答集成问题</a></h2>
+<p>面向有经验程序员的库文档，重点应放在帮助对方做出采用决策，而不是罗列功能卖点。正在评估一个可复用库的调用者，需要知道的是：</p>
+<ul>
+<li>库解决什么问题，明确不管什么。</li>
+<li>哪些输入是借用的，哪些输出自带存储。</li>
+<li>哪些失败属于常规情况，报告方式是什么。</li>
+<li>正常使用时会产生哪些分配、复制或后台开销。</li>
+<li>有没有线程安全保证，如果有，保证到什么程度。</li>
+<li>版本和兼容性方面，哪些承诺是真的。</li>
+</ul>
+<p>简短、看起来像生产代码的示例在这里最有用，尤其是那些同时展示了错误处理路径和配置边界的示例。大而全的教程式演练通常帮助不大。文档的目的，是让另一个团队不用打听内部”口耳相传”的知识，也能顺利集成。</p>
+<p>性能方面的说法同样需要克制。不要笼统地说库”很快”，而要讲清楚：测了什么场景、在什么负载下、跟什么基线对比、成本模型对哪些因素敏感。解析库的性能往往与分配策略、输入大小分布和失败率密切相关，这些都应当直说。</p>
+<h2 id="验证应当匹配库的公开承诺"><a class="header" href="#验证应当匹配库的公开承诺">验证应当匹配库的公开承诺</a></h2>
+<p>可复用库需要比末端应用组件更严格的验证纪律，因为调用者没办法审查你的全部假设。测试应当直接对应公开承诺。</p>
+<p>承诺对某个文档化的格式版本保持稳定解析行为？那就保留基于 fixture 的契约测试。承诺畸形输入只会返回结构化错误而不触发未定义行为？那就在公开解析入口上跑 fuzzing 和 sanitizer。宣称在特定模式下分配量有上界？那就用 benchmark 或埋点来验证。暴露了宿主侧的诊断通道？那就测试 sink 收到的确实是稳定的事件类别，而不是实现层的噪音。</p>
+<p>兼容性检查同样属于这个环节。承诺次版本间源码兼容，就要有集成测试或样例客户端来覆盖旧的调用模式。ABI 很重要，就要用能真正检验符号和布局预期的方式来测试产物。”在我机器上还能编译”不是兼容性策略。</p>
+<h2 id="知道什么时候还不该做成库"><a class="header" href="#知道什么时候还不该做成库">知道什么时候还不该做成库</a></h2>
+<p>团队经常过早地把代码做成共享库。如果只有一个应用在用，领域词汇每周都在变，或者所谓的”复用”更多只是组织层面的美好愿望，那么强行冻结出一个稳定的公开接口，往往只会把错误的假设固化下来。有时正确的做法是：在契约真正稳定之前，先把组件留在内部。</p>
+<p>这并不是反对复用，而是要求认真计算公开 API 的真实成本。其他团队一旦依赖上这个库，修改语义、所有权或错误策略的代价就会远高于改内部代码。只有当问题本身和契约都已成熟到值得承担这笔代价时，复用才真正有意义。</p>
+<h2 id="要点总结"><a class="header" href="#要点总结">要点总结</a></h2>
+<p>好的可复用 C++23 库只做一个精确的承诺，在公开类型中直接编码所有权与不变量，保持失败形态的稳定，只开放少量经过深思熟虑的定制接缝，并如实陈述版本与性能方面的承诺。它应尽量减少依赖拖拽，让有经验的调用者能轻松做出是否采用的判断。</p>
+<p>这些权衡并不陌生，只是在库的语境下要付得更明确。更丰富的签名可能不够优雅；稳定的错误类别需要在边界做转换；面向 ABI 稳定的设计会限制公开模板的自由度；窄接缝要求你有纪律地决定哪些东西不开放定制。之所以这些成本可以接受，是因为库是一份长期契约，而不仅仅是一堆可复用的代码。</p>
+<p>复习问题：</p>
+<ul>
+<li>这个库做出的核心承诺是什么？它明确拒绝承担哪些职责？</li>
+<li>哪些公开类型在不依赖隐藏假设的前提下，清晰地传达了所有权、生命周期和不变量？</li>
+<li>公开的错误类别是否足够精简、足够稳定，且能让调用者据此采取行动？</li>
+<li>哪些定制接缝确实必要？哪些依赖应当推到适配器后面，而不是出现在公开头文件中？</li>
+<li>实际做出的兼容性承诺到底是什么——源码兼容、ABI 兼容、序列化格式稳定、语义行为不变，还是其中几项的组合？</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="21-building-a-small-service-in-modern-cpp.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="23-reviewers-checklist-modern-cpp-code.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="21-building-a-small-service-in-modern-cpp.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="23-reviewers-checklist-modern-cpp-code.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Parameter Passing, Return Types, and API Surface - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-810527eb.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/04-parameter-passing-return-types-and-api-surface.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="parameter-passing-return-types-and-api-surface"><a class="header" href="#parameter-passing-return-types-and-api-surface">Parameter Passing, Return Types, and API Surface</a></h1>
+<p>In C++, a function signature says more than many authors intend. It says whether the callee borrows or retains data. It often implies whether null is meaningful, whether mutation is allowed, whether a copy may happen, and whether failure is ordinary control flow. If the signature gets these semantics wrong, the implementation can still be locally correct while the API remains expensive to use and hard to review.</p>
+<p>This chapter is about that semantic surface area. The goal is not to memorize “always pass X by Y.” The goal is to choose parameter and return forms that tell the truth about ownership, lifetime, mutation, nullability, and cost at the boundary where a caller must make decisions.</p>
+<p>That boundary focus keeps this chapter distinct from the ones before and after it. Chapter 1 dealt with who owns resources. Chapter 2 dealt with what kinds of objects exist in the model. Chapter 3 dealt with how failure should cross boundaries. Here the question is narrower and more practical: given those design choices, what should a function signature look like so the call contract is obvious?</p>
+<h2 id="signatures-are-contracts-not-type-checking-rituals"><a class="header" href="#signatures-are-contracts-not-type-checking-rituals">Signatures Are Contracts, Not Type-Checking Rituals</a></h2>
+<p>Many bad C++ APIs come from treating the signature as the smallest set of types that compiles. That approach ignores the fact that parameter and return choices are documentation with teeth.</p>
+<p>Take a parser boundary.</p>
+<pre><code class="language-cpp">auto parse_frame(std::span&lt;const std::byte&gt; bytes)
+    -&gt; std::expected&lt;Frame, ParseError&gt;;
+</code></pre>
+<p>This single line communicates several things immediately.</p>
+<ul>
+<li>The function borrows contiguous read-only bytes.</li>
+<li>It does not require ownership of the source buffer.</li>
+<li>A frame is produced as an owned value.</li>
+<li>Failure is expected and explicit.</li>
+</ul>
+<p>Compare that with <code>Frame parse_frame(const std::vector&lt;std::byte&gt;&amp;);</code>. That version implies a container choice the parser does not need, hides failure policy, and says nothing about whether the returned <code>Frame</code> contains borrowed views into the input or independent owned data.</p>
+<p>The example project’s HTTP parser follows the same pattern. In <code>examples/web-api/src/modules/http.cppm</code>, <code>parse_request</code> borrows its input and returns an owned result:</p>
+<pre><code class="language-cpp">[[nodiscard]] inline std::optional&lt;Request&gt;
+parse_request(std::string_view raw);
+</code></pre>
+<p>The function accepts a <code>string_view</code> into a stack buffer, parses method, path, headers, and body, and returns a fully owned <code>Request</code> with <code>std::string</code> members. The caller’s buffer can be reused or destroyed immediately after the call returns. That borrow-in, own-out contract is visible in the signature alone.</p>
+<p>The difference is not stylistic polish. It is whether the call site can reason about the contract without opening the implementation.</p>
+<h2 id="borrowing-parameters-should-look-borrowed"><a class="header" href="#borrowing-parameters-should-look-borrowed">Borrowing Parameters Should Look Borrowed</a></h2>
+<p>If a function reads caller-owned data during the call and does not retain it, the signature should express borrowing directly.</p>
+<p>For text, <code>std::string_view</code> is usually the right parameter type when null termination is irrelevant and no ownership transfer occurs. For contiguous binary or element sequences, <code>std::span&lt;const T&gt;</code> is usually the right read-only form. For mutable borrowed access, <code>std::span&lt;T&gt;</code> or a non-const reference may be appropriate depending on whether the abstraction is sequence-shaped or object-shaped.</p>
+<p>This has two advantages.</p>
+<ol>
+<li>Call sites remain flexible. They can pass strings, slices, arrays, vectors, and mapped buffers without forced allocation or container conversion.</li>
+<li>The contract is honest. Borrowing stays borrowing.</li>
+</ol>
+<p>The main misuse is allowing borrowed parameters to leak into retained state. A function that accepts <code>string_view</code> and then caches it beyond the call is not clever; it is lying about the contract.</p>
+<h3 id="dangling-borrows-the-cost-of-getting-this-wrong"><a class="header" href="#dangling-borrows-the-cost-of-getting-this-wrong">Dangling Borrows: The Cost of Getting This Wrong</a></h3>
+<p>When a borrowed parameter outlives its source, the result is undefined behavior that often manifests as intermittent corruption rather than a clean crash:</p>
+<pre><code class="language-cpp">class Logger {
+public:
+    void set_prefix(std::string_view prefix) {
+        prefix_ = prefix; // BUG: stores a view, not a copy
+    }
+
+    void log(std::string_view message) {
+        fmt::print("[{}] {}\n", prefix_, message); // reads dangling view
+    }
+
+private:
+    std::string_view prefix_; // non-owning -- lifetime depends on caller
+};
+
+void configure_logger(Logger&amp; logger) {
+    std::string name = build_service_name();
+    logger.set_prefix(name); // name is destroyed at end of scope
+} // name destroyed here -- logger.prefix_ is now dangling
+</code></pre>
+<p>The fix is straightforward: if the member must outlive the call, it must own its data.</p>
+<pre><code class="language-cpp">class Logger {
+public:
+    void set_prefix(std::string prefix) { // takes ownership by value
+        prefix_ = std::move(prefix);
+    }
+    // ...
+private:
+    std::string prefix_; // owning -- no lifetime dependency on caller
+};
+</code></pre>
+<p>That is why a useful review heuristic is simple: if the parameter type says borrow, all retention must be visible in the implementation as an explicit copy or transformation to an owning type.</p>
+<h2 id="pass-by-value-when-the-callee-needs-its-own-copy-anyway"><a class="header" href="#pass-by-value-when-the-callee-needs-its-own-copy-anyway">Pass by Value When the Callee Needs Its Own Copy Anyway</a></h2>
+<p>One of the most useful modern C++ patterns is passing by value when the callee intends to store or otherwise own the argument. This often surprises people trained to avoid copies at all costs.</p>
+<p>Consider a request object that stores a tenant name.</p>
+<pre><code class="language-cpp">class RequestContext {
+public:
+    explicit RequestContext(std::string tenant)
+        : tenant_(std::move(tenant)) {}
+
+private:
+    std::string tenant_;
+};
+</code></pre>
+<p>This constructor is often better than both <code>const std::string&amp;</code> and <code>std::string_view</code>.</p>
+<ul>
+<li>It is honest that the object will own a string.</li>
+<li>Lvalue callers pay one copy, which was unavoidable anyway.</li>
+<li>Rvalue callers can move directly.</li>
+<li>There is no temptation to retain a borrowed view accidentally.</li>
+</ul>
+<p>The rule is not “always pass expensive types by const reference.” The rule is “pass by value when ownership transfer into the callee is the intended contract and the extra move/copy story is acceptable.”</p>
+<h3 id="wrong-parameter-choices-and-their-costs"><a class="header" href="#wrong-parameter-choices-and-their-costs">Wrong Parameter Choices and Their Costs</a></h3>
+<p>The cost of getting parameter passing wrong is not always dramatic, but it compounds across hot paths and large objects.</p>
+<p><strong>Unnecessary copy from <code>const std::string&amp;</code> when ownership is needed:</strong></p>
+<pre><code class="language-cpp">class Registry {
+public:
+    void register_name(const std::string&amp; name) {
+        names_.push_back(name); // always copies, even if caller passed a temporary
+    }
+private:
+    std::vector&lt;std::string&gt; names_;
+};
+
+// Caller:
+registry.register_name(build_name()); // builds a temporary string, copies it,
+                                      // then destroys the temporary. The move
+                                      // that pass-by-value would have enabled
+                                      // is lost.
+</code></pre>
+<p>With pass-by-value-and-move, the temporary is moved directly into the container at zero copy cost:</p>
+<pre><code class="language-cpp">void register_name(std::string name) {
+    names_.push_back(std::move(name)); // rvalue callers: 1 move. lvalue callers: 1 copy + 1 move.
+}
+</code></pre>
+<p>The example project’s error module applies the same pattern. In <code>examples/web-api/src/modules/error.cppm</code>, <code>make_error</code> takes a <code>std::string</code> by value and moves it into the error object:</p>
+<pre><code class="language-cpp">[[nodiscard]] inline std::unexpected&lt;Error&gt;
+make_error(ErrorCode code, std::string detail) {
+    return std::unexpected&lt;Error&gt;{Error{code, std::move(detail)}};
+}
+</code></pre>
+<p>Callers passing a string literal or a temporary pay zero copy cost; callers passing an lvalue pay one copy that the function would have needed anyway. The signature honestly communicates that <code>detail</code> will be owned by the resulting error.</p>
+<p><strong>Forced allocation from <code>const std::vector&lt;T&gt;&amp;</code> when <code>std::span</code> suffices:</strong></p>
+<pre><code class="language-cpp">// Anti-pattern: forces callers to allocate a vector even if data is in an array or span.
+double average(const std::vector&lt;double&gt;&amp; values);
+
+// Caller with a C array or std::array must construct a vector just to call this:
+std::array&lt;double, 4&gt; readings = {1.0, 2.0, 3.0, 4.0};
+auto avg = average(std::vector&lt;double&gt;(readings.begin(), readings.end())); // pointless heap allocation
+</code></pre>
+<p>With <code>std::span&lt;const double&gt;</code>, the function accepts any contiguous source without forcing a container choice:</p>
+<pre><code class="language-cpp">double average(std::span&lt;const double&gt; values);
+
+// Now works with vector, array, C array, span -- no allocation required.
+auto avg = average(readings);
+</code></pre>
+<p>The tradeoff is that pass-by-value can be wrong for polymorphic types, very large aggregates where copying lvalues is rarely desired, or APIs where retention is conditional and uncommon. As always, the semantic contract comes first.</p>
+<h2 id="non-const-reference-means-more-than-mutability"><a class="header" href="#non-const-reference-means-more-than-mutability">Non-const Reference Means More Than Mutability</a></h2>
+<p>A non-const reference parameter is strong syntax. It says the caller must provide a live object, null is not meaningful, and the callee may mutate that exact object. This is sometimes the right contract. It is also overused.</p>
+<p>Use a non-const reference when the mutation is central to the operation and callers should see it as the main point of the call. Sorting a vector in place, filling a provided output buffer, or advancing a parser state object may fit.</p>
+<p>Do not use non-const references merely to avoid returning a value or because out-parameters feel familiar from C APIs. Out-parameters weaken readability when the result is conceptually the output of the function rather than an object the caller is deliberately handing over for mutation.</p>
+<p>In modern C++, returning a value is usually clearer for primary results. Reserve non-const reference parameters for genuine in-place mutation or multi-object coordination where mutation is the real contract.</p>
+<h2 id="raw-pointers-are-mostly-for-optionality-and-interop"><a class="header" href="#raw-pointers-are-mostly-for-optionality-and-interop">Raw Pointers Are Mostly for Optionality and Interop</a></h2>
+<p>Raw pointers still have legitimate roles in interfaces. The cleanest modern use is to represent an optional borrowed object or to interoperate with lower-level APIs.</p>
+<p>That is a narrower role than many codebases give them.</p>
+<p>A <code>T*</code> parameter should usually mean one of two things:</p>
+<ol>
+<li>The callee may receive no object at all.</li>
+<li>The interface is crossing into pointer-based interop or low-level data structures where pointer identity itself matters.</li>
+</ol>
+<p>If null is not meaningful, a reference is usually clearer. If ownership is being transferred, <code>std::unique_ptr&lt;T&gt;</code> or another owning type is clearer. If the object is an array or contiguous sequence, <code>std::span&lt;T&gt;</code> is usually clearer. A naked pointer that means “non-null borrowed maybe-single maybe-many maybe-retained” is semantic debt.</p>
+<p>The same principle applies to return types. Returning a raw owning pointer from ordinary modern C++ APIs is almost always the wrong signal. Returning a raw observer pointer can be fine when absence is meaningful and lifetime is controlled elsewhere.</p>
+<h2 id="return-owned-meaning-not-storage-accidents"><a class="header" href="#return-owned-meaning-not-storage-accidents">Return Owned Meaning, Not Storage Accidents</a></h2>
+<p>Return types deserve the same discipline as parameters. The main question is whether the caller should receive owned meaning, borrowed access, or a decision-bearing wrapper such as <code>expected</code> or <code>optional</code>.</p>
+<p>For many APIs, returning an owned value is the cleanest design even when it involves a move. This keeps lifetime local, makes composition easier, and avoids callers depending on internal storage. Modern C++23 move semantics make value returns cheap enough in many cases that the clarity win dominates.</p>
+<p>Borrowed return types are appropriate only when the source lifetime is obvious, stable, and truly part of the contract. Returning <code>std::string_view</code> into internal storage is fine only when the storage clearly outlives the view and callers can use that fact safely. Across broad boundaries, this is often a poor trade because it exports lifetime reasoning the callee could have kept private.</p>
+<p>Optionality and failure should also be explicit in the return type rather than smuggled through sentinel values. A search returning “maybe found” fits <code>std::optional&lt;T&gt;</code> or an observer pointer if lifetime semantics require it. A parse or load operation whose failure is decision-relevant fits <code>std::expected&lt;T, E&gt;</code>. A function that returns an empty string or <code>-1</code> on failure is usually making the API weaker than the implementation needs it to be.</p>
+<h2 id="anti-pattern-one-signature-several-hidden-stories"><a class="header" href="#anti-pattern-one-signature-several-hidden-stories">Anti-pattern: One Signature, Several Hidden Stories</a></h2>
+<p>This kind of API survives in many codebases because it seems flexible.</p>
+<pre><code class="language-cpp">// Anti-pattern: signature hides ownership, failure, and buffer contract.
+bool encode_record(const Record&amp; record,
+               std::vector&lt;std::byte&gt;&amp; output,
+               std::string* error_message = nullptr);
+</code></pre>
+<p>This one function now carries several hidden rules.</p>
+<ul>
+<li>Does it append to <code>output</code> or overwrite it?</li>
+<li>Is <code>error_message</code> optional because diagnostics are not important, or because logging happens elsewhere?</li>
+<li>Can <code>output</code> be partially modified on failure?</li>
+<li>Is <code>false</code> validation failure, encoding bug, capacity issue, or internal exception translation?</li>
+</ul>
+<p>Nothing in the signature answers those questions cleanly.</p>
+<p>A stronger API usually splits the semantics.</p>
+<pre><code class="language-cpp">auto encode_record(const Record&amp; record)
+    -&gt; std::expected&lt;std::vector&lt;std::byte&gt;, EncodeError&gt;;
+
+auto append_encoded_record(const Record&amp; record,
+                   ByteAppender&amp; output)
+    -&gt; std::expected&lt;void, EncodeError&gt;;
+</code></pre>
+<p>Now the caller chooses between owned result production and append-style mutation, and the failure contract is explicit. The two different operations no longer pretend to be one generic “flexible” interface.</p>
+<h2 id="factories-and-acquisition-functions-must-state-ownership-up-front"><a class="header" href="#factories-and-acquisition-functions-must-state-ownership-up-front">Factories and Acquisition Functions Must State Ownership Up Front</a></h2>
+<p>Creation functions are where unclear ownership becomes especially expensive. A factory returning <code>T*</code> leaves callers asking who deletes it. A factory writing into an out-parameter plus bool return often hides partial-construction rules. A factory returning <code>shared_ptr&lt;T&gt;</code> by default may impose shared ownership long before the design proved it necessary.</p>
+<p>For ordinary exclusive ownership, <code>std::unique_ptr&lt;T&gt;</code> is usually the clearest result. For value-like created objects, return the value directly or use <code>expected&lt;T, E&gt;</code> when failure belongs at the boundary. For shared ownership, return <code>shared_ptr&lt;T&gt;</code> only when the product being created is genuinely intended for shared lifetime.</p>
+<p>The difference is concrete:</p>
+<pre><code class="language-cpp">// Anti-pattern: raw pointer factory -- caller does not know who owns the result.
+Widget* create_widget(const WidgetConfig&amp; cfg);
+
+void setup() {
+    auto* w = create_widget(cfg);
+    // Does the caller own w? Does a global registry own it?
+    // Must the caller call delete? delete[]? A custom deallocator?
+    // Nothing in the signature answers these questions.
+    use(w);
+    // If the caller guesses wrong, the result is a leak or a double-free.
+}
+</code></pre>
+<pre><code class="language-cpp">// Clear: unique_ptr states exclusive caller ownership unambiguously.
+auto create_widget(const WidgetConfig&amp; cfg)
+    -&gt; std::expected&lt;std::unique_ptr&lt;Widget&gt;, WidgetError&gt;;
+
+void setup() {
+    auto result = create_widget(cfg);
+    if (!result) { /* handle error */ }
+    auto widget = std::move(*result); // ownership transferred, no ambiguity
+    // widget is destroyed automatically when it leaves scope
+}
+</code></pre>
+<p>The example project shows a value-oriented variant of this pattern. In <code>examples/web-api/src/modules/task.cppm</code>, <code>Task::validate</code> is a factory-style function that takes a <code>Task</code> by value and returns <code>Result&lt;Task&gt;</code> (an alias for <code>std::expected&lt;Task, Error&gt;</code>):</p>
+<pre><code class="language-cpp">[[nodiscard]] static Result&lt;Task&gt; validate(Task t) {
+    if (t.title.empty()) {
+        return make_error(ErrorCode::bad_request, "title must not be empty");
+    }
+    return t;
+}
+</code></pre>
+<p>And in <code>examples/web-api/src/modules/repository.cppm</code>, <code>TaskRepository::create</code> composes with it — accepting a <code>Task</code> by value, validating, assigning an ID, and returning the stored result or the validation error:</p>
+<pre><code class="language-cpp">[[nodiscard]] Result&lt;Task&gt; create(Task task);
+</code></pre>
+<p>Neither function uses out-parameters or bool return codes. The ownership story is the same as the <code>unique_ptr</code> factory above, adapted for value types: the caller moves a value in, gets back either a valid owned result or an explicit error.</p>
+<p>The important point is not the specific vocabulary type. It is that creation boundaries are where ownership should become unmistakable.</p>
+<h2 id="api-surface-is-also-cost-surface"><a class="header" href="#api-surface-is-also-cost-surface">API Surface Is Also Cost Surface</a></h2>
+<p>Signature choices influence cost in ways that matter to callers.</p>
+<p>A <code>std::function</code> parameter may allocate and type-erase even when the callback is used only synchronously. A <code>std::span&lt;const T&gt;</code> avoids forcing callers into a container representation. A <code>std::string</code> by-value sink constructor may permit efficient moves from temporaries. Returning an owned vector may allocate once but eliminate a long-lived lifetime hazard. These are design tradeoffs, not micro-optimizations.</p>
+<p>The right discipline is to expose costs the caller should know about and avoid accidental ones the caller cannot infer. A good signature does not promise zero cost. It makes the important costs unsurprising.</p>
+<p>That is also why broad “convenience” overload sets can become harmful. When an API accepts every combination of pointer, string, span, vector, and view, the overload surface can become harder to reason about than the original problem. Prefer a small number of semantically crisp forms.</p>
+<h2 id="verification-and-review"><a class="header" href="#verification-and-review">Verification and Review</a></h2>
+<p>Function signatures are one of the cheapest places to catch design mistakes early.</p>
+<p>Useful review questions:</p>
+<ol>
+<li>Does each parameter truthfully communicate borrow, ownership transfer, mutation, or optionality?</li>
+<li>Is pass-by-value being used where the callee needs ownership, rather than out of habit or dogma?</li>
+<li>Are raw pointers reserved for optional borrowed access or interop, rather than vague contracts?</li>
+<li>Does the return type express owned result, borrowed access, or explicit failure clearly?</li>
+<li>Is the API exposing the important costs and hiding only incidental implementation details?</li>
+</ol>
+<p>Tests should exercise signature-driven semantics, not only core behavior. Verify append versus overwrite behavior. Verify that returned views remain valid for the documented lifetime and no longer. Verify that failure leaves output parameters or state in the promised condition. A clear signature still needs evidence behind it.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<ul>
+<li>Treat signatures as semantic contracts, not just compiler-acceptable types.</li>
+<li>Use borrowing parameter types when the callee only inspects caller-owned data.</li>
+<li>Pass by value when the callee needs to take ownership and that contract should be obvious.</li>
+<li>Use references, pointers, and return wrappers to express mutation, optionality, and failure deliberately.</li>
+<li>Keep the API surface small enough that callers can understand lifetime and cost without reading implementation code.</li>
+</ul>
+<p>Good C++ APIs do not merely compile. They tell the truth early enough that callers can use them correctly on the first read. That is what makes signatures worth this much attention.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="03-errors-results-and-failure-boundaries.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="05-standard-library-types-that-change-design.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="03-errors-results-and-failure-boundaries.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="05-standard-library-types-that-change-design.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

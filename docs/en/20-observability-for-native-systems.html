@@ -1,0 +1,516 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Observability for Native Systems - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-810527eb.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/20-observability-for-native-systems.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="observability-for-native-systems"><a class="header" href="#observability-for-native-systems">Observability for Native Systems</a></h1>
+<p>Testing and sanitizers reduce how often bugs escape. They do not eliminate production failures, and they do not explain live behavior under real load, real data, real dependency failures, and real rollout conditions. That is what observability is for.</p>
+<p>In native systems, poor observability is unusually expensive. When a managed service stalls, you may still have a runtime with rich exceptions, heap snapshots, and standardized tracing hooks. In C++ you may instead have a partially symbolized crash, a thread pool stuck behind one blocked dependency, RSS growth that does not cleanly map to logical ownership, and operators who only know that latency tripled after a deployment. If logs, metrics, traces, and dump artifacts were not designed into the system before the incident, the investigation starts from guesswork.</p>
+<p>This chapter is about runtime evidence. Keep the boundary sharp. Tests ask whether the code meets a contract before shipping. Sanitizers and static analysis mechanically search for bug classes in development and CI. Observability answers a different question: when a native system is running for real, what signals let engineers explain failure, overload, or degradation fast enough to act?</p>
+<h2 id="start-from-operating-questions"><a class="header" href="#start-from-operating-questions">Start From Operating Questions</a></h2>
+<p>Observability is weak when it begins as “add some logs.” It gets strong when it begins with operating questions.</p>
+<p>For a service, those questions may be:</p>
+<ul>
+<li>Why did request latency rise even though CPU stayed moderate?</li>
+<li>Which dependency failures are causing retries, queue growth, or partial work?</li>
+<li>Did shutdown hang because work ignored cancellation or because a downstream dependency never drained?</li>
+<li>Is memory growth caused by leaks, fragmentation, caching, or backlog?</li>
+</ul>
+<p>For a library, the questions shift:</p>
+<ul>
+<li>Which host operation triggered the failure and with what inputs or version context?</li>
+<li>Is the library spending time on parsing, waiting, locking, allocation, or I/O?</li>
+<li>Can the host correlate library failures with its own request or job identifiers?</li>
+</ul>
+<p>Those questions determine which fields, metrics, and spans are worth recording. Without them, teams default to verbose but low-value telemetry: string-heavy logs, counters with no dimensions, or traces that show everything except queueing, retries, and cancellation.</p>
+<h3 id="what-debugging-looks-like-without-observability"><a class="header" href="#what-debugging-looks-like-without-observability">What debugging looks like without observability</a></h3>
+<p>To make the value concrete, consider a service that processes file uploads. A user reports that uploads are timing out. Here is the handler with no structured observability:</p>
+<pre><code class="language-cpp">void handle_upload(const http_request&amp; req) {
+    std::println("INFO: Processing upload");
+
+    std::println("INFO: Starting validation");
+    auto validation = validate(req);
+    if (!validation) {
+        std::println(stderr, "ERROR: Validation failed: {}",
+                     validation.error().message());
+        return;
+    }
+
+    std::println("INFO: Storing file");
+    auto store_result = store(req);
+    if (!store_result) {
+        std::println(stderr, "ERROR: Store failed: {}",
+                     store_result.error().message());
+        return;
+    }
+
+    notify(req);
+    std::println("INFO: Upload complete");
+}
+</code></pre>
+<p>Which upload failed? Was it the same user or a different one? What was it waiting on – disk I/O, a downstream service, a lock? How long did the store call take? Was the failure retried? None of these questions are answerable from the logs this function produces. The on-call engineer resorts to grepping logs by timestamp ranges, guessing at correlation, and asking the user to reproduce.</p>
+<p>Now the same function with structured logging, correlation IDs, and dimensional metrics:</p>
+<pre><code class="language-cpp">void handle_upload(upload_context&amp; ctx) {
+    auto span = ctx.tracer().start_span("handle_upload", {
+        {"request_id", ctx.request_id()},
+        {"user_id",    ctx.user_id()},
+        {"file_size",  ctx.file_size()},
+        {"shard",      ctx.shard_id()},
+    });
+
+    ctx.log(severity::info, "upload_started", {
+        {"request_id", ctx.request_id()},
+        {"file_name",  ctx.file_name()},
+        {"file_size",  std::to_string(ctx.file_size())},
+    });
+
+    auto validation = validate(ctx);
+    if (!validation) {
+        ctx.log(severity::warning, "validation_failed", {
+            {"request_id", ctx.request_id()},
+            {"reason",     validation.error().category()},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "validation"}, {"shard", ctx.shard_id()}});
+        return;
+    }
+
+    auto store_result = store(ctx);
+    if (!store_result) {
+        ctx.log(severity::error, "store_failed", {
+            {"request_id",  ctx.request_id()},
+            {"dependency",  "blob_store"},
+            {"error_class", store_result.error().category()},
+            {"latency_ms",  std::to_string(store_result.elapsed_ms())},
+        });
+        ctx.metrics().increment("upload_failures", 1,
+            {{"reason", "store"}, {"shard", ctx.shard_id()}});
+        return;
+    }
+
+    ctx.metrics().observe_latency("upload_duration_ms", span.elapsed_ms(),
+        {{"shard", ctx.shard_id()}});
+    ctx.log(severity::info, "upload_complete", {
+        {"request_id", ctx.request_id()},
+        {"latency_ms", std::to_string(span.elapsed_ms())},
+    });
+}
+</code></pre>
+<p>Now the on-call engineer filters by <code>request_id</code>, sees that the timeout happened during <code>store</code> with <code>dependency=blob_store</code>, checks the <code>upload_duration_ms</code> histogram by shard, and discovers that shard-3 latency spiked at 09:40. The blob store dashboard confirms the dependency was degraded. Total investigation time drops from hours to minutes.</p>
+<p>Both versions of <code>handle_upload</code> do the same work: validate, store, notify. The difference is not more code. It is code that was written with operating questions in mind from the start.</p>
+<h2 id="logs-should-explain-decisions-and-state-transitions"><a class="header" href="#logs-should-explain-decisions-and-state-transitions">Logs Should Explain Decisions and State Transitions</a></h2>
+<p>Logs are most useful when they capture decisions the system made and the state that mattered at the time, not when they narrate every function call. In native systems, this discipline matters even more because the volume and overhead of logging can become a performance problem quickly.</p>
+<p>Good production logs are structured, sparse, and stable.</p>
+<ul>
+<li>Structured means the important fields are emitted as machine-readable key-value data, not hidden in prose.</li>
+<li>Sparse means the default path is quiet and the exceptional path is informative.</li>
+<li>Stable means field names and meanings do not drift every sprint.</li>
+</ul>
+<p>When an operation fails, the log record should usually capture identity, classification, and local operating context.</p>
+<ul>
+<li>Request or job identifier.</li>
+<li>Operation or route name.</li>
+<li>Failure category, not just a formatted message.</li>
+<li>Retryability or permanence if the code knows it.</li>
+<li>Resource indicators that change diagnosis, such as queue depth, shard, peer, or attempt number.</li>
+<li>Version or build metadata when rollout state matters.</li>
+</ul>
+<p>Avoid two common mistakes.</p>
+<p>First, do not make logs the only source of truth for metrics-like questions. If you need to know retry rate or queue depth, emit those as metrics instead of forcing operators to reconstruct them from text. Second, do not log high-cardinality payloads or sensitive blobs just because an incident once needed them. Put those behind deliberate sampling or debug paths.</p>
+<p><code>std::source_location</code> can be useful in low-volume internal diagnostics or infrastructure code, especially when you need a stable call-site tag without hand-maintaining strings. It is not a substitute for a meaningful operation name. A log saying <code>source=foo.cpp:412</code> is weaker than one saying <code>operation=manifest_reload phase=commit</code>.</p>
+<p>The example project’s <code>request_logger()</code> middleware (in <code>examples/web-api/src/modules/middleware.cppm</code>) shows a minimal but structured starting point for per-request logging:</p>
+<pre><code class="language-cpp">// examples/web-api/src/modules/middleware.cppm — request_logger()
+return [](const http::Request&amp; req, const http::Handler&amp; next) -&gt; http::Response {
+    auto start = std::chrono::steady_clock::now();
+    auto resp = next(req);
+    auto elapsed = std::chrono::steady_clock::now() - start;
+    auto ms = std::chrono::duration_cast&lt;std::chrono::microseconds&gt;(elapsed).count();
+
+    std::println("[{}] {} {} → {} ({} μs)",
+        "LOG",
+        http::method_to_string(req.method),
+        req.path,
+        resp.status,
+        ms
+    );
+    return resp;
+};
+</code></pre>
+<p>Every response carries method, path, status code, and latency. That is not yet production-grade structured logging – the fields are embedded in formatted text rather than emitted as machine-queryable key-value pairs – but it demonstrates the right instinct: capture identity (route), outcome (status), and timing (latency) at a single cross-cutting point. Evolving this toward a structured JSON or key-value emitter is a straightforward next step.</p>
+<h3 id="unstructured-versus-structured-logging-in-practice"><a class="header" href="#unstructured-versus-structured-logging-in-practice">Unstructured versus structured logging in practice</a></h3>
+<p>The difference between unstructured and structured logs matters most during incidents, when the person reading logs is under time pressure and may not have written the code.</p>
+<pre><code class="language-cpp">// Unstructured: human-readable but machine-hostile.
+log("Failed to connect to database server db-prod-3 after 3 retries "
+    "(last error: connection refused), request will be dropped");
+</code></pre>
+<p>This line contains useful information, but extracting it requires parsing English. You cannot filter by retry count, dependency name, or error class without fragile regex. Across a fleet of instances, aggregating failure patterns from lines like this is expensive and error-prone.</p>
+<pre><code class="language-cpp">// Structured: same information, machine-queryable.
+ctx.log(severity::error, "dependency_connect_failed", {
+    {"dependency",  "db-prod-3"},
+    {"attempts",    "3"},
+    {"last_error",  "connection_refused"},
+    {"action",      "request_dropped"},
+    {"request_id",  ctx.request_id()},
+});
+</code></pre>
+<p>Now <code>dependency_connect_failed</code> events can be counted, filtered by dependency name, and correlated with specific requests. The field names are stable across code changes, so dashboards and alerts do not break when someone rewords a log message.</p>
+<h2 id="metrics-should-track-throughput-saturation-and-failure-shape"><a class="header" href="#metrics-should-track-throughput-saturation-and-failure-shape">Metrics Should Track Throughput, Saturation, and Failure Shape</a></h2>
+<p>Metrics answer questions that logs answer poorly: rates, distributions, long-term drift, and comparative behavior across instances. For native systems, the most useful metrics usually fall into three families.</p>
+<p>The first is throughput and latency: request rate, task completion rate, retry rate, and latency histograms for important stages. Use histograms for latency, not just averages. Native performance failures are often tail problems.</p>
+<p>The second is saturation: queue depth, worker utilization, open file descriptors, connection pool occupancy, allocator pressure, pending timers, and outstanding background tasks. These tell you whether the system is busy in a healthy way or accumulating work it cannot retire.</p>
+<p>The third is failure shape: counts by error category, timeout counts, cancellation counts, parse failures, dropped work, crash-loop restarts, and degraded-mode activations. These reveal whether the system is failing because dependencies are slow, because input quality changed, or because internal backpressure kicked in.</p>
+<p>The example project’s <code>ErrorCode</code> enum (in <code>examples/web-api/src/modules/error.cppm</code>) illustrates the foundation for failure-shape metrics. The closed set – <code>not_found</code>, <code>bad_request</code>, <code>conflict</code>, <code>internal_error</code> – with its <code>constexpr to_http_status()</code> mapping gives every failure a stable category. In a production evolution, you would increment a counter dimensioned by <code>ErrorCode</code> at the handler boundary, turning the type system’s classification into queryable metric labels without inventing ad-hoc string tags.</p>
+<p>Use labels conservatively. High-cardinality labels are one of the fastest ways to turn a metrics system into an expensive liability. Request ID, user ID, file path, arbitrary exception text, and raw peer address usually do not belong as labels. Region, route, dependency name, result category, and bounded shard identifiers often do.</p>
+<p>Gauges also deserve suspicion. They are easy to add and easy to misread. If a queue depth gauge jumps, is that a brief burst or a persistent trend? Pair gauges with rates or histograms when possible so operators can tell whether the state is draining.</p>
+<h2 id="traces-need-to-follow-asynchronous-ownership-not-just-synchronous-calls"><a class="header" href="#traces-need-to-follow-asynchronous-ownership-not-just-synchronous-calls">Traces Need To Follow Asynchronous Ownership, Not Just Synchronous Calls</a></h2>
+<p>In distributed services and async native systems, traces are the only practical way to see where end-to-end time went. But C++ code often loses trace value by failing to preserve context across executors, callbacks, thread hops, and coroutine suspension.</p>
+<p>If a request enters a service, enqueues background work, awaits a downstream call, and later resumes on another worker, the trace should still describe one coherent operation. That requires explicit propagation of trace context at the boundaries where ownership of work crosses time.</p>
+<p>This is where earlier design decisions matter. Structured concurrency and explicit cancellation scopes make tracing cleaner because the parent-child relationships are already meaningful. Detached work and ad hoc thread spawning make traces fragment into unrelated spans.</p>
+<p>Record spans for stages that correspond to actual waiting or service boundaries.</p>
+<ul>
+<li>Time spent queued before work starts.</li>
+<li>Time spent executing local CPU work.</li>
+<li>Time spent waiting on downstream I/O.</li>
+<li>Time spent retrying or backing off.</li>
+<li>Time lost to cancellation, shutdown, or overload shedding.</li>
+</ul>
+<p>Do not create spans for every helper function. That produces trace noise without causal value. The purpose of tracing is to explain latency structure and dependency shape, not to restate the call graph.</p>
+<p>The middleware pipeline in the example project (see <code>middleware::chain()</code> in <code>examples/web-api/src/modules/middleware.cppm</code>) is a natural carrier for trace context propagation. Each middleware wraps the next handler and has access to both the request and the response. A tracing middleware inserted into the pipeline can start a span before calling <code>next</code>, attach it to the request context, and close the span after the response returns. Because the pipeline already composes as a chain of <code>std::function</code> wrappers, adding a tracing stage requires no changes to handler signatures – exactly the kind of cross-cutting insertion point that makes trace propagation practical.</p>
+<h3 id="without-trace-context-the-invisible-queue"><a class="header" href="#without-trace-context-the-invisible-queue">Without trace context: the invisible queue</a></h3>
+<p>A common failure mode in async native services is latency that lives in queueing, not in execution. Without trace propagation across executor boundaries, this is invisible:</p>
+<pre><code class="language-cpp">// No trace context propagation. The span only covers execution, not waiting.
+void enqueue_work(thread_pool&amp; pool, request req) {
+    pool.submit([req = std::move(req)] {
+        auto span = tracer::start_span("process_request");  // Starts when work RUNS.
+        process(req);
+    });
+    // Time between submit() and when the lambda actually executes is lost.
+    // If the pool is saturated, requests wait 500ms in the queue,
+    // but traces show 2ms of execution time. Operators see low latency
+    // in traces while users experience high latency. The queue time is a
+    // blind spot.
+}
+</code></pre>
+<p>With proper context propagation, the full picture is visible:</p>
+<pre><code class="language-cpp">void enqueue_work(thread_pool&amp; pool, request req, trace_context ctx) {
+    auto enqueue_time = steady_clock::now();
+    pool.submit([req = std::move(req), ctx = std::move(ctx), enqueue_time] {
+        auto queue_span = ctx.start_span("queued", {
+            {"queue_ms", std::to_string(duration_cast&lt;milliseconds&gt;(
+                steady_clock::now() - enqueue_time).count())},
+        });
+        queue_span.end();
+
+        auto exec_span = ctx.start_span("process_request");
+        process(req);
+    });
+}
+</code></pre>
+<p>Now the trace shows two spans – queueing and execution – both linked to the parent request. When queue time dominates, it is immediately visible in the trace waterfall. This is the kind of latency that metrics alone (average processing time) systematically hide.</p>
+<h2 id="crash-diagnostics-are-part-of-observability-not-a-separate-emergency-hobby"><a class="header" href="#crash-diagnostics-are-part-of-observability-not-a-separate-emergency-hobby">Crash Diagnostics Are Part of Observability, Not a Separate Emergency Hobby</a></h2>
+<p>Native services and tools need a crash story before the first crash. That story includes more than “enable dumps.” You need to know where dumps go, how they are symbolized, how they map to exact builds, how operators correlate them with logs and traces, and which process metadata is attached.</p>
+<p>At minimum, a crash event should be linkable to:</p>
+<ul>
+<li>Exact binary or build ID.</li>
+<li>Symbol files produced by the matching build.</li>
+<li>Deployment metadata such as version, environment, and rollout ring.</li>
+<li>Recent structured breadcrumbs around the failing operation.</li>
+<li>Thread identities and, where possible, stack traces for relevant threads.</li>
+</ul>
+<p>The build work from the previous chapter is what makes this viable. Symbol servers, build IDs, and release metadata are build concerns. Their operational payoff shows up here when an incident happens at 03:00 and the on-call engineer needs a useful stack instead of raw addresses.</p>
+<p>Crash reporting also needs policy. Some components should fail fast because continuing risks data corruption. Others can isolate a failing request or plugin and keep the host alive. Observability should make that decision legible after the fact. If the process aborts intentionally on invariant violation, emit enough context before termination that the crash is distinguishable from an arbitrary segfault.</p>
+<h2 id="resource-visibility-matters-more-in-native-systems"><a class="header" href="#resource-visibility-matters-more-in-native-systems">Resource Visibility Matters More in Native Systems</a></h2>
+<p>A recurring operational problem in C++ services is confusing logical work growth with memory bugs. RSS climbs, latency rises, and everyone asks whether there is a leak. Sometimes there is. Often the explanation is less clean: allocator retention, oversized caches, unbounded queues, stalled consumers, mmap growth, file descriptor leaks, or fragmentation under a new traffic pattern.</p>
+<p>You cannot solve that with one metric. You need a set of resource signals that connect runtime behavior to likely causes.</p>
+<ul>
+<li>RSS and virtual memory for coarse process shape.</li>
+<li>Allocator-specific statistics where available.</li>
+<li>Queue depth and backlog age for in-memory work accumulation.</li>
+<li>Open file descriptor or handle counts.</li>
+<li>Active thread count and blocked-thread indicators.</li>
+<li>Connection pool occupancy and timeout counts.</li>
+<li>Cache size and eviction metrics for components that intentionally retain memory.</li>
+</ul>
+<p>The point is not to expose every allocator bin or kernel counter. The point is to make the likely failure modes distinguishable. If memory climbs while queue depth and backlog age also climb, overload is a stronger hypothesis than a pure leak. If memory climbs while queue depth stays flat and handle counts rise, a resource leak becomes more plausible. Observability should narrow the search space.</p>
+<h2 id="libraries-need-host-owned-telemetry-boundaries"><a class="header" href="#libraries-need-host-owned-telemetry-boundaries">Libraries Need Host-Owned Telemetry Boundaries</a></h2>
+<p>A reusable library should not assume a global logging framework, metrics backend, or tracing SDK. That creates the same dependency inversion problems discussed earlier in the book, now in operational form. Libraries should instead expose a narrow diagnostics boundary that the host can implement.</p>
+<h3 id="intentional-partial-a-library-facing-diagnostics-sink"><a class="header" href="#intentional-partial-a-library-facing-diagnostics-sink">Intentional partial: a library-facing diagnostics sink</a></h3>
+<pre><code class="language-cpp">enum class severity { debug, info, warning, error };
+
+struct diagnostic_field {
+    std::string_view key;
+    std::string_view value;
+};
+
+struct diagnostics_sink {
+    virtual ~diagnostics_sink() = default;
+
+    virtual void record_event(severity level,
+                              std::string_view event_name,
+                              std::span&lt;diagnostic_field const&gt; fields) noexcept = 0;
+
+    virtual void increment_counter(std::string_view name,
+                                   std::int64_t delta,
+                                   std::span&lt;diagnostic_field const&gt; dimensions) noexcept = 0;
+};
+</code></pre>
+<p>This kind of interface keeps the library honest. It can report parse failures, retries, cache evictions, or reload timings without hard-coding a vendor SDK into every binary that uses it. The host decides how to attach request IDs, export metrics, or bridge into traces.</p>
+<p>The tradeoff is deliberate abstraction work. For a small internal-only component, direct integration may be acceptable. For a reusable library, host-owned telemetry is usually the cleaner long-term design.</p>
+<h2 id="what-to-avoid"><a class="header" href="#what-to-avoid">What To Avoid</a></h2>
+<p>Native observability goes wrong in familiar ways.</p>
+<ul>
+<li>Logging every allocation, lock acquisition, or function entry in the hope that more data is always safer.</li>
+<li>Using high-cardinality identifiers as metric dimensions.</li>
+<li>Emitting traces that follow synchronous helper calls but drop async context on executor or coroutine boundaries.</li>
+<li>Shipping binaries with weak symbolization and expecting crash analysis to work later.</li>
+<li>Treating logs as the only operational interface instead of combining logs, metrics, traces, and dumps.</li>
+<li>Making library telemetry depend on a specific service logging stack.</li>
+</ul>
+<p>All of these create cost without proportional diagnostic value.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<p>Observability in native systems is runtime evidence design. Start from concrete operating questions. Use logs for decisions and state transitions, metrics for rates and saturation, traces for end-to-end latency structure, and crash artifacts for postmortem debugging. Preserve the async and ownership boundaries that make these signals meaningful. Expose resource signals that let operators distinguish leaks, backlog, fragmentation, and dependency stalls.</p>
+<p>The main tradeoff is overhead versus explanation quality. Rich telemetry adds CPU, memory, storage, and design complexity. Sparse telemetry lengthens incidents and leaves native failures ambiguous. Choose the smallest signal set that answers your real operating questions, then make it stable.</p>
+<p>Review questions:</p>
+<ul>
+<li>Which operating questions can this service or library answer today without guessing?</li>
+<li>Which log fields are stable and structured enough to support automation, not just humans reading text?</li>
+<li>Which metrics distinguish throughput, saturation, and failure shape rather than mixing them together?</li>
+<li>Does trace context survive executor hops, callbacks, and coroutine suspension boundaries?</li>
+<li>Can a production crash be correlated with exact build identity, symbols, and nearby operational context?</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="19-sanitizers-static-analysis-and-build-diagnostics.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="21-building-a-small-service-in-modern-cpp.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="19-sanitizers-static-analysis-and-build-diagnostics.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="21-building-a-small-service-in-modern-cpp.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

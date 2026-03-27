@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A production guide to modern C++23 for experienced programmers — ownership, interfaces, concurrency, performance, and verification.">
+  <title>Modern C++ in Practice</title>
+  <style>
+    /* ── Theme tokens ─────────────────────────────────────────────────── */
+    :root {
+      color-scheme: light dark;
+      --bg:       #f8fafc;
+      --surface:  #ffffff;
+      --border:   #e2e8f0;
+      --text:     #1e293b;
+      --muted:    #64748b;
+      --accent:   #2563eb;
+      --accent-2: #0ea5e9;
+      --tag-bg:   #f1f5f9;
+      --tag-text: #475569;
+      --card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --hero-gradient: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 50%, #f8fafc 100%);
+    }
+
+    [data-theme="dark"] {
+      --bg:       #0f172a;
+      --surface:  #1e293b;
+      --border:   #334155;
+      --text:     #e2e8f0;
+      --muted:    #94a3b8;
+      --accent:   #60a5fa;
+      --accent-2: #38bdf8;
+      --tag-bg:   #1e293b;
+      --tag-text: #94a3b8;
+      --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+      --hero-gradient: linear-gradient(135deg, #0f172a 0%, #0c1a2e 50%, #0f172a 100%);
+    }
+
+    /* ── Reset & base ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────────────── */
+    .page { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Header ───────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .logo span { color: var(--accent); }
+
+    #theme-toggle {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 10px;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: border-color 150ms, color 150ms;
+    }
+
+    #theme-toggle:hover { border-color: var(--accent); color: var(--text); }
+
+    #theme-toggle svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ── Hero ─────────────────────────────────────────────────────────── */
+    .hero {
+      padding: 56px 0 48px;
+      text-align: center;
+      background: var(--hero-gradient);
+      border-radius: 20px;
+      margin-bottom: 48px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--tag-bg);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 5px 14px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      max-width: 600px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 1.08rem;
+      padding: 0 24px;
+    }
+
+    .hero-actions {
+      margin-top: 28px;
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 12px;
+      text-decoration: none;
+      transition: transform 100ms, box-shadow 100ms;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+    }
+
+    .btn-primary:hover { box-shadow: 0 4px 14px rgba(37,99,235,0.35); }
+
+    .btn-outline {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover { border-color: var(--accent); }
+
+    /* ── Section headings ─────────────────────────────────────────────── */
+    .section-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .section-desc {
+      color: var(--muted);
+      margin-bottom: 28px;
+      max-width: 640px;
+    }
+
+    /* ── Feature pills ────────────────────────────────────────────────── */
+    .features {
+      margin-bottom: 56px;
+    }
+
+    .pill-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .pill {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pill-icon {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--tag-bg);
+      font-size: 1.1rem;
+    }
+
+    .pill h3 {
+      font-size: 0.92rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .pill p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── Parts grid ───────────────────────────────────────────────────── */
+    .parts { margin-bottom: 56px; }
+
+    .parts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .part-card {
+      padding: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .part-card .part-num {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .part-card h3 {
+      font-size: 1rem;
+      font-weight: 650;
+      margin-bottom: 8px;
+    }
+
+    .part-card ul {
+      list-style: none;
+      font-size: 0.84rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .part-card li::before {
+      content: "·";
+      margin-right: 6px;
+      color: var(--border);
+      font-weight: 700;
+    }
+
+    /* ── Audience ─────────────────────────────────────────────────────── */
+    .audience { margin-bottom: 56px; }
+
+    .audience-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .audience-card {
+      padding: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .audience-card .aud-icon {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .audience-card h3 {
+      font-size: 0.95rem;
+      font-weight: 650;
+      margin-bottom: 4px;
+    }
+
+    .audience-card p {
+      font-size: 0.84rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── Tags ─────────────────────────────────────────────────────────── */
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 56px;
+    }
+
+    .tag {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--tag-text);
+      background: var(--tag-bg);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 5px 14px;
+    }
+
+    /* ── Footer ───────────────────────────────────────────────────────── */
+    footer {
+      padding: 32px 0;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Header -->
+    <header>
+      <a class="logo" href="./">Modern C++ in Practice</a>
+      <button id="theme-toggle" aria-label="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="badge">C++23 &middot; Production-Grade</div>
+      <h1>Modern C++ in Practice</h1>
+      <p>A hands-on engineering guide for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification &mdash; taught through real design pressure.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="./en/">Read in English</a>
+        <a class="btn btn-outline" href="./zh-CN/">阅读中文版</a>
+      </div>
+    </section>
+
+    <!-- Key topics -->
+    <section class="features">
+      <p class="section-title">What You'll Learn</p>
+      <h2>Engineering decisions, not syntax tours</h2>
+      <p class="section-desc">Every chapter starts from a production problem and ends with decisions you can apply in real code reviews.</p>
+      <div class="pill-grid">
+        <div class="pill">
+          <div class="pill-icon">&#x1f512;</div>
+          <div>
+            <h3>Ownership &amp; Lifetime</h3>
+            <p>RAII, move semantics, and resource boundaries that survive refactoring.</p>
+          </div>
+        </div>
+        <div class="pill">
+          <div class="pill-icon">&#x26a0;&#xfe0f;</div>
+          <div>
+            <h3>Error Boundaries</h3>
+            <p>Expected, error codes, and exceptions &mdash; when each one pays off.</p>
+          </div>
+        </div>
+        <div class="pill">
+          <div class="pill-icon">&#x1f9e9;</div>
+          <div>
+            <h3>Concepts &amp; Constraints</h3>
+            <p>Write generic code that fails at the call site, not deep in a template.</p>
+          </div>
+        </div>
+        <div class="pill">
+          <div class="pill-icon">&#x26a1;</div>
+          <div>
+            <h3>Concurrency</h3>
+            <p>jthread, coroutines, structured concurrency, and cancellation that works.</p>
+          </div>
+        </div>
+        <div class="pill">
+          <div class="pill-icon">&#x1f4ca;</div>
+          <div>
+            <h3>Performance</h3>
+            <p>Data layout, allocation cost models, and benchmarking without lying to yourself.</p>
+          </div>
+        </div>
+        <div class="pill">
+          <div class="pill-icon">&#x1f6e1;&#xfe0f;</div>
+          <div>
+            <h3>Verification</h3>
+            <p>Sanitizers, static analysis, observability, and testing strategy for native code.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Book parts -->
+    <section class="parts">
+      <p class="section-title">Table of Contents</p>
+      <h2>Seven parts, 23 chapters</h2>
+      <p class="section-desc">Each part builds on the previous one, but chapters can also be read independently as reference.</p>
+      <div class="parts-grid">
+        <div class="part-card">
+          <p class="part-num">Part I</p>
+          <h3>Core Mental Models</h3>
+          <ul>
+            <li>Ownership, Lifetime &amp; RAII</li>
+            <li>Values, Identity &amp; Invariants</li>
+            <li>Errors, Results &amp; Failure Boundaries</li>
+            <li>Parameter Passing &amp; API Surface</li>
+          </ul>
+        </div>
+        <div class="part-card">
+          <p class="part-num">Part II</p>
+          <h3>Writing Modern C++ Code</h3>
+          <ul>
+            <li>Standard Library Types That Change Design</li>
+            <li>Concepts &amp; Constraints</li>
+            <li>Ranges, Views &amp; Generators</li>
+            <li>Compile-Time Programming</li>
+          </ul>
+        </div>
+        <div class="part-card">
+          <p class="part-num">Part III</p>
+          <h3>Interfaces &amp; Architecture</h3>
+          <ul>
+            <li>Interface Design &amp; Dependency Direction</li>
+            <li>Type Erasure &amp; Callbacks</li>
+            <li>Modules, Packaging &amp; ABI</li>
+          </ul>
+        </div>
+        <div class="part-card">
+          <p class="part-num">Part IV</p>
+          <h3>Concurrency &amp; Async</h3>
+          <ul>
+            <li>Shared State &amp; Synchronization</li>
+            <li>Coroutines &amp; Suspension</li>
+            <li>Structured Concurrency &amp; Cancellation</li>
+          </ul>
+        </div>
+        <div class="part-card">
+          <p class="part-num">Part V</p>
+          <h3>Data, Memory &amp; Performance</h3>
+          <ul>
+            <li>Data Layout &amp; Containers</li>
+            <li>Allocation &amp; Cost Models</li>
+            <li>Benchmarking &amp; Profiling</li>
+          </ul>
+        </div>
+        <div class="part-card">
+          <p class="part-num">Part VI</p>
+          <h3>Verification &amp; Delivery</h3>
+          <ul>
+            <li>Testing Strategy</li>
+            <li>Sanitizers &amp; Static Analysis</li>
+            <li>Observability for Native Systems</li>
+          </ul>
+        </div>
+        <div class="part-card">
+          <p class="part-num">Part VII</p>
+          <h3>Production Patterns</h3>
+          <ul>
+            <li>Building a Small Service</li>
+            <li>Building a Reusable Library</li>
+            <li>Reviewer's Checklist</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Audience -->
+    <section class="audience">
+      <p class="section-title">Who This Is For</p>
+      <h2>Experienced programmers, C++ newcomers welcome</h2>
+      <p class="section-desc">You already know how serious software gets designed, debugged, and deployed. You may be new to C++, but not to engineering judgment.</p>
+      <div class="audience-grid">
+        <div class="audience-card">
+          <div class="aud-icon">&#x1f3d7;&#xfe0f;</div>
+          <h3>Systems Engineers</h3>
+          <p>Moving to C++ from Rust, Go, or Java for performance-critical work.</p>
+        </div>
+        <div class="audience-card">
+          <div class="aud-icon">&#x1f50d;</div>
+          <h3>Senior Developers</h3>
+          <p>Reviewing C++ in production and want a modern mental model, not legacy patterns.</p>
+        </div>
+        <div class="audience-card">
+          <div class="aud-icon">&#x1f4d0;</div>
+          <h3>Tech Leads</h3>
+          <p>Setting coding standards for teams and need actionable review checklists.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tags -->
+    <div class="tags">
+      <span class="tag">C++23</span>
+      <span class="tag">RAII</span>
+      <span class="tag">Concepts</span>
+      <span class="tag">Coroutines</span>
+      <span class="tag">Modules</span>
+      <span class="tag">std::expected</span>
+      <span class="tag">Ranges</span>
+      <span class="tag">jthread</span>
+      <span class="tag">Type Erasure</span>
+      <span class="tag">Sanitizers</span>
+      <span class="tag">Structured Concurrency</span>
+      <span class="tag">Benchmarking</span>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p>&copy; 2024 &ndash; 2026 Qiao Wang &middot; Source on <a href="https://github.com/qiaowan/modern-cpp">GitHub</a></p>
+    </footer>
+
+  </div>
+
+  <script>
+    (() => {
+      const toggle = document.getElementById('theme-toggle');
+      const html = document.documentElement;
+
+      function applyTheme(theme) {
+        if (theme === 'dark') {
+          html.setAttribute('data-theme', 'dark');
+          toggle.querySelector('.icon-sun').style.display = 'none';
+          toggle.querySelector('.icon-moon').style.display = 'block';
+        } else {
+          html.removeAttribute('data-theme');
+          toggle.querySelector('.icon-sun').style.display = 'block';
+          toggle.querySelector('.icon-moon').style.display = 'none';
+        }
+      }
+
+      // Resolve initial theme: saved > system > light
+      const saved = localStorage.getItem('theme');
+      if (saved) {
+        applyTheme(saved);
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        applyTheme('dark');
+      } else {
+        applyTheme('light');
+      }
+
+      // Listen for system changes when no manual override
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('theme')) {
+          applyTheme(e.matches ? 'dark' : 'light');
+        }
+      });
+
+      // Manual toggle
+      toggle.addEventListener('click', () => {
+        const next = html.hasAttribute('data-theme') ? 'light' : 'dark';
+        localStorage.setItem('theme', next);
+        applyTheme(next);
+      });
+    })();
+  </script>
+</body>
+</html>

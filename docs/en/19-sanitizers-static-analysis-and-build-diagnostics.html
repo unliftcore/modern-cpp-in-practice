@@ -1,0 +1,460 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Sanitizers, Static Analysis, and Build Diagnostics - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-810527eb.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/19-sanitizers-static-analysis-and-build-diagnostics.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="sanitizers-static-analysis-and-build-diagnostics"><a class="header" href="#sanitizers-static-analysis-and-build-diagnostics">Sanitizers, Static Analysis, and Build Diagnostics</a></h1>
+<p>Testing strategy tells you what behavior to exercise. This chapter is about the mechanical bug-finding stack that should run alongside that exercise: compiler warnings, sanitizers, static analysis, and build configurations that preserve useful diagnostics. These tools do not tell you whether the design is correct. They tell you whether the program stepped into a bug class that humans routinely miss in review.</p>
+<p>That distinction matters. A test can assert that cancellation leaves no visible partial state. AddressSanitizer can tell you that the cleanup path touched freed memory while attempting to honor that contract. A contract test can prove that a parser rejects malformed input. UndefinedBehaviorSanitizer can tell you that one rejection path signed-overflowed while computing a buffer size. Observability can later tell you that a production build is crashing in a path you never exercised under sanitizer. Each layer answers a different question.</p>
+<p>For native systems, the cost of skipping this layer is predictable. The bug is found later, reproduced less reliably, and diagnosed with worse evidence. If the build only produces optimized binaries with stripped symbols, weak warnings, and no analyzer or sanitizer jobs, the team has chosen slower debugging as policy.</p>
+<h2 id="treat-diagnostics-as-build-products-not-developer-preferences"><a class="header" href="#treat-diagnostics-as-build-products-not-developer-preferences">Treat Diagnostics as Build Products, Not Developer Preferences</a></h2>
+<p>The first mistake is organizational, not technical. Teams often treat warnings and analysis as optional local tooling, which means they drift by compiler, machine, and mood. Production C++ needs the opposite posture. Diagnostic fidelity should be part of the build contract.</p>
+<p>At minimum, your repository should define named build modes that answer distinct questions.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Build mode</th><th>Primary question</th><th>Typical characteristics</th></tr>
+</thead>
+<tbody>
+<tr><td>Fast developer build</td><td>Can I iterate quickly on logic?</td><td>Debug info, assertions, no or low optimization</td></tr>
+<tr><td>Address/UB sanitizer build</td><td>Did execution hit memory or undefined-behavior bugs?</td><td><code>-O1</code>, debug info, frame pointers, ASan and UBSan</td></tr>
+<tr><td>Thread sanitizer build</td><td>Did concurrent execution hit a data race or lock-order problem?</td><td>Dedicated job, reduced parallelism, TSan only</td></tr>
+<tr><td>Static analysis build</td><td>Does the code trigger warning patterns or analyzable defects before execution?</td><td>Compiler warnings, clang-tidy, analyzer jobs</td></tr>
+<tr><td>Release-with-symbols build</td><td>Will production behavior remain diagnosable?</td><td>Release optimization, external symbols, build IDs, stable source mapping</td></tr>
+</tbody>
+</table>
+</div>
+<p>Trying to collapse those into one universal configuration usually fails. TSan carries too much overhead for every build. ASan and UBSan alter memory layout and timing. Deep analysis jobs are slower than normal edit-compile-run loops. The right answer is not one magical build. The right answer is a deliberate matrix.</p>
+<p>That matrix should live in versioned build scripts or presets, not in tribal knowledge. If the repository cannot tell a new engineer exactly how to produce a sanitized binary or a release artifact with symbols, the workflow is not mature enough.</p>
+<p>The example project in <code>examples/web-api/</code> demonstrates this with named CMake options that map directly to the build lanes above:</p>
+<pre><code class="language-cmake"># examples/web-api/CMakeLists.txt
+option(ENABLE_ASAN  "Enable AddressSanitizer + UBSan"  OFF)
+option(ENABLE_TSAN  "Enable ThreadSanitizer"            OFF)
+
+add_library(project_sanitizers INTERFACE)
+if(ENABLE_ASAN)
+    target_compile_options(project_sanitizers INTERFACE
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(project_sanitizers    INTERFACE
+        -fsanitize=address,undefined)
+endif()
+if(ENABLE_TSAN)
+    target_compile_options(project_sanitizers INTERFACE -fsanitize=thread)
+    target_link_options(project_sanitizers    INTERFACE -fsanitize=thread)
+endif()
+</code></pre>
+<p>A new engineer clones the repository and runs <code>cmake -G Ninja -DENABLE_ASAN=ON</code> or <code>-DENABLE_TSAN=ON</code>. The lanes are discoverable, version-controlled, and produce distinct binaries. That is what “named build modes” looks like in practice.</p>
+<h2 id="warnings-are-a-policy-surface"><a class="header" href="#warnings-are-a-policy-surface">Warnings Are a Policy Surface</a></h2>
+<p>Compiler warnings are the cheapest analysis you have, and teams still waste them. One common failure mode is warning inflation: thousands of preexisting warnings train everyone to ignore the channel. The other is warning minimalism: fear of noise causes the team to enable so little that suspicious code passes silently.</p>
+<p>The practical target is narrower and stricter.</p>
+<ul>
+<li>Enable a serious warning set on all supported compilers.</li>
+<li>Treat warnings as errors for owned code once the warning baseline is under control.</li>
+<li>Keep suppressions local, versioned, and explained.</li>
+<li>Review new suppressions like code changes, because that is what they are.</li>
+</ul>
+<p>This is not about aesthetic cleanliness. Warnings often expose real review problems: narrowing conversions, missing overrides, ignored return values, shadowing that hides ownership state, switch exhaustiveness gaps, or accidental copies in hot paths. Some warnings are stylistic and should stay off. That is fine. The point is to make the enabled set defensible and stable.</p>
+<p>Be especially careful with blanket suppression at target level. When a third-party header or generated source is noisy, isolate it rather than muting the same diagnostic across the repository. Teams often create future blind spots by solving one vendor problem with project-wide suppression.</p>
+<h2 id="sanitizers-turn-silent-corruption-into-actionable-failures"><a class="header" href="#sanitizers-turn-silent-corruption-into-actionable-failures">Sanitizers Turn Silent Corruption Into Actionable Failures</a></h2>
+<p>Sanitizers are valuable because they change failure mode. Instead of a memory bug manifesting as a distant crash or impossible state, it stops near the violation with a stack trace and an explanation of the bug class.</p>
+<p>For most production C++ codebases, three sanitizer configurations carry the highest value.</p>
+<h3 id="addresssanitizer-and-leak-detection"><a class="header" href="#addresssanitizer-and-leak-detection">AddressSanitizer and Leak Detection</a></h3>
+<p>AddressSanitizer is the standard first line because it finds a wide set of bugs that otherwise waste enormous time: use-after-free, heap buffer overflow, stack use-after-return in some configurations, double free, and related memory-lifetime violations. Leak detection, where available, adds another useful signal for test processes and short-lived tools.</p>
+<p>ASan is especially effective when paired with the testing strategies from the previous chapter. Failure-path tests, fuzzers, and integration scenarios drive execution into branches where ownership mistakes live. ASan then converts those mistakes into reproducible failures.</p>
+<h3 id="the-bug-that-works-without-asan"><a class="header" href="#the-bug-that-works-without-asan">The bug that “works” without ASan</a></h3>
+<p>This is the canonical case that wastes days of debugging time in codebases that skip sanitizer builds:</p>
+<pre><code class="language-cpp">auto get_session_name(session_registry&amp; registry, session_id id)
+    -&gt; std::string_view
+{
+    auto it = registry.find(id);
+    if (it == registry.end()) return {};
+    return it-&gt;second.name();  // Returns view into the session object.
+}
+
+void log_and_remove_session(session_registry&amp; registry, session_id id)
+{
+    auto name = get_session_name(registry, id);
+    registry.erase(id);             // Session destroyed. name is now dangling.
+    audit_log("removed session: {}", name);  // Use-after-free.
+}
+</code></pre>
+<p>Without ASan, this code will usually pass tests and even run correctly in production for months. The freed memory still contains the old string data until something else overwrites it. The test passes. Code review might not catch it – the function looks straightforward. When it does fail, the symptom is garbled log output or a crash in an unrelated allocation, nowhere near the actual bug.</p>
+<p>Under ASan, this produces an immediate, precise failure:</p>
+<pre><code>==41032==ERROR: AddressSanitizer: heap-use-after-free on address 0x6020000000d0
+READ of size 12 at 0x6020000000d0 thread T0
+    #0 0x55a3c1 in log_and_remove_session(session_registry&amp;, session_id)
+        src/session_manager.cpp:47
+    #1 0x55a812 in handle_disconnect src/connection.cpp:103
+
+0x6020000000d0 is located 0 bytes inside of 32-byte region
+freed by thread T0 here:
+    #0 0x4c1a30 in operator delete(void*)
+    #1 0x55a7f1 in session_registry::erase(session_id)
+        src/session_manager.cpp:31
+
+previously allocated by thread T0 here:
+    #0 0x4c1820 in operator new(unsigned long)
+    #1 0x55a620 in session_registry::insert(session_id, session_info)
+        src/session_manager.cpp:22
+</code></pre>
+<p>The report identifies the exact read, the exact free, and the exact allocation. Compare that with the alternative: a corrupted log entry three weeks from now that nobody connects to this code path.</p>
+<p>Typical build characteristics look like this:</p>
+<pre><code class="language-bash">clang++ -std=c++23 -O1 -g -fno-omit-frame-pointer \
+    -fsanitize=address,undefined
+</code></pre>
+<p>The exact flags vary by toolchain, but the principles are stable: keep enough optimization to preserve realistic structure, keep debug info, and keep frame pointers so stacks are usable.</p>
+<h3 id="undefinedbehaviorsanitizer"><a class="header" href="#undefinedbehaviorsanitizer">UndefinedBehaviorSanitizer</a></h3>
+<p>UBSan is the companion that catches dangerous behavior not always visible as memory corruption: misaligned access, invalid shifts, bad enum values, null dereference in some contexts, signed overflow depending on configuration, and other undefined or suspicious operations. The important operational lesson is that undefined behavior is often input-sensitive and build-sensitive. The same code may pass tests for months, then fail only on a new compiler or after an inlining change. UBSan helps surface those hazards while the bug is still local enough to fix sanely.</p>
+<p>Do not over-interpret it, though. UBSan is not a proof system. It only reports behavior that the exercised execution encountered and that the enabled checks can see.</p>
+<p>A concrete example: signed overflow in size calculations is a common source of security bugs that compilers are free to exploit.</p>
+<pre><code class="language-cpp">auto compute_buffer_size(std::int32_t width, std::int32_t height, std::int32_t channels)
+    -&gt; std::int32_t
+{
+    return width * height * channels;  // Signed overflow if product exceeds INT32_MAX.
+}
+</code></pre>
+<p>For <code>width=4096, height=4096, channels=4</code>, the product is 67,108,864 – safe. For <code>width=32768, height=32768, channels=4</code>, the product is 4,294,967,296 which overflows a 32-bit signed integer. Without UBSan, the compiler may optimize downstream bounds checks away entirely because signed overflow is undefined. UBSan catches this at the multiplication:</p>
+<pre><code>runtime error: signed integer overflow: 32768 * 32768 cannot be
+represented in type 'int'
+</code></pre>
+<p>The fix is to use unsigned arithmetic or to check for overflow before the multiplication. The point is that this class of bug is silent, optimizer-sensitive, and often security-relevant – exactly what UBSan is for.</p>
+<h3 id="threadsanitizer"><a class="header" href="#threadsanitizer">ThreadSanitizer</a></h3>
+<p>TSan is expensive and often noisy around custom synchronization, lock-free code, and some coroutine or foreign-runtime integrations. It is still worth running because data races remain among the most expensive native bugs to diagnose after the fact.</p>
+<h3 id="the-data-race-that-tests-never-catch"><a class="header" href="#the-data-race-that-tests-never-catch">The data race that tests never catch</a></h3>
+<p>Data races are invisible to testing without TSan because they depend on scheduling. Consider a metrics counter shared between a request handler and a background reporter:</p>
+<pre><code class="language-cpp">struct service_stats {
+    std::int64_t requests_handled = 0;   // No synchronization.
+    std::int64_t bytes_processed = 0;
+};
+
+// Thread 1: request handler
+void handle_request(service_stats&amp; stats, request const&amp; req) {
+    process(req);
+    stats.requests_handled++;    // Data race: unsynchronized write.
+    stats.bytes_processed += req.size();
+}
+
+// Thread 2: periodic reporter
+void report_stats(service_stats const&amp; stats) {
+    log_metrics("requests", stats.requests_handled);   // Data race: unsynchronized read.
+    log_metrics("bytes", stats.bytes_processed);
+}
+</code></pre>
+<p>This code will pass every test you write. It will run correctly for months on x86 where the memory model is relatively forgiving. It becomes a problem when the compiler reorders the writes, when the optimizer lifts the read into a register, or when someone ports to ARM. The bug is real today but the symptoms are deferred.</p>
+<p>TSan catches it immediately:</p>
+<pre><code>WARNING: ThreadSanitizer: data race (pid=28511)
+  Write of size 8 at 0x7f8e3c000120 by thread T1:
+    #0 handle_request(service_stats&amp;, request const&amp;)
+        src/handler.cpp:24
+    #1 worker_loop src/server.cpp:88
+
+  Previous read of size 8 at 0x7f8e3c000120 by thread T2:
+    #0 report_stats(service_stats const&amp;)
+        src/reporter.cpp:12
+    #1 reporter_loop src/server.cpp:102
+
+  Location is global 'g_stats' of size 16 at 0x7f8e3c000120
+
+  Thread T1 (tid=28513, running) created by main thread at:
+    #0 pthread_create
+    #1 start_workers src/server.cpp:71
+
+  Thread T2 (tid=28514, running) created by main thread at:
+    #0 pthread_create
+    #1 start_reporter src/server.cpp:76
+</code></pre>
+<p>The fix is to use <code>std::atomic&lt;std::int64_t&gt;</code> with appropriate memory ordering, or to protect the struct with a mutex if the fields must be read consistently together. The important point is that no amount of conventional testing would have found this – the test needs TSan to convert a scheduling-dependent corruption into a deterministic failure.</p>
+<p>The operational pattern is usually different from ASan. Run TSan in a narrower CI lane or nightly job. Feed it tests that deliberately stress shared-state paths, shutdown, retries, and cancellation. Keep the suppression file short and justified. If TSan reports a race in supposedly benign statistics code, do not dismiss it reflexively. Benign races have a habit of becoming real ones after the next feature.</p>
+<p>Avoid stacking TSan with other heavy sanitizers in the same build. Separate jobs make failures easier to interpret and keep the timing distortion manageable.</p>
+<p>The example project’s <code>TaskRepository</code> (in <code>examples/web-api/src/modules/repository.cppm</code>) is a concrete case where TSan validates a correct synchronization pattern. The repository protects its internal <code>std::vector&lt;Task&gt;</code> with a <code>std::shared_mutex</code>, using <code>std::shared_lock</code> for read paths (<code>find_by_id</code>, <code>find_all</code>) and <code>std::scoped_lock</code> for write paths (<code>create</code>, <code>update</code>, <code>remove</code>). Building with <code>-DENABLE_TSAN=ON</code> and exercising concurrent readers and writers confirms that this locking discipline has no data races – exactly the kind of evidence that conventional tests alone cannot provide.</p>
+<h2 id="static-analysis-scales-review-attention"><a class="header" href="#static-analysis-scales-review-attention">Static Analysis Scales Review Attention</a></h2>
+<p>Static analysis is most useful when it is selective and boring. If the analyzer produces pages of stylistic noise, the team will stop reading it. If it is tuned toward patterns that actually matter in your codebase, it becomes a force multiplier for review.</p>
+<p>Useful targets in modern C++ typically include:</p>
+<ul>
+<li>Dangling views or references caused by temporary lifetime mistakes.</li>
+<li>Missing or misapplied <code>override</code>, <code>noexcept</code>, or <code>[[nodiscard]]</code> where the API contract depends on them.</li>
+<li>Suspicious ownership transfer patterns involving raw pointers, moved-from objects, or smart-pointer aliasing.</li>
+<li>Error-handling mistakes such as ignored results, swallowed status values, or inconsistent translation at boundaries.</li>
+<li>Expensive accidental copies across hot or high-volume interfaces.</li>
+<li>Concurrency hazards such as locking inconsistencies or unsafe capture of shared state.</li>
+</ul>
+<p>Compiler-integrated analysis, <code>clang-tidy</code>, the Clang static analyzer, and platform-specific tools such as MSVC <code>/analyze</code> each catch somewhat different things. Use more than one if your toolchain supports it, but keep the output curated. A small enforced rule set that consistently catches real problems is better than a sprawling configuration everybody bypasses.</p>
+<p>This is also where repository-specific knowledge belongs. If your service code should never ignore <code>std::expected</code> results from transport adapters, add checks and wrappers that make that hard to do silently. If your library forbids exceptions at the ABI boundary, analyze for that policy directly or enforce it via build and API structure. Static analysis becomes substantially better when it knows what your contracts are.</p>
+<h2 id="preserve-diagnostic-quality-in-release-artifacts"><a class="header" href="#preserve-diagnostic-quality-in-release-artifacts">Preserve Diagnostic Quality in Release Artifacts</a></h2>
+<p>One of the most damaging habits in native development is treating debuggability as a debug-build-only concern. Production failures happen in release builds. If those artifacts do not preserve enough information to map crashes and latency problems back to code, you have made later observability dramatically weaker.</p>
+<p>Release artifacts should normally preserve at least these properties.</p>
+<ul>
+<li>External symbol files or symbol servers so stacks can be symbolized after deployment.</li>
+<li>Build IDs or equivalent version fingerprints that unambiguously map a dump or trace to an exact binary.</li>
+<li>Source revision metadata embedded in the artifact or attached in deployment metadata.</li>
+<li>Enough unwind support for usable native stack traces.</li>
+<li>Stable compiler and linker settings recorded somewhere repeatable.</li>
+</ul>
+<p>Depending on platform and sensitivity, that may also include frame pointers, split DWARF or PDB handling, map files, and archived link commands. The exact mechanics are toolchain-specific. The policy is not: if you cannot reproduce the diagnostic shape of the shipped binary, incident response slows down immediately.</p>
+<p>This is why build diagnostics belong in the chapter with sanitizers and analysis rather than in the observability chapter. Observability consumes these artifacts later, but the decision to produce them is a build decision.</p>
+<h2 id="ci-should-stage-cost-not-pretend-cost-does-not-exist"><a class="header" href="#ci-should-stage-cost-not-pretend-cost-does-not-exist">CI Should Stage Cost, Not Pretend Cost Does Not Exist</a></h2>
+<p>A mature pipeline does not run every expensive check on every edit. It stages them by cost and by bug class.</p>
+<p>For example:</p>
+<ul>
+<li>Pull request gate: fast build, serious warnings, targeted tests, and at least one ASan/UBSan configuration on changed targets.</li>
+<li>Scheduled or nightly jobs: broader sanitizer coverage, TSan, deeper static analysis, and fuzz targets with sanitizer enabled.</li>
+<li>Release qualification: clean release-with-symbols build, packaging checks, and verification that symbol publication and build metadata succeeded.</li>
+</ul>
+<p>The tradeoff is obvious: slower checks find bugs later in the day. The answer is not to drop them. The answer is to place them where they are sustainable and visible.</p>
+<p>Do not let sanitizer or analyzer failures become advisory-only noise. If a lane is too flaky to gate anything, fix the flakiness or narrow its scope. A permanently red analysis job is organizationally equivalent to not having the job.</p>
+<h2 id="what-these-tools-will-not-do"><a class="header" href="#what-these-tools-will-not-do">What These Tools Will Not Do</a></h2>
+<p>This tooling stack is powerful, but its limits should stay explicit.</p>
+<ul>
+<li>Sanitizers do not prove correctness; they only instrument exercised executions.</li>
+<li>Static analysis does not understand every project-specific invariant unless you encode those invariants into the code and configuration.</li>
+<li>Warning cleanliness does not imply good API design or good failure handling.</li>
+<li>A perfectly diagnosable build can still ship the wrong behavior.</li>
+</ul>
+<p>That is why Part VI has three chapters instead of one. Testing strategy defines what must be exercised. Mechanical tooling catches classes of bugs while that exercise happens. Observability explains how to understand failures that still reach production.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<p>In production C++, diagnostics must be designed, not hoped for. Keep a versioned build matrix with distinct jobs for fast iteration, sanitizers, analysis, and release-with-symbols. Treat warnings as a policy surface. Run ASan and UBSan routinely, TSan deliberately, and static analysis selectively enough that people still read the output. Preserve symbolization and build identity in release artifacts.</p>
+<p>The central tradeoff is cost versus signal. Sanitizers and analysis slow the pipeline and occasionally require suppressions. Shipping without them costs far more when a native bug escapes. Choose the cost while the code is still local.</p>
+<p>Review questions:</p>
+<ul>
+<li>Which sanitizer configurations are mandatory for this target, and are they actually exercised by meaningful tests?</li>
+<li>Which warnings are enforced repository-wide, and where are suppressions reviewed?</li>
+<li>Which analyzer checks reflect real project contracts rather than generic style preferences?</li>
+<li>Can a release crash or dump be mapped back to an exact binary, symbol set, and source revision?</li>
+<li>Which expensive checks run later by design, and is that staging explicit rather than accidental?</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="18-testing-strategy-for-resource-and-boundary-bugs.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="20-observability-for-native-systems.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="18-testing-strategy-for-resource-and-boundary-bugs.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="20-observability-for-native-systems.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

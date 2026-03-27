@@ -1,0 +1,456 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Allocation, Locality, and Cost Models - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-810527eb.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/16-allocation-locality-and-cost-models.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="allocation-locality-and-cost-models"><a class="header" href="#allocation-locality-and-cost-models">Allocation, Locality, and Cost Models</a></h1>
+<h2 id="production-problem"><a class="header" href="#production-problem">Production Problem</a></h2>
+<p>Once the data shape is reasonable, the next performance question is where the bytes come from and how often they move. Many teams jump from “this path is slow” straight to allocator tweaks or pool designs without first stating the cost model. That is backwards. Before changing allocation strategy, you need to know which costs dominate: allocation latency, synchronization in the allocator, page faults, cache and TLB misses from scattered objects, copy cost from oversized values, or instruction overhead from abstraction layers.</p>
+<p>This chapter builds that model. The point is not to memorize allocator APIs. It is to reason concretely about what a design forces the machine to do. Claims such as “<code>std::function</code> is zero cost,” “arenas are always faster,” or “small allocations are cheap now” are not engineering arguments. The argument starts when you can identify the actual object graph, the number and timing of allocations, the ownership horizon of the objects involved, and the locality consequences of each layer of indirection.</p>
+<p>Keep the boundary with the previous chapter sharp. Chapter 15 asked, “What should the representation be?” This chapter asks, “Given a representation, what costs does it impose over time?” Containers still appear here, but the emphasis is allocation frequency, lifetime clustering, object graph depth, and locality, not container semantics.</p>
+<h2 id="start-with-an-allocation-inventory"><a class="header" href="#start-with-an-allocation-inventory">Start With an Allocation Inventory</a></h2>
+<p>The first useful performance model is embarrassingly simple: list what allocates on the path you care about.</p>
+<p>Most codebases are worse at this than they think. A request parser allocates strings for every header value, a routing layer stores callbacks in type-erased wrappers, a JSON transformation materializes intermediate objects, and a logging path formats into temporary buffers. Each decision may be locally reasonable. Together they create a request that performs dozens or hundreds of allocations before any real business work begins.</p>
+<p>The example project’s <code>parse_request()</code> in <code>examples/web-api/src/modules/http.cppm</code> illustrates this pattern concretely. Each call allocates a <code>std::string</code> for every header name and value (line 191: <code>headers.emplace_back(std::string(name), std::string(value))</code>), plus a <code>std::string</code> for the path and the body. For a request with ten headers, that is at least twelve heap allocations before any handler runs. This is a natural candidate for PMR optimization: a <code>std::pmr::monotonic_buffer_resource</code> backed by a stack buffer could supply all of those strings from a single arena, eliminating per-header allocator calls entirely and making teardown a bulk operation when the request scope ends.</p>
+<p>Inventory work should separate three questions:</p>
+<ul>
+<li>Which operations allocate on the steady-state hot path?</li>
+<li>Which allocations are one-time setup or batch rebuild costs?</li>
+<li>Which allocations are avoidable with different ownership or data flow, rather than with a better allocator?</li>
+</ul>
+<p>That last question matters most. If a system allocates because it insistently decomposes dense processing into many short-lived heap objects, changing the allocator may reduce pain without fixing the design. The highest-leverage change is often to stop needing the allocations.</p>
+<p>Here is a concrete example of what allocation-heavy code looks like on a hot path, and what the alternative can be:</p>
+<pre><code class="language-cpp">// Allocation-heavy: every event creates a temporary string,
+// a vector, and a map entry.  Under load this path may perform
+// 5-10 heap allocations per event.
+struct Event {
+    std::string type;
+    std::string payload;
+    std::vector&lt;std::string&gt; tags;
+    std::unordered_map&lt;std::string, std::string&gt; metadata;
+};
+
+void process_batch_heavy(std::span&lt;const RawEvent&gt; raw,
+                         std::vector&lt;Event&gt;&amp; out) {
+    for (const auto&amp; r : raw) {
+        Event e;
+        e.type = parse_type(r);         // allocates
+        e.payload = parse_payload(r);   // allocates
+        e.tags = parse_tags(r);         // allocates vector + each string
+        e.metadata = parse_meta(r);     // allocates map buckets + nodes
+        out.push_back(std::move(e));    // may reallocate out's buffer
+    }
+}
+</code></pre>
+<pre><code class="language-cpp">// Allocation-light: pre-sized arena, string views into stable
+// input buffer, fixed-capacity inline storage.
+struct EventView {
+    std::string_view type;
+    std::string_view payload;
+    // Use a small fixed-capacity container for tags.
+    // boost::static_vector or a similar stack-allocated small vector.
+    std::array&lt;std::string_view, 8&gt; tags;
+    std::uint8_t tag_count = 0;
+};
+
+void process_batch_light(std::string_view input_buffer,
+                         std::span&lt;const RawEvent&gt; raw,
+                         std::vector&lt;EventView&gt;&amp; out) {
+    out.clear();
+    out.reserve(raw.size());  // one allocation, amortized
+    for (const auto&amp; r : raw) {
+        EventView e;
+        e.type = parse_type_view(r, input_buffer);
+        e.payload = parse_payload_view(r, input_buffer);
+        e.tag_count = parse_tags_view(r, input_buffer, e.tags);
+        out.push_back(e);
+    }
+    // Zero heap allocations per event if input_buffer is stable
+    // and out has sufficient capacity.
+}
+</code></pre>
+<p>The light version imposes constraints: the input buffer must outlive the views, tags are bounded, and metadata is handled differently. Those constraints are the cost of avoiding allocations. Whether that cost is acceptable depends on the workload, but making it visible is the point.</p>
+<h2 id="allocation-cost-is-more-than-the-call-to-new"><a class="header" href="#allocation-cost-is-more-than-the-call-to-new">Allocation Cost Is More Than the Call to <code>new</code></a></h2>
+<p>Engineers sometimes talk about allocation as though the only cost were the allocator function call. In production, that is usually a minority of the bill. Allocation also affects cache locality, synchronization behavior, fragmentation, page working set, and destruction cost later. If an object graph spreads logically adjacent data across unrelated heap locations, every later traversal pays for that decision. If per-request allocations hit a shared global allocator from many threads, allocator contention becomes part of latency variance. If many short-lived objects are destroyed individually, cleanup traffic can dominate tail latency during bursts.</p>
+<p>This is why “we pooled it, so the problem is solved” is often false. A pool may reduce allocator call overhead and even reduce contention, but if the resulting object graph is still pointer-heavy and scattered, traversal remains expensive. Conversely, a design that stores request-local state in contiguous buffers may perform very few allocations and enjoy better locality even with the default allocator.</p>
+<h2 id="lifetime-clustering-usually-beats-clever-reuse"><a class="header" href="#lifetime-clustering-usually-beats-clever-reuse">Lifetime Clustering Usually Beats Clever Reuse</a></h2>
+<p>Objects that die together should often be allocated together. This is the core intuition behind arenas and monotonic resources: if a batch of data shares a lifetime boundary, paying for individual deallocation is wasted work. Request-local parse trees, temporary token buffers, graph search scratch state, and one-shot compilation metadata are classic examples.</p>
+<p>C++23 still relies on <code>std::pmr</code> for the standard vocabulary here. The value is not stylistic. It is architectural. Memory resources let you express that a family of objects belongs to a shared lifetime region without hard-wiring a custom allocator type through every template instantiation.</p>
+<pre><code class="language-cpp">struct RequestScratch {
+    std::pmr::monotonic_buffer_resource arena;
+    std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
+    std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt; headers{&amp;arena};
+
+    explicit RequestScratch(std::span&lt;std::byte&gt; buffer)
+        : arena(buffer.data(), buffer.size()) {}
+};
+</code></pre>
+<p>This design says something important: the strings and containers are not independent heap citizens. They are request-scoped scratch. That reduces allocation overhead and makes teardown a bulk operation.</p>
+<p>A more complete example shows the difference in practice. Compare standard allocation versus <code>pmr</code> with a stack-local buffer for a request-processing path:</p>
+<pre><code class="language-cpp">#include &lt;memory_resource&gt;
+#include &lt;vector&gt;
+#include &lt;string&gt;
+#include &lt;array&gt;
+
+// Standard allocation: every string, every vector growth, and the
+// map internals go through the global allocator.  Under contention
+// from many threads, this serializes on allocator locks.
+void handle_request_standard(std::span&lt;const std::byte&gt; input) {
+    std::vector&lt;std::string&gt; tokens;
+    std::unordered_map&lt;std::string, std::string&gt; headers;
+    parse(input, tokens, headers);  // many small allocations
+    route(tokens, headers);
+    // Destruction: each string freed individually, each map node freed.
+}
+
+// PMR with stack buffer: small requests never touch the heap.
+// The monotonic_buffer_resource first allocates from the stack buffer.
+// If the request is large enough to exhaust it, it falls back to
+// the upstream resource (default: new/delete).
+void handle_request_pmr(std::span&lt;const std::byte&gt; input) {
+    std::array&lt;std::byte, 4096&gt; stack_buf;
+    std::pmr::monotonic_buffer_resource arena{
+        stack_buf.data(), stack_buf.size(),
+        std::pmr::null_memory_resource()
+        // null_memory_resource: fail loudly if buffer is exceeded.
+        // Replace with std::pmr::new_delete_resource() to allow
+        // fallback to heap for oversized requests.
+    };
+
+    std::pmr::vector&lt;std::pmr::string&gt; tokens{&amp;arena};
+    std::pmr::unordered_map&lt;std::pmr::string, std::pmr::string&gt;
+        headers{&amp;arena};
+    parse_pmr(input, tokens, headers);
+    route_pmr(tokens, headers);
+    // Destruction: arena destructor releases everything in one shot.
+    // No per-string, per-node deallocation calls.
+}
+</code></pre>
+<p>The pmr version eliminates all per-object deallocation calls and avoids global allocator contention entirely for requests that fit within the stack buffer. On a high-throughput server handling small requests, this can reduce allocator overhead by an order of magnitude. The tradeoff is that <code>std::pmr</code> containers carry an extra pointer to the memory resource (increasing <code>sizeof</code> slightly) and that the monotonic resource does not reclaim memory from individual deallocations – it only grows until the resource itself is destroyed. This is fine for request-scoped scratch; it is wrong for long-lived containers that grow and shrink over time.</p>
+<p>But monotonic allocation is not a universal upgrade. It is a bad fit when objects need selective deallocation, when memory spikes from one pathological request must not bloat the steady-state footprint, or when accidentally retaining a single object would retain an entire arena. Regional allocation sharpens lifetime assumptions. If the assumptions are wrong, the failure is bigger than with individual ownership.</p>
+<h2 id="locality-is-about-graph-shape-not-just-raw-bytes"><a class="header" href="#locality-is-about-graph-shape-not-just-raw-bytes">Locality Is About Graph Shape, Not Just Raw Bytes</a></h2>
+<p>It is possible to have a low allocation count and still have terrible locality. A handful of large allocations containing arrays of pointers to separately allocated nodes can be worse than many small allocations if traversal constantly bounces between pages. The cost model therefore needs one more question: when the hot code walks this structure, how many pointer dereferences does it perform before it reaches useful payload?</p>
+<p>Pointer-rich designs are often semantically attractive because they mirror domain relationships directly. Trees point to children. Polymorphic objects point to implementations. Pipelines store chains of heap-allocated stages. Sometimes that is unavoidable. Often it is laziness disguised as modeling.</p>
+<p>The cure is not “never use pointers.” The cure is to distinguish identity and topology from storage. A graph can be stored in contiguous node arrays with index-based adjacency. A polymorphic pipeline can often be represented as a small closed <code>std::variant</code> of step types when the set of operations is known. A string-heavy parser can intern repeated tokens or keep slices into a stable input buffer rather than allocating owned strings for every field.</p>
+<p>Those are not language-trick optimizations. They are graph-shape decisions. They reduce the amount of memory chasing required before useful work begins.</p>
+<h2 id="the-hidden-cost-of-stdshared_ptr"><a class="header" href="#the-hidden-cost-of-stdshared_ptr">The Hidden Cost of <code>std::shared_ptr</code></a></h2>
+<p><code>std::shared_ptr</code> deserves special attention because its costs are frequently underestimated. The allocation cost is the most visible: <code>std::make_shared</code> performs one allocation for the control block and the managed object together, while constructing from a raw pointer performs two. But allocation is only the beginning.</p>
+<p>The deeper cost is reference counting. Every copy of a <code>std::shared_ptr</code> performs an atomic increment; every destruction performs an atomic decrement with acquire-release semantics. On x86, an atomic increment is relatively cheap (a locked instruction, roughly 10-20 ns under no contention), but under cross-core sharing, the cache line holding the control block bounces between cores. Under heavy contention, this serializes otherwise parallel work.</p>
+<pre><code class="language-cpp">// Looks innocent: passing shared_ptr by value into a thread pool.
+// Each enqueue copies the shared_ptr (atomic increment), and each
+// task completion destroys it (atomic decrement + potential dealloc).
+void submit_work(std::shared_ptr&lt;Config&gt; cfg,
+                 ThreadPool&amp; pool,
+                 std::span&lt;const Request&gt; requests) {
+    for (const auto&amp; req : requests) {
+        // Copies cfg: atomic ref-count increment per task.
+        pool.enqueue([cfg, &amp;req] {
+            handle(req, *cfg);
+        });
+    }
+    // If 10,000 requests are enqueued, that is 10,000 atomic
+    // increments on submission and 10,000 atomic decrements
+    // on completion, all contending on the same cache line.
+}
+</code></pre>
+<pre><code class="language-cpp">// Fix: cfg outlives all tasks, so pass a raw pointer or reference.
+void submit_work_fixed(const Config&amp; cfg,
+                       ThreadPool&amp; pool,
+                       std::span&lt;const Request&gt; requests) {
+    for (const auto&amp; req : requests) {
+        pool.enqueue([&amp;cfg, &amp;req] {
+            handle(req, cfg);
+        });
+    }
+    // Zero reference-counting overhead.  Caller guarantees
+    // cfg lives until all tasks complete.
+}
+</code></pre>
+<p>The rule is not “never use <code>std::shared_ptr</code>.” It is: do not use shared ownership to avoid thinking about lifetime. When an object has a clear owner and borrowers, express that with a unique owner and references or views. Reserve <code>std::shared_ptr</code> for genuinely shared, non-deterministic lifetimes. And never pass <code>std::shared_ptr</code> by value when a <code>const&amp;</code> or raw reference suffices – each copy is an atomic round-trip you are paying for nothing.</p>
+<p>The example project demonstrates this principle in practice. In <code>examples/web-api/src/modules/handlers.cppm</code>, every handler factory (e.g., <code>list_tasks()</code>, <code>get_task()</code>, <code>create_task()</code>) takes <code>TaskRepository&amp;</code> by reference and captures it by reference in the returned lambda. The repository is owned by <code>main()</code> and outlives all handlers, so there is no need for <code>std::shared_ptr&lt;TaskRepository&gt;</code>. This avoids atomic reference-count traffic on every request and keeps the handler’s capture small – a single pointer rather than a two-pointer-wide <code>shared_ptr</code> plus its control block.</p>
+<p>Additional costs that accumulate: <code>std::shared_ptr</code> is two pointers wide (pointer to object + pointer to control block), doubling the size of a raw pointer. Containers of <code>std::shared_ptr</code> therefore have worse cache density. The weak reference count adds another atomic variable. And custom deleters stored in the control block add type-erased indirection at destruction time.</p>
+<h2 id="hidden-allocation-is-a-design-smell"><a class="header" href="#hidden-allocation-is-a-design-smell">Hidden Allocation Is a Design Smell</a></h2>
+<p>Modern C++ provides abstractions that are appropriate only when their cost model remains visible enough for the code under review. The problem is not abstraction itself. The problem is abstraction whose allocation behavior is implicit, workload-dependent, or implementation-defined in ways the team ignores.</p>
+<p><code>std::string</code> may allocate or may fit in a small-string buffer. <code>std::function</code> may allocate for larger callables and may not for smaller ones. Type-erased wrappers, coroutine frames, regex engines, locale-aware formatting, and stream-based composition can all allocate in ways that disappear from the immediate call site.</p>
+<p>None of these types are forbidden. They become dangerous when used on hot paths without explicit evidence. If a service constructs a <code>std::function</code> per message, or repeatedly turns stable string slices into owned <code>std::string</code> objects because downstream APIs demand ownership by default, the real issue is not just “too many allocations.” It is that the API surface obscures where cost enters.</p>
+<p>Review hot-path abstractions with the same seriousness you apply to thread synchronization. Ask:</p>
+<ul>
+<li>Can this wrapper allocate?</li>
+<li>Can it force an extra indirection?</li>
+<li>Can it enlarge object size enough to reduce packing density?</li>
+<li>Can the same behavior be expressed with a closed alternative such as <code>std::variant</code>, a template boundary, or a borrowed view?</li>
+</ul>
+<p>The right answer depends on code size, ABI, compile times, and substitution flexibility. The point is to make the trade explicit.</p>
+<h2 id="pools-freelist-reuse-and-their-failure-modes"><a class="header" href="#pools-freelist-reuse-and-their-failure-modes">Pools, Freelist Reuse, and Their Failure Modes</a></h2>
+<p>Pooling is attractive because it offers a story of reuse and predictability. Sometimes that story is true. Fixed-size object pools can help when allocation size is uniform, object lifetime is short, reuse is heavy, and allocator contention matters. Slab-like designs can also improve spatial locality relative to fully general heap allocation.</p>
+<p>But pools fail in repeatable ways.</p>
+<p>They fail when object sizes vary enough that multiple pools or internal fragmentation erase the gain. They fail when a pool hides unbounded retention because objects are “reused later” but rarely enough that memory never returns to the system. They fail when per-thread pools complicate balancing under skewed workloads. They fail when code starts encoding lifetime around pool availability instead of around domain ownership. And they fail when developers stop measuring because the existence of a pool feels like optimization.</p>
+<p>The operational rule is blunt: use pooling to support a known workload shape, not as a generic performance gesture. If you cannot describe the allocation distribution and reuse pattern, you are not ready to design the pool.</p>
+<h2 id="value-size-and-parameter-surfaces-still-matter"><a class="header" href="#value-size-and-parameter-surfaces-still-matter">Value Size and Parameter Surfaces Still Matter</a></h2>
+<p>Allocation is only part of the cost model. Large value types copied casually through APIs can be just as destructive. A “convenient” record type that embeds several <code>std::string</code> members, optional blobs, and vectors may avoid some heap traffic by using move semantics, but it still enlarges working-set size, increases cache pressure, and makes pass-by-value choices more expensive.</p>
+<p>This is where Chapter 4’s API guidance re-enters the picture. Passing by value is excellent when ownership transfer or cheap move is the actual contract. It is poor when a path repeatedly copies or moves large aggregate objects merely to satisfy generic convenience. A cost model must include object size, move cost, and how often data crosses layer boundaries.</p>
+<p>Small values are easier to move through the system. Large values often want stable storage plus borrowed access, summary extraction, or decomposition into hot and cold parts. If those options complicate the API, that complication may be justified. Performance design is full of cases where cleaner interfaces at one layer create avoidable cost everywhere else.</p>
+<h2 id="a-practical-cost-model-for-review"><a class="header" href="#a-practical-cost-model-for-review">A Practical Cost Model for Review</a></h2>
+<p>For production work, an informal but explicit model is usually enough. For the path under review, write down:</p>
+<ul>
+<li>Number of steady-state allocations per operation.</li>
+<li>Whether those allocations are thread-local, globally contended, or hidden behind abstractions.</li>
+<li>The lifetime grouping of allocated objects.</li>
+<li>Number of pointer indirections on the hot traversal path.</li>
+<li>Approximate hot working-set size.</li>
+<li>Whether traversal is contiguous, strided, hashed, or graph-like.</li>
+<li>Whether destruction is individual, batched, or region-based.</li>
+</ul>
+<p>That list will not yield a cycle-accurate prediction. It will stop hand-waving. It lets reviewers distinguish “this feels costly” from “this design guarantees allocator traffic, scattered reads, and poor teardown behavior under burst load.”</p>
+<h2 id="boundary-conditions"><a class="header" href="#boundary-conditions">Boundary Conditions</a></h2>
+<p>A cost model is not a license to over-specialize everything. Sometimes a heap allocation is correct because the object truly outlives local scopes and participates in shared ownership. Sometimes type erasure is the right trade for substitution across library boundaries. Sometimes arena allocation is inappropriate because retention risk or debugging complexity outweighs the throughput gain.</p>
+<p>The goal is not maximal local speed. The goal is predictable, explainable cost under real system pressure. If a design slightly increases steady-state cost while dramatically improving correctness or evolvability at a non-hot boundary, that can be the right call. Cost models exist to support tradeoffs, not to abolish them.</p>
+<h2 id="what-to-verify-before-you-tune"><a class="header" href="#what-to-verify-before-you-tune">What to Verify Before You Tune</a></h2>
+<p>Before introducing custom allocators, pooling, or broad <code>pmr</code> plumbing, verify four things.</p>
+<p>First, confirm the path is hot enough that allocation and locality matter materially. Second, confirm the current design actually allocates or scatters data in the way you think it does. Third, confirm the objects involved share the lifetime shape your proposed allocator strategy assumes. Fourth, confirm the new design does not simply move cost elsewhere, such as larger retained memory, worse debugging ergonomics, or more complex ownership boundaries.</p>
+<p>The next chapter addresses the evidence side directly. Cost models are hypotheses. They become engineering only when benchmarking and profiling test the right hypothesis.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<ul>
+<li>Start with an allocation inventory before reaching for allocator techniques.</li>
+<li>Treat allocation cost as latency, locality, contention, retention, and teardown cost, not just the price of <code>new</code>.</li>
+<li>Cluster objects by lifetime when their destruction boundary is genuinely shared.</li>
+<li>Use <code>std::pmr</code> to express regional memory strategy when it matches ownership, not as decorative modernity.</li>
+<li>Be suspicious of abstractions whose allocation and indirection behavior is hidden on hot paths.</li>
+<li>Design pools for a measured workload shape or not at all.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="15-data-layout-containers-and-memory-behavior.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="17-benchmarking-and-profiling-without-lying-to-yourself.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="15-data-layout-containers-and-memory-behavior.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="17-benchmarking-and-profiling-without-lying-to-yourself.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

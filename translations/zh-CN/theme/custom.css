@@ -1,0 +1,79 @@
+/* Typography overrides */
+body {
+    font-family: "PingFang SC", "Microsoft YaHei UI", "Noto Sans SC", "Source Han Sans SC", system-ui, sans-serif;
+}
+
+code,
+pre,
+.hljs {
+    font-family: "Cascadia Code", "JetBrains Mono", "Sarasa Mono SC", "Fira Code", Consolas, monospace;
+}
+
+/* Wider, centered content area */
+.content {
+    max-width: none;
+    padding: 0 4rem;
+}
+
+.content main {
+    max-width: 96rem;
+    margin: 0 auto;
+    line-height: 1.75;
+}
+
+.content p {
+    line-height: 1.75;
+}
+
+/* Tighter code blocks */
+pre > code {
+    /* font-size: 1rem; */
+    line-height: 1.5;
+}
+
+/* Anti-pattern headings stand out */
+h4:has(+ pre) {
+    margin-bottom: 0.3rem;
+}
+
+/* Review checklist styling */
+.content ul li {
+    margin-bottom: 0.25rem;
+}
+
+/* Part separators in sidebar */
+.chapter-item.part-title {
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 1.2rem;
+    color: var(--sidebar-active);
+}
+
+/* Blockquote for prerequisites */
+.content blockquote {
+    border-left: 3px solid var(--quote-border);
+    padding: 0.4rem 1rem;
+    margin: 0.8rem 0 1.2rem 0;
+    font-style: italic;
+    opacity: 0.85;
+}
+
+/* Table styling */
+.content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.content table th,
+.content table td {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--table-border-color);
+}
+
+.content table th {
+    font-weight: 600;
+    background: var(--table-header-bg);
+}

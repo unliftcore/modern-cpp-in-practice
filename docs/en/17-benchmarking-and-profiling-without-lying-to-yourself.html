@@ -1,0 +1,469 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Benchmarking and Profiling Without Lying to Yourself - Modern CPP in Practice</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A production guide to modern C++ for experienced programmers. Ownership, interfaces, failure boundaries, concurrency, performance, and verification.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom-5b8e14c7.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "light";
+            window.path_to_searchindex_js = "searchindex-810527eb.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-6430f798.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Modern CPP in Practice</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/qiaowan/modern-cpp/edit/main/chapters/chapters/17-benchmarking-and-profiling-without-lying-to-yourself.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="benchmarking-and-profiling-without-lying-to-yourself"><a class="header" href="#benchmarking-and-profiling-without-lying-to-yourself">Benchmarking and Profiling Without Lying to Yourself</a></h1>
+<h2 id="production-problem"><a class="header" href="#production-problem">Production Problem</a></h2>
+<p>Performance discussions become expensive when teams confuse numbers with evidence. A benchmark reports a 20 percent win, but the production service does not improve. A profiler shows a hot function, but the real issue is lock contention or off-CPU waiting. A regression slips into main because the benchmark measured the wrong input shape or because someone “optimized” dead work the compiler already removed.</p>
+<p>This chapter is about measurement discipline. The previous chapters covered representation and cost modeling. Here the question is different: how do you gather evidence that is strong enough to change code, justify complexity, or reject a supposed optimization? The answer requires benchmark design, profiler literacy, and a refusal to let attractive charts substitute for causal reasoning.</p>
+<p>Performance work in modern C++ is especially vulnerable to self-deception because the language exposes many powerful local transformations. You can change container type, ownership shape, inlining boundaries, allocator strategy, range pipelines, coroutine structure, and type-erasure choices. Some of those changes matter. Many do not. Measurement is how you tell the difference.</p>
+<h2 id="choose-the-right-instrument-for-the-question"><a class="header" href="#choose-the-right-instrument-for-the-question">Choose the Right Instrument for the Question</a></h2>
+<p>Not every performance question should start with a microbenchmark.</p>
+<p>If you are deciding between two data representations for a tight loop, a controlled benchmark may be exactly right. If you are debugging why request latency spikes under burst load, profiling a realistic system or gathering production traces is more appropriate. If you suspect lock contention, scheduler behavior and blocking time matter more than a standalone throughput loop. If a regression appears only in end-to-end service traffic, a synthetic isolated benchmark may actively mislead.</p>
+<p>Use a simple hierarchy:</p>
+<ul>
+<li>Use microbenchmarks for narrowly scoped, well-isolated questions.</li>
+<li>Use profilers for discovering where time or samples actually go in a process.</li>
+<li>Use production-like load tests for interactions among queues, threads, I/O, caches, and contention.</li>
+<li>Use production observability to confirm the change matters in the environment that pays the bill.</li>
+</ul>
+<p>Confusing these layers is one of the fastest ways to waste weeks.</p>
+<h2 id="a-benchmark-must-state-its-claim"><a class="header" href="#a-benchmark-must-state-its-claim">A Benchmark Must State Its Claim</a></h2>
+<p>A trustworthy benchmark starts with a sentence, not with code. “Compare lookup latency of sorted contiguous storage versus hash lookup for a read-mostly route table of 1k, 10k, and 100k entries with realistic key lengths.” That is a claim. “Benchmark containers” is not.</p>
+<p>The sentence should identify:</p>
+<ul>
+<li>The operation under test.</li>
+<li>The data size and distribution.</li>
+<li>The mutation versus read ratio.</li>
+<li>The machine or environment assumptions that matter.</li>
+<li>The decision the benchmark is supposed to inform.</li>
+</ul>
+<p>If you cannot write that sentence, you do not yet know what the benchmark means.</p>
+<p>This requirement matters because performance is workload-shaped. A benchmark over random integer keys may tell you nothing about a production router that uses string views with strong prefix locality. A benchmark over uniform hash hits may hide the collision behavior of real skewed keys. A benchmark that rebuilds a container every iteration may punish a design whose production cost is dominated by lookup after a one-time build.</p>
+<h2 id="benchmark-the-whole-relevant-operation"><a class="header" href="#benchmark-the-whole-relevant-operation">Benchmark the Whole Relevant Operation</a></h2>
+<p>One common lie is measuring a convenient fragment instead of the decision boundary that matters. For example, a parsing pipeline is “optimized” by measuring only token conversion after the input is already resident in cache and after allocations are pre-reserved. A container comparison measures lookup while excluding construction, sorting, deduplication, and memory reclamation even though the production workload rebuilds the structure frequently.</p>
+<p>A benchmark does not need to be huge. It does need to include the costs the design imposes in reality. If an API choice forces allocation, copying, hashing, or validation before the line you currently measure, those costs belong in the measurement unless you can justify excluding them.</p>
+<p>This is where the cost model from Chapter 16 should inform the benchmark. Measure the actual boundary where the costs accumulate. Otherwise the result is technically correct and operationally useless.</p>
+<p>In a real project, the benchmarkable surfaces are often less obvious than <code>vector&lt;int&gt;</code> but more instructive. Consider the example project in <code>examples/web-api/</code>:</p>
+<ul>
+<li><strong><code>json::serialize_array()</code></strong> (<code>json.cppm</code>) iterates a range and builds a JSON array by repeated string concatenation. Benchmarking this function across varying collection sizes (10, 100, 1000 tasks) would reveal whether the concatenation strategy or the <code>to_json()</code> cost per element dominates, and whether pre-reserving the result string matters.</li>
+<li><strong><code>TaskRepository::find_by_id()</code></strong> (<code>repository.cppm</code>) performs a linear scan with <code>std::ranges::find</code> under a <code>shared_lock</code>. A benchmark comparing this against an <code>unordered_map&lt;TaskId, Task&gt;</code> alternative would need to include the locking cost and test at realistic repository sizes – not just the raw find.</li>
+<li><strong><code>Router::to_handler()</code></strong> (<code>router.cppm</code>) captures the route table by value and returns a lambda that performs a linear scan on every request dispatch. Benchmarking route dispatch at 5, 50, and 500 registered routes would show whether the linear scan remains acceptable or whether a sorted-vector or trie approach is justified. The benchmark must include the full dispatch path – matching method, comparing patterns, and invoking the handler – not just the loop.</li>
+</ul>
+<p>These are the kinds of benchmark claims worth writing in plain language before writing code: “Compare route dispatch latency with linear scan versus sorted vector at 5, 50, and 500 routes with realistic HTTP method and path distributions.”</p>
+<h2 id="control-for-compiler-and-harness-artifacts"><a class="header" href="#control-for-compiler-and-harness-artifacts">Control for Compiler and Harness Artifacts</a></h2>
+<p>C++ can produce especially misleading microbenchmarks because the optimizer is extremely willing to remove, fold, hoist, and vectorize code that is not anchored to observable behavior. Benchmark harnesses exist partly to prevent this, but they do not eliminate the need for skepticism.</p>
+<p>At minimum:</p>
+<ul>
+<li>Ensure results are consumed in a way the compiler cannot elide.</li>
+<li>Separate one-time setup from per-iteration work deliberately.</li>
+<li>Warm up enough to avoid measuring first-touch effects accidentally.</li>
+<li>Control data initialization so each iteration exercises the intended branch and cache behavior.</li>
+<li>Inspect generated code when a surprising result appears.</li>
+</ul>
+<p>If a benchmark claims that a complex operation takes almost no time, assume the optimizer removed work until proven otherwise. If a benchmark shows enormous variance, assume the environment is unstable or the workload is underspecified until proven otherwise.</p>
+<h3 id="flawed-benchmark-dead-code-elimination"><a class="header" href="#flawed-benchmark-dead-code-elimination">Flawed Benchmark: Dead Code Elimination</a></h3>
+<p>This is the single most common microbenchmark lie. The compiler sees that a result is never used and removes the computation entirely:</p>
+<pre><code class="language-cpp">// BROKEN: the compiler may eliminate the entire loop because
+// 'total' is never observed.
+static void BM_bad_dce(benchmark::State&amp; state) {
+    std::vector&lt;double&gt; data(1'000'000, 1.0);
+    for (auto _ : state) {
+        double total = 0.0;
+        for (double d : data)
+            total += d * d;
+        // total is dead.  Optimizer removes the loop.
+        // Benchmark reports ~0 ns/iteration.
+    }
+}
+</code></pre>
+<pre><code class="language-cpp">// FIXED: benchmark::DoNotOptimize prevents the compiler from
+// proving the result is unused.
+static void BM_good_dce(benchmark::State&amp; state) {
+    std::vector&lt;double&gt; data(1'000'000, 1.0);
+    for (auto _ : state) {
+        double total = 0.0;
+        for (double d : data)
+            total += d * d;
+        benchmark::DoNotOptimize(total);
+    }
+}
+</code></pre>
+<p><code>benchmark::DoNotOptimize</code> is not magic. On most implementations it acts as an opaque read of the value (often an inline asm that the compiler treats as potentially observing the variable). Use it on the final result, not on every intermediate step, or you risk inhibiting legitimate optimizations the production code would also benefit from. If you are unsure whether DCE is affecting your results, compile with <code>-S</code> and inspect the assembly.</p>
+<h3 id="flawed-benchmark-measuring-setup-instead-of-work"><a class="header" href="#flawed-benchmark-measuring-setup-instead-of-work">Flawed Benchmark: Measuring Setup Instead of Work</a></h3>
+<pre><code class="language-cpp">// BROKEN: construction cost dominates. The benchmark is
+// measuring vector allocation and initialization, not lookup.
+static void BM_bad_lookup(benchmark::State&amp; state) {
+    for (auto _ : state) {
+        std::vector&lt;int&gt; v(1'000'000);
+        std::iota(v.begin(), v.end(), 0);
+        auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+        benchmark::DoNotOptimize(it);
+    }
+}
+
+// FIXED: setup goes outside the timing loop.
+static void BM_good_lookup(benchmark::State&amp; state) {
+    std::vector&lt;int&gt; v(1'000'000);
+    std::iota(v.begin(), v.end(), 0);
+    for (auto _ : state) {
+        auto it = std::lower_bound(v.begin(), v.end(), 500'000);
+        benchmark::DoNotOptimize(it);
+    }
+}
+</code></pre>
+<h3 id="flawed-benchmark-wrong-baseline"><a class="header" href="#flawed-benchmark-wrong-baseline">Flawed Benchmark: Wrong Baseline</a></h3>
+<p>Comparing two designs against an unfair baseline is subtler and more dangerous:</p>
+<pre><code class="language-cpp">// MISLEADING: comparing hash lookup against linear scan.
+// Concludes "hash map is 100x faster" -- but the real alternative
+// in production is sorted vector with binary search, which may
+// be within 2x and uses half the memory.
+static void BM_linear_scan(benchmark::State&amp; state) {
+    std::vector&lt;std::pair&lt;int,int&gt;&gt; data(100'000);
+    // ... fill with random kv pairs, unsorted ...
+    for (auto _ : state) {
+        auto it = std::find_if(data.begin(), data.end(),
+            [](const auto&amp; p) { return p.first == 42; });
+        benchmark::DoNotOptimize(it);
+    }
+}
+</code></pre>
+<p>The right baseline is the realistic alternative, not the worst possible option. Always state what the benchmark is comparing against and why that alternative is the one the team would actually choose.</p>
+<h3 id="flawed-benchmark-warm-cache-illusion"><a class="header" href="#flawed-benchmark-warm-cache-illusion">Flawed Benchmark: Warm Cache Illusion</a></h3>
+<pre><code class="language-cpp">// MISLEADING: data fits in L2 cache and is hot from the previous
+// iteration.  Production accesses the same structure after
+// processing unrelated data that evicts it from cache.
+static void BM_warm_cache(benchmark::State&amp; state) {
+    std::vector&lt;int&gt; v(1'000);  // ~4 KB, fits in L1
+    std::iota(v.begin(), v.end(), 0);
+    for (auto _ : state) {
+        int sum = 0;
+        for (int x : v) sum += x;
+        benchmark::DoNotOptimize(sum);
+    }
+    // Reports ~50 ns.  In production, with cache-cold data,
+    // the same operation takes 10-50x longer.
+}
+</code></pre>
+<p>If the production access pattern encounters cold data, either make the working set large enough to exceed cache, or explicitly flush cache lines between iterations (platform-specific and fragile, but sometimes necessary for honest results).</p>
+<h3 id="google-benchmark-pitfalls"><a class="header" href="#google-benchmark-pitfalls">Google Benchmark Pitfalls</a></h3>
+<p>Google Benchmark (<code>benchmark::</code>) is widely used and generally solid, but several recurring mistakes deserve mention:</p>
+<ol>
+<li><strong>Forgetting <code>benchmark::ClobberMemory()</code></strong>: <code>DoNotOptimize</code> prevents dead stores of a value, but it does not force the compiler to assume memory has changed. If your benchmark modifies a data structure in place, the compiler may hoist reads above writes across iterations. Use <code>benchmark::ClobberMemory()</code> after mutations to force a reload:</li>
+</ol>
+<pre><code class="language-cpp">static void BM_modify(benchmark::State&amp; state) {
+    std::vector&lt;int&gt; v(10'000, 0);
+    for (auto _ : state) {
+        for (auto&amp; x : v) x += 1;
+        benchmark::ClobberMemory();
+        // Without ClobberMemory, the compiler could theoretically
+        // observe that v is never read and eliminate the writes,
+        // or combine multiple iterations into one.
+    }
+}
+</code></pre>
+<ol start="2">
+<li>
+<p><strong>Not using <code>state.SetItemsProcessed()</code></strong>: Without it, the output shows only time per iteration, making it hard to compare benchmarks that process different batch sizes. Always call <code>state.SetItemsProcessed(state.iterations() * num_items)</code> so the output includes a throughput column.</p>
+</li>
+<li>
+<p><strong>Ignoring <code>state.PauseTiming()</code> / <code>state.ResumeTiming()</code> overhead</strong>: These calls use clock reads that themselves take 20-100 ns on many platforms. If the operation you are measuring takes less than a microsecond, the pause/resume overhead dominates. For sub-microsecond work, keep setup outside the loop entirely or amortize it across many iterations.</p>
+</li>
+<li>
+<p><strong>Benchmarking only one size</strong>: Use <code>-&gt;Range(8, 1 &lt;&lt; 20)</code> or <code>-&gt;DenseRange()</code> to test across sizes. A design that wins at 1K elements may lose at 1M. Performance is not a scalar.</p>
+</li>
+</ol>
+<p>Use a serious harness when possible. The exact library is less important than the discipline: stable repetition, clear setup boundaries, and explicit prevention of dead-code elimination. When a benchmark is intentionally partial because the repository does not standardize on a harness, say so and document the omitted scaffolding.</p>
+<h2 id="measuring-noise-instead-of-signal"><a class="header" href="#measuring-noise-instead-of-signal">Measuring Noise Instead of Signal</a></h2>
+<p>Even with a correct benchmark, environmental noise can dominate the result. Frequency scaling, thermal throttling, background processes, NUMA effects, and interrupt coalescing all inject variance that has nothing to do with your code change.</p>
+<p>Practical defenses:</p>
+<ul>
+<li><strong>Pin CPU frequency</strong> during benchmarks (<code>cpupower frequency-set -g performance</code> on Linux, or disable turbo boost). A benchmark that runs at 4.5 GHz on one iteration and 3.2 GHz on the next is measuring the governor, not your code.</li>
+<li><strong>Isolate cores</strong> (<code>isolcpus</code> kernel parameter or <code>taskset</code> / <code>numactl</code>) to prevent scheduler interference.</li>
+<li><strong>Run multiple trials</strong> and report median, not mean. Median is robust to occasional spikes from interrupts or page faults. Mean is dragged by outliers.</li>
+<li><strong>Require statistical significance</strong> before declaring a win. A 3% improvement with 5% coefficient of variation is noise. Google Benchmark supports <code>--benchmark_repetitions=N</code> and reports stddev; use it.</li>
+<li><strong>Compare on the same machine, same boot, same binary</strong> when possible. Cross-machine comparisons require careful normalization and are generally less trustworthy.</li>
+</ul>
+<p>If a benchmark result changes by more than 1-2% between identical runs on an idle machine, the benchmark setup needs fixing before the result means anything.</p>
+<h2 id="distribution-matters-more-than-a-single-number"><a class="header" href="#distribution-matters-more-than-a-single-number">Distribution Matters More Than a Single Number</a></h2>
+<p>Average runtime is a weak summary. Many production systems care about percentiles, variance, and worst-case behavior under skew. A representation that improves mean throughput while making tail latency worse under bursty allocation or lock contention may still be a regression. Likewise, a benchmark that reports only “nanoseconds per iteration” can hide bimodal behavior caused by rehash, page faults, branch predictor flips, or occasional large allocations.</p>
+<p>Read performance numbers the way you would read availability or latency telemetry. Ask about spread, not just center. Ask whether outliers are noise, environment instability, or real behavior from the design. Ask whether the benchmark shape forces rare expensive events often enough to matter.</p>
+<p>For CI regression control, this means using thresholds and trend analysis carefully. A noisy benchmark can create false alarms that train teams to ignore the signal. A too-forgiving threshold can let meaningful regressions accumulate. Stable benchmark design is usually more valuable than elaborate reporting.</p>
+<h2 id="profilers-answer-different-questions"><a class="header" href="#profilers-answer-different-questions">Profilers Answer Different Questions</a></h2>
+<p>A profiler is not a slower benchmark. It is a sampling or instrumentation tool for understanding where time, allocations, cache misses, or waits occur in a real process. Use it when you do not yet know where the bottleneck is, or when a microbenchmark result needs validation against full-system behavior.</p>
+<p>Different profilers reveal different failure classes:</p>
+<ul>
+<li>CPU sampling profilers answer where active CPU time is spent.</li>
+<li>Allocation profilers answer which paths allocate and retain memory.</li>
+<li>Hardware-counter-aware tools answer where cache misses, branch mispredicts, or stalled cycles cluster.</li>
+<li>Concurrency and tracing tools answer where threads block, wait, or contend.</li>
+</ul>
+<p>Do not ask one tool to answer a question it cannot see. A CPU profiler will not explain why threads are mostly idle waiting on a lock. An allocation flame graph will not tell you whether a faster allocator would matter if traversal cost still dominates. A wall-clock trace may show a slow request without distinguishing CPU work from scheduler delay.</p>
+<p>On Linux, that may mean combining <code>perf</code>, allocator profiling, and tracing. On Windows, it may mean ETW-based tools, Visual Studio Profiler, or Windows Performance Analyzer. On macOS, Instruments fills a similar role. The tool choice is secondary to the habit: pair the question with the instrument that can actually answer it.</p>
+<h2 id="correlate-benchmarks-with-profiles"><a class="header" href="#correlate-benchmarks-with-profiles">Correlate Benchmarks With Profiles</a></h2>
+<p>Benchmarking and profiling should constrain each other.</p>
+<p>If a microbenchmark says a change should help because it reduces allocations, the profiler in a realistic process should show fewer allocations or less time in allocation-heavy paths. If a profile says a loop is hot because of cache misses in a pointer-rich traversal, a benchmark should isolate that traversal shape and test alternatives. If the two disagree, do not average them into comfort. Investigate the mismatch.</p>
+<p>Common causes of mismatch include:</p>
+<ul>
+<li>The benchmark data shape does not match production.</li>
+<li>The benchmark isolated a cost that is drowned out end to end.</li>
+<li>The profiler points at a symptom rather than the root cause.</li>
+<li>The measured change affected code size, inlining, or branch behavior in the full binary differently than in isolation.</li>
+</ul>
+<p>Good performance work narrows these gaps. Bad performance work ignores them.</p>
+<h2 id="beware-representative-inputs-that-are-not"><a class="header" href="#beware-representative-inputs-that-are-not">Beware “Representative” Inputs That Are Not</a></h2>
+<p>Teams often sabotage measurement by using tidy synthetic inputs. Keys are uniformly random. Messages are the same size. Queues are never bursty. Hash tables never experience realistic load factors. Parsers never see malformed or adversarial data. These inputs are easier to generate and easier to stabilize. They are also often wrong.</p>
+<p>Representative input does not mean copying production traffic blindly. It means preserving the properties that drive cost: size distribution, skew, repetition, mutation ratio, working-set size, and failure-path frequency. For a cache, that may mean a Zipf-like access pattern rather than uniform keys. For a parser, it may mean a realistic mix of short and long fields plus a small rate of malformed records. For a scheduler or queue, it may mean burst patterns rather than a flat arrival rate.</p>
+<p>When data privacy or operational constraints prevent real traces, at least synthesize distributions intentionally. A benchmark over unrealistic inputs is not neutral. It actively trains the team on the wrong problem.</p>
+<h2 id="performance-claims-must-survive-code-review"><a class="header" href="#performance-claims-must-survive-code-review">Performance Claims Must Survive Code Review</a></h2>
+<p>Treat performance changes as reviewable design work, not as heroic experiments. A credible change should come with a compact evidence package:</p>
+<ul>
+<li>The performance question being answered.</li>
+<li>The benchmark or profile setup.</li>
+<li>The workload assumptions.</li>
+<li>The before-and-after result, including variance or percentile data when relevant.</li>
+<li>The tradeoffs introduced: code complexity, memory footprint, API restrictions, portability, or maintenance cost.</li>
+</ul>
+<p>This forces a useful discipline. It prevents “seems faster on my machine” from entering the codebase as institutional memory. It also creates artifacts future reviewers can re-run when compilers, standard libraries, or workload shape changes alter the answer.</p>
+<h2 id="regression-control-is-an-engineering-system-not-a-dashboard"><a class="header" href="#regression-control-is-an-engineering-system-not-a-dashboard">Regression Control Is an Engineering System, Not a Dashboard</a></h2>
+<p>It is tempting to add a benchmark job to CI and call performance solved. In practice, regression control works only when the measured benchmarks are stable, cheap enough to run at the right frequency, and tied to code paths the team actually cares about. A flaky nightly benchmark suite that no one trusts is not safety. It is ritual.</p>
+<p>A practical setup usually includes a small set of highly stable microbenchmarks for known hot kernels, a separate heavier performance workflow for broader load tests, and production observability that tracks latency, throughput, CPU time, and memory effects after release. The layers differ in cost and fidelity. You need all three because no single layer is enough.</p>
+<h2 id="what-honest-measurement-looks-like"><a class="header" href="#what-honest-measurement-looks-like">What Honest Measurement Looks Like</a></h2>
+<p>Honest measurement is modest. It does not promise universal truths from one benchmark. It does not confuse profile heat with immediate blame. It does not assume an optimization matters just because it is visible in assembly. It ties a number to a workload, a question, and a decision.</p>
+<p>That attitude is more important than any specific toolchain. Hardware changes, compilers improve, standard library implementations shift, and production traffic evolves. The habit you want in a C++ team is not attachment to one profiler or framework. It is the refusal to make performance claims without evidence that matches the decision being made.</p>
+<h2 id="takeaways"><a class="header" href="#takeaways">Takeaways</a></h2>
+<ul>
+<li>Pick the measurement tool that matches the question: benchmark, profile, load test, or production telemetry.</li>
+<li>Write the benchmark claim in plain language before writing benchmark code.</li>
+<li>Measure the full relevant operation, not the most convenient fragment.</li>
+<li>Treat optimizer artifacts, harness mistakes, and unrealistic inputs as default suspects.</li>
+<li>Look at variance and percentiles, not only means.</li>
+<li>Require performance changes to carry a reviewable evidence package.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="16-allocation-locality-and-cost-models.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="18-testing-strategy-for-resource-and-boundary-bugs.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="16-allocation-locality-and-cost-models.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="18-testing-strategy-for-resource-and-boundary-bugs.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>
